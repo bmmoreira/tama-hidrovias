@@ -4,7 +4,7 @@ Tama Hidrovias – Plataforma de Previsão Hidrológica
 .. image:: https://img.shields.io/badge/license-MIT-blue.svg
    :target: LICENSE
 
-**Tama Hidrovias** é uma plataforma integrada de previsão hidrológica para aregião dos rios Madeira e Tapajós, focada no monitoramento de hidrovias e gestão de recursos hídricos. O sistema processa dados climáticos do ERA5, recorta por bacias hidrográficas específicas e serve camadas raster interativas para visualização em mapas 
+**Tama Hidrovias** é uma plataforma integrada de previsão hidrológica para aregião dos rios Madeira e Tapajós, focada no monitoramento de hidrovias e gestão de recursos hídricos. O sistema processa dados climáticos, recorta regiões hidrográficas específicas e serve camadas raster interativas para visualização em mapas 
 hidrográficas brasileiras. O sistema combina dados de reanálise climática,
 processamento geoespacial em Python, uma API headless Strapi, visualização interativa com
 Next.js e servição de camadas raster via TileServer-GL.
@@ -86,7 +86,7 @@ Pipeline Python
 
 O worker Python executa as seguintes etapas automaticamente:
 
-1. **Download** de dados ERA5 (temperatura, precipitação, escoamento) via ``cdsapi``
+1. **Download** de dados (com variáveis hidrológicas) via ``cdsapi``
 2. **Recorte espacial** da bacia hidrográfica usando o shapefile configurado em
    ``BASIN_SHAPEFILE``
 3. **Conversão** NetCDF → GeoTIFF com reprojeção para EPSG:4326
