@@ -72,11 +72,11 @@ def delta_method(
     hindcast: np.ndarray,
     forecast: np.ndarray,
 ) -> np.ndarray:
-    """Additive delta-method bias correction for precipitation.
+    """Multiplicative (ratio-based) delta-method bias correction for precipitation.
 
-    Computes the climatological mean bias between *obs* and *hindcast* and
-    adds (or subtracts) that offset from *forecast*, clamping the result to
-    be non-negative.
+    Computes the ratio between the climatological means of *obs* and *hindcast*
+    and multiplies *forecast* by that ratio, clamping the result to be
+    non-negative.
 
     Parameters
     ----------

@@ -156,6 +156,10 @@ class DataStandardizer:
     ) -> pd.DataFrame:
         """Convert values in *col* from *from_unit* to *to_unit*.
 
+        Unit strings are compared **case-insensitively** after stripping
+        whitespace (e.g. ``"m3/s"``, ``"M3/S"``, and ``" m3/s "`` are
+        all equivalent).
+
         Parameters
         ----------
         df:

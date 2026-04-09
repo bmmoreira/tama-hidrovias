@@ -246,11 +246,13 @@ class StrapiClient:
         dict
             Strapi upload response.
         """
-        # Override Content-Type so requests sets multipart boundary
+        # Set Content-Type to None so that requests auto-sets the
+        # multipart/form-data boundary — required for file uploads.
         headers = {"Content-Type": None}
         with open(file_path, "rb") as fh:
             files = {"files": (title, fh, "image/tiff")}
-            data = {"fileInfo": f'{{"caption":"{title}"}}'}
+            import json as _json
+            data = {"fileInfo": _json.dumps({"caption": title})}
             result = self._request(
                 "POST", "/api/upload", files=files, data=data, extra_headers=headers
             )
@@ -327,5 +329,5 @@ class StrapiClient:
                 logger.error("Non-retryable request error: %s", exc)
                 raise
 
-        logger.error("All %d retry attempts exhausted for %s %s", _MAX_RETRIES, method, url)
+        logger.error("All %d retry attempts exhausted for %s %s", _MAX_RETRIES, method, path)
         raise last_exc  # type: ignore[misc]

@@ -80,7 +80,7 @@ def kge(observed: np.ndarray, simulated: np.ndarray) -> float:
     mean_obs = np.mean(obs)
     mean_sim = np.mean(sim)
 
-    if std_obs == 0 or mean_obs == 0:
+    if std_obs == 0 or std_sim == 0 or mean_obs == 0:
         return float("nan")
 
     r = float(np.corrcoef(obs, sim)[0, 1])

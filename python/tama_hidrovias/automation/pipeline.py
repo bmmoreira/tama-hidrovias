@@ -276,8 +276,9 @@ def main() -> None:
     load_dotenv()
 
     parser = argparse.ArgumentParser(description="tama-hidrovias data pipeline")
-    parser.add_argument("--start-date", default=(date.today() - timedelta(days=7)).isoformat())
-    parser.add_argument("--end-date", default=date.today().isoformat())
+    today = date.today()
+    parser.add_argument("--start-date", default=(today - timedelta(days=7)).isoformat())
+    parser.add_argument("--end-date", default=today.isoformat())
     parser.add_argument("--source", default="ana")
     parser.add_argument("--stations", nargs="*", default=[])
     parser.add_argument("--output-dir", default="output")
