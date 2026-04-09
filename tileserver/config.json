@@ -1,0 +1,17 @@
+{
+  "options": {
+    "paths": {
+      "root": "/data",
+      "fonts": "fonts",
+      "sprites": "sprites",
+      "styles": "styles",
+      "mbtiles": "mbtiles",
+      "icons": "icons"
+    },
+    "serveStaticMaps": true,
+    "serveRendered": true,
+    "renderWatermark": false
+  },
+  "styles": {},
+  "data": {}
+}

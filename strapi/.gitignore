@@ -1,0 +1,8 @@
+.tmp/
+.cache/
+.DS_Store
+*.env
+build/
+node_modules/
+dist/
+export/
