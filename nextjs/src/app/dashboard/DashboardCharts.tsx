@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import useSWR from 'swr';
 import { getStations } from '@/lib/strapi';
+import type { Station } from '@/lib/strapi';
 import StationChart from '@/components/StationChart';
 
 export default function DashboardCharts() {
@@ -10,7 +11,7 @@ export default function DashboardCharts() {
     getStations({ 'pagination[pageSize]': '10' }),
   );
 
-  const stations = stationsData?.data ?? [];
+  const stations: Station[] = stationsData?.data ?? [];
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
   const stationId = selectedId ?? stations[0]?.id;
@@ -30,7 +31,7 @@ export default function DashboardCharts() {
             onChange={(e) => setSelectedId(Number(e.target.value))}
             className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm outline-none focus:border-blue-400"
           >
-            {stations.map((s) => (
+            {stations.map((s: Station) => (
               <option key={s.id} value={s.id}>
                 {s.attributes.name} ({s.attributes.code})
               </option>

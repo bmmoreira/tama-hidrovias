@@ -1,23 +1,21 @@
 import Link from 'next/link';
-import { Droplets, Map, LayoutDashboard, ArrowRight } from 'lucide-react';
+import { Droplets, Map, LayoutDashboard, ArrowRight, SatelliteIcon } from 'lucide-react';
 
 export default function HomePage() {
   return (
     <main className="flex min-h-screen flex-col">
       {/* Hero */}
-      <section className="relative flex flex-1 flex-col items-center justify-center bg-gradient-to-br from-blue-900 via-blue-700 to-cyan-600 px-6 py-24 text-white">
+      <section className="relative flex flex-1 flex-col items-center justify-center bg-gradient-to-br from-blue-900 via-green-700 to-cyan-600 px-6 py-24 text-white">
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
         <div className="relative z-10 mx-auto max-w-3xl text-center">
           <div className="mb-6 flex justify-center">
-            <Droplets className="h-16 w-16 text-cyan-300" strokeWidth={1.5} />
+            <img src="/logo5.png" alt="Logo" className="h-32 w-32" />
           </div>
           <h1 className="mb-4 text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-            Tama Hidrovias
+            TaMa Hidrovias
           </h1>
           <p className="mb-8 text-lg text-blue-100 sm:text-xl">
-            Plataforma de monitoramento hidrológico para bacias hidrográficas
-            brasileiras. Acesse dados em tempo real de estações fluviométricas,
-            altimetria e previsões hidrológicas.
+            Plataforma de monitoramento hidrológico para hidrovias na região dos rios Madeira e Tapajós. Cadeia de previsão integrada em escala de temporal.
           </p>
 
           <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
@@ -68,7 +66,7 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="border-t border-gray-200 bg-white px-6 py-8 text-center text-sm text-gray-400">
         <p>
-          © {new Date().getFullYear()} Tama Hidrovias · Dados hidrológicos
+          © {new Date().getFullYear()} TaMa Hidrovias · Dados hidrológicos
           abertos para o Brasil
         </p>
       </footer>
@@ -81,18 +79,18 @@ const features = [
     Icon: Map,
     title: 'Mapa Interativo',
     description:
-      'Visualize estações hidrométricas em todo o Brasil com dados em tempo real e séries históricas.',
+      'Visualize estações hidrométricas os rios Madeira e Tapajós com dados e séries históricas.',
+  },
+  {
+    Icon: SatelliteIcon,
+    title: 'Medições em Altimetria',
+    description:
+      'Acesse dados de nível d\'água e altimetria de diversas fontes para monitoramento contínuo das hidrovias.',
   },
   {
     Icon: Droplets,
-    title: 'Medições em Tempo Real',
-    description:
-      'Acesse dados de nível d\'água, vazão e altimetria de diversas fontes: ANA, HydroWeb e SNIRH.',
-  },
-  {
-    Icon: LayoutDashboard,
     title: 'Previsões Hidrológicas',
     description:
-      'Previsões de até 15 dias geradas por modelos numéricos para planejamento de recursos hídricos.',
+      'Previsões de 1 dia a 6 meses geradas por modelos numéricos para planejamento de recursos hídricos.',
   },
 ] as const;

@@ -1,10 +1,12 @@
 'use client';
 
+import type { Station } from '@/lib/strapi';
+'use client';
+
 import { useState } from 'react';
 import useSWR from 'swr';
 import { Plus, Search, Radio } from 'lucide-react';
 import { getStations } from '@/lib/strapi';
-import type { Station } from '@/lib/strapi';
 import VirtualStationModal from './VirtualStationModal';
 
 const SOURCES = ['Todas', 'ANA', 'HydroWeb', 'SNIRH', 'Virtual'] as const;
@@ -24,10 +26,10 @@ export default function StationsPage() {
   const stations = data?.data ?? [];
 
   const basins = Array.from(
-    new Set(stations.map((s) => s.attributes.basin).filter(Boolean)),
-  ).sort();
+    new Set(stations.map((s: Station) => s.attributes.basin).filter(Boolean)),
+  ).sort() as string[];
 
-  const filtered = stations.filter((s) => {
+  const filtered = stations.filter((s: Station) => {
     const matchQuery =
       !query ||
       s.attributes.name.toLowerCase().includes(query.toLowerCase()) ||
@@ -145,7 +147,7 @@ export default function StationsPage() {
                   </td>
                 </tr>
               )}
-              {filtered.map((station) => (
+              {filtered.map((station: Station) => (
                 <StationRow key={station.id} station={station} />
               ))}
             </tbody>
@@ -181,7 +183,7 @@ function StationRow({ station }: { station: Station }) {
       <td className="px-4 py-3">
         <span
           className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-            sourceColors[a.source] ?? 'bg-gray-100 text-gray-600'
+            sourceColors[a.source ?? ''] ?? 'bg-gray-100 text-gray-600'
           }`}
         >
           {a.source}

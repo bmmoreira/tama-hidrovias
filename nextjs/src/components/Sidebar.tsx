@@ -28,7 +28,7 @@ const adminLink = { href: '/dashboard/admin', label: 'Admin', Icon: Settings };
 export default function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const isAdmin = session?.role === 'admin' || session?.role === 'superAdmin';
+  const isAdmin = (session as any)?.role === 'admin' || (session as any)?.role === 'superAdmin';
 
   const allLinks = isAdmin ? [...links, adminLink] : links;
 

@@ -39,7 +39,7 @@ export default function ClimateLayersPage() {
     getClimateLayers(),
   );
 
-  const layers = data?.data ?? [];
+  const layers: ClimateLayer[] = data?.data ?? [];
 
   return (
     <div className="space-y-5">
@@ -67,7 +67,7 @@ export default function ClimateLayersPage() {
             </div>
           )}
 
-          {layers.map((layer) => (
+          {layers.map((layer: ClimateLayer) => (
             <button
               key={layer.id}
               onClick={() =>

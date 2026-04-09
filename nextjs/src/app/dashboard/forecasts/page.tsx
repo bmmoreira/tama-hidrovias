@@ -1,3 +1,4 @@
+import type { Station } from '@/lib/strapi';
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -59,7 +60,7 @@ export default function ForecastsPage() {
   // Group forecasts by model run (issued_at)
   const runs = useMemo(() => {
     const map = new Map<string, Forecast[]>();
-    forecasts.forEach((f) => {
+    forecasts.forEach((f: Forecast) => {
       const key = f.attributes.issued_at;
       const existing = map.get(key) ?? [];
       existing.push(f);
@@ -95,7 +96,7 @@ export default function ForecastsPage() {
           onChange={(e) => setStationId(Number(e.target.value))}
           className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
         >
-          {stations.map((s) => (
+          {stations.map((s: Station) => (
             <option key={s.id} value={s.id}>
               {s.attributes.name} ({s.attributes.code})
             </option>

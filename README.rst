@@ -4,8 +4,8 @@ Tama Hidrovias – Plataforma de Previsão Hidrológica
 .. image:: https://img.shields.io/badge/license-MIT-blue.svg
    :target: LICENSE
 
-**Tama Hidrovias** é uma plataforma integrada de previsão hidrológica para bacias
-hidrográficas brasileiras. O sistema combina dados de reanálise climática (ERA5/Copernicus),
+**Tama Hidrovias** é uma plataforma integrada de previsão hidrológica para aregião dos rios Madeira e Tapajós, focada no monitoramento de hidrovias e gestão de recursos hídricos. O sistema processa dados climáticos do ERA5, recorta por bacias hidrográficas específicas e serve camadas raster interativas para visualização em mapas 
+hidrográficas brasileiras. O sistema combina dados de reanálise climática,
 processamento geoespacial em Python, uma API headless Strapi, visualização interativa com
 Next.js e servição de camadas raster via TileServer-GL.
 
@@ -19,24 +19,24 @@ Arquitetura
 .. code-block:: text
 
     ┌──────────────────────────────────────────────────────────┐
-    │                     Fontes de Dados                       │
-    │         ERA5 / Copernicus CDS  ·  Shapefiles ANA          │
+    │                     Fontes de Dados                      │
+    │         Remote Repository  ·  Shapefiles                 │
     └───────────────────────┬──────────────────────────────────┘
                             │
                             ▼
     ┌───────────────────────────────────────┐
-    │         Python Worker (pipeline)       │
-    │  · Download ERA5 via cdsapi            │
-    │  · Recorte por bacia (GDAL/Shapely)    │
-    │  · Geração de GeoTIFF / NetCDF         │
-    │  · Publicação via API REST → Strapi    │
+    │         Python Worker (pipeline)      │
+    │  · Download                           │
+    │  · Recorte  (GDAL/Shapely)            │
+    │  · Geração de GeoTIFF / NetCDF        │
+    │  · Publicação via API REST → Strapi   │
     └───────────┬───────────────────────────┘
                 │                   │
                 ▼                   ▼
     ┌───────────────────┐  ┌────────────────────┐
-    │   Strapi (API)    │  │  TileServer-GL      │
-    │   porta 1337      │  │  porta 8080         │
-    │   PostgreSQL 15   │  │  GeoTIFF → XYZ/PNG  │
+    │   Strapi (API)    │  │  TileServer-GL     │
+    │   porta 1337      │  │  porta 8080        │
+    │   PostgreSQL 15   │  │  GeoTIFF → XYZ/PNG │
     └─────────┬─────────┘  └────────┬───────────┘
               │                     │
               └──────────┬──────────┘

@@ -37,7 +37,7 @@ export default function StationSearchPanel({
 
   const filtered = useMemo(() => {
     const stations = data?.data ?? [];
-    return stations.filter((s) => {
+    return stations.filter((s: Station) => {
       const matchQuery =
         !query ||
         s.attributes.name.toLowerCase().includes(query.toLowerCase()) ||
@@ -149,7 +149,7 @@ export default function StationSearchPanel({
             </p>
           )}
 
-          {filtered.map((station) => (
+          {filtered.map((station: Station) => (
             <button
               key={station.id}
               onClick={() => {
