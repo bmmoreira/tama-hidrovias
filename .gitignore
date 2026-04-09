@@ -154,3 +154,34 @@ dmypy.json
 cython_debug/
 
 # End of https://www.toptal.com/developers/gitignore/api/python,jupyternotebooks
+
+# Egg / build artifacts
+*.egg-info/
+.pytest_cache/
+
+# Node.js
+node_modules/
+.next/
+out/
+
+# Docker
+.env
+
+# Data files (keep structure, not data)
+data/geotiffs/*.tif
+data/geotiffs/*.tiff
+data/raw/*.nc
+data/raw/*.grib2
+data/processed/*.nc
+data/processed/*.csv
+data/shapefiles/*.shp
+data/shapefiles/*.dbf
+data/shapefiles/*.prj
+data/shapefiles/*.shx
+
+# Strapi
+strapi/.tmp/
+strapi/build/
+strapi/dist/
+strapi/exports/
+
