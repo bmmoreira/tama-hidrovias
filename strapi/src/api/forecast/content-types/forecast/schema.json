@@ -1,0 +1,30 @@
+{
+  "kind": "collectionType",
+  "collectionName": "forecasts",
+  "info": {
+    "singularName": "forecast",
+    "pluralName": "forecasts",
+    "displayName": "Forecast"
+  },
+  "options": { "draftAndPublish": false },
+  "attributes": {
+    "station": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::station.station",
+      "inversedBy": "forecasts"
+    },
+    "issued_at": { "type": "datetime", "required": true },
+    "valid_at": { "type": "datetime", "required": true },
+    "lead_time_days": { "type": "integer", "required": true },
+    "variable": {
+      "type": "enumeration",
+      "enum": ["flow_m3s", "level_m", "precipitation_mm", "water_surface_elevation_m"],
+      "required": true
+    },
+    "value": { "type": "float", "required": true },
+    "model": { "type": "string" },
+    "ensemble_member": { "type": "integer" },
+    "bias_corrected": { "type": "boolean", "default": false }
+  }
+}

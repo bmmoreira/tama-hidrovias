@@ -1,0 +1,38 @@
+{
+  "kind": "collectionType",
+  "collectionName": "stations",
+  "info": {
+    "singularName": "station",
+    "pluralName": "stations",
+    "displayName": "Station"
+  },
+  "options": { "draftAndPublish": true },
+  "attributes": {
+    "name": { "type": "string", "required": true },
+    "code": { "type": "string", "unique": true, "required": true },
+    "source": {
+      "type": "enumeration",
+      "enum": ["ANA", "HydroWeb", "SNIRH", "Virtual"],
+      "required": true
+    },
+    "latitude": { "type": "float", "required": true },
+    "longitude": { "type": "float", "required": true },
+    "altitude_m": { "type": "float" },
+    "basin": { "type": "string" },
+    "river": { "type": "string" },
+    "active": { "type": "boolean", "default": true },
+    "metadata": { "type": "json" },
+    "measurements": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::measurement.measurement",
+      "mappedBy": "station"
+    },
+    "forecasts": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::forecast.forecast",
+      "mappedBy": "station"
+    }
+  }
+}

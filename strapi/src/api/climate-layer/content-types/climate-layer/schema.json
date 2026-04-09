@@ -1,0 +1,27 @@
+{
+  "kind": "collectionType",
+  "collectionName": "climate_layers",
+  "info": {
+    "singularName": "climate-layer",
+    "pluralName": "climate-layers",
+    "displayName": "Climate Layer"
+  },
+  "options": { "draftAndPublish": true },
+  "attributes": {
+    "title": { "type": "string", "required": true },
+    "variable": { "type": "string", "required": true },
+    "model": { "type": "string" },
+    "period_start": { "type": "date" },
+    "period_end": { "type": "date" },
+    "geotiff": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": ["files"]
+    },
+    "colormap": { "type": "string", "default": "Blues" },
+    "min_value": { "type": "float" },
+    "max_value": { "type": "float" },
+    "metadata": { "type": "json" }
+  }
+}
