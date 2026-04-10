@@ -11,6 +11,7 @@ Next.js e serviço de camadas raster via TileServer-GL.
 
 .. image:: images/logo5.png
    :alt: Logo da plataforma Tama Hidrovias
+   :width: 200px
 
 .. contents:: Conteúdo
    :depth: 2
