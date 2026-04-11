@@ -1,10 +1,10 @@
-Tama Hidrovias – Plataforma de Previsão Hidrológica
+TaMa Hidrovias – Plataforma de Previsão Hidrológica
 ====================================================
 
 .. image:: https://img.shields.io/badge/license-MIT-blue.svg
    :target: LICENSE
 
-**Tama Hidrovias** é uma plataforma integrada de previsão hidrológica para a
+**TaMa Hidrovias** é uma plataforma integrada de previsão hidrológica para a
 região dos rios Madeira e Tapajós, focada no monitoramento de hidrovias e
 gestão de recursos hídricos. O sistema processa dados climáticos, recorta
 regiões hidrográficas específicas e serve camadas raster interativas para
@@ -67,6 +67,7 @@ executáveis vivem nos diretórios de serviço:
     ├── web/           # frontend
     ├── cms/           # CMS e API
     ├── pipeline/      # pipeline de dados e testes
+    ├── pgadmin/       # bootstrap config do pgAdmin
     ├── tileserver/    # serviço de tiles raster
     ├── data/          # dados locais brutos e processados
     ├── docs/          # documentação Sphinx
@@ -89,6 +90,7 @@ Início Rápido com Docker
     # 3. Acesse a plataforma
     # Frontend:    http://localhost:3000
     # API Strapi:  http://localhost:1337/admin
+    # pgAdmin:     http://localhost:5050
     # TileServer:  http://localhost:8080
 
 Serviços
@@ -100,6 +102,8 @@ Serviços
 | ``web``        | 3000  | Interface web com mapas interativos (Mapbox GL)   |
 +----------------+-------+---------------------------------------------------+
 | ``strapi``     | 1337  | API headless REST/GraphQL + painel de administração|
++----------------+-------+---------------------------------------------------+
+| ``pgadmin``    | 5050  | Interface web gráfica para administrar o PostgreSQL|
 +----------------+-------+---------------------------------------------------+
 | ``tileserver`` | 8080  | Servição de camadas raster GeoTIFF via TileJSON   |
 +----------------+-------+---------------------------------------------------+
@@ -125,6 +129,19 @@ Para rodar o pipeline manualmente:
 .. code-block:: bash
 
     docker compose run --rm python-worker
+
+Administração do Banco
+----------------------
+
+O stack inclui um ``pgAdmin`` acessível pelo navegador em
+``http://localhost:5050``.
+
+- Login: use ``PGADMIN_DEFAULT_EMAIL`` e ``PGADMIN_DEFAULT_PASSWORD`` do seu
+  arquivo ``.env``.
+- O servidor PostgreSQL principal é pré-cadastrado como ``Tama Hidrovias
+  Postgres``.
+- Na primeira conexão ao servidor, informe a senha do banco PostgreSQL
+  (por padrão, ``POSTGRES_PASSWORD``).
 
 Configuração para Desenvolvimento
 -----------------------------------
@@ -194,6 +211,10 @@ Copie o arquivo apropriado para ``.env`` e preencha os valores:
      - Descrição
    * - ``POSTGRES_PASSWORD``
      - Senha do banco de dados PostgreSQL
+   * - ``PGADMIN_DEFAULT_EMAIL``
+     - Login inicial do pgAdmin no navegador
+   * - ``PGADMIN_DEFAULT_PASSWORD``
+     - Senha inicial do pgAdmin no navegador
    * - ``APP_KEYS``
      - Chaves de sessão do Strapi (gere valores aleatórios)
    * - ``ADMIN_JWT_SECRET``

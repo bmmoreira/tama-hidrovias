@@ -1,13 +1,14 @@
 API
 ===
 
-The platform is composed of four primary services:
+The platform is composed of five primary services:
 
 - ``web`` exposes the user-facing web interface and map views.
 - ``cms`` stores domain entities such as stations, measurements,
   forecasts, and climate layers.
 - ``pipeline`` contains collectors, processing steps, evaluation code,
   and automation for the hydrology pipeline.
+- ``pgadmin`` provides a browser-based PostgreSQL administration interface.
 - ``tileserver`` serves generated GeoTIFF assets as map tiles.
 
 Python package layout

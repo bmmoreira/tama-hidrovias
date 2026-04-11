@@ -8,6 +8,7 @@ This repository is a multi-service platform. The repository root is the orchestr
 web/         Frontend application
 cms/         CMS and API
 pipeline/    Data pipeline and tests
+pgadmin/     pgAdmin bootstrap configuration
 tileserver/  Raster tile service
 data/        Local raw and processed data
 docs/        Sphinx documentation
@@ -21,6 +22,8 @@ docs/        Sphinx documentation
 cp .env.example .env
 docker compose up --build
 ```
+
+Then open `http://localhost:5050` to manage PostgreSQL in pgAdmin.
 
 ### Frontend
 

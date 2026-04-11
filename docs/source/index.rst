@@ -9,6 +9,7 @@ The repository is organized as a coordinated set of services:
 - ``web/`` for the frontend application
 - ``cms/`` for the CMS and API
 - ``pipeline/`` for the data pipeline
+- ``pgadmin/`` for pgAdmin bootstrap configuration
 - ``tileserver/`` for raster tile delivery
 
 .. note::
