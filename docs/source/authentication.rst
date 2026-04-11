@@ -52,6 +52,7 @@ The authentication system is centered in these files:
 - ``web/src/app/api/measurements/route.ts``
 - ``web/src/app/api/forecasts/route.ts``
 - ``web/src/app/api/climate-layers/route.ts``
+- ``web/src/app/api/users/me/preferences/route.ts``
   Internal proxy routes used by the app.
 - ``web/src/app/dashboard/layout.tsx``
   Dashboard gate using ``getServerSession(authOptions)``.
@@ -110,6 +111,26 @@ Current behavior:
   Next.js route first and are then forwarded to Strapi with the server-held JWT.
 
 This keeps the browser from ever handling the Strapi bearer token directly.
+
+Current-User Preferences Route
+------------------------------
+
+The project now also exposes a current-user preferences route through the same
+authenticated proxy pattern.
+
+Web-facing route:
+
+- ``GET /api/users/me/preferences``
+- ``PUT /api/users/me/preferences``
+
+Important implementation files:
+
+- ``web/src/app/api/users/me/preferences/route.ts``
+- ``cms/src/api/user-preference/controllers/user-preference.js``
+- ``cms/src/api/user-preference/routes/custom-user-preference.js``
+
+This route intentionally stays separate from ``/api/users/me`` so identity and
+role bootstrap remain isolated from mutable UI preferences.
 
 Roles and Authorization
 -----------------------
@@ -231,3 +252,12 @@ When authentication stops working, check these in order:
 
 If login succeeds but writes fail, the usual cause is missing Strapi role
 permissions rather than a NextAuth problem.
+
+If the preferences route fails while login still works, check these next:
+
+1. The Strapi container was restarted after schema or controller changes.
+2. ``web/src/app/api/users/me/preferences/route.ts`` is forwarding with
+   ``requireAuth: true``.
+3. The Strapi controller still validates the incoming bearer token correctly.
+4. The request is made from an authenticated session and not an anonymous page.
+

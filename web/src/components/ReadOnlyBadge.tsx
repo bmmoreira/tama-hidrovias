@@ -17,7 +17,7 @@ export default function ReadOnlyBadge({
     <span
       title={title}
       className={clsx(
-        'inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700',
+        'inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 dark:border-amber-900 dark:bg-amber-950/60 dark:text-amber-200',
         className,
       )}
     >

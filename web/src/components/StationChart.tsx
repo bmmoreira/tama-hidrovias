@@ -13,6 +13,7 @@ import {
 } from 'recharts';
 import { getMeasurements } from '@/lib/strapi';
 import type { Measurement, StationVariable } from '@/lib/strapi';
+import { cn } from '@/lib/utils';
 
 interface StationChartProps {
   stationId: number;
@@ -112,14 +113,14 @@ export default function StationChart({
       <p className="mb-2 text-xs font-medium text-gray-500">{label}</p>
       <ResponsiveContainer width="100%" height={200}>
         <LineChart data={chartData} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.24)" />
           <XAxis
             dataKey="date"
-            tick={{ fontSize: 11, fill: '#6b7280' }}
+            tick={{ fontSize: 11, fill: '#94a3b8' }}
             interval="preserveStartEnd"
           />
           <YAxis
-            tick={{ fontSize: 11, fill: '#6b7280' }}
+            tick={{ fontSize: 11, fill: '#94a3b8' }}
             tickFormatter={(v: number) => v.toFixed(1)}
           />
           <Tooltip

@@ -5,6 +5,14 @@ import useSWR from 'swr';
 import { getStations } from '@/lib/strapi';
 import type { Station } from '@/lib/strapi';
 import StationChart from '@/components/StationChart';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export default function DashboardCharts() {
   const { data: stationsData } = useSWR('dashboard-stations', () =>
@@ -20,27 +28,32 @@ export default function DashboardCharts() {
   const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-base font-semibold text-gray-800">
+    <Card>
+      <CardHeader className="mb-0 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <CardTitle className="text-base text-gray-800 dark:text-slate-100">
           Medições Recentes
-        </h2>
+        </CardTitle>
         {stations.length > 0 && (
-          <select
-            value={stationId ?? ''}
-            onChange={(e) => setSelectedId(Number(e.target.value))}
-            className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm outline-none focus:border-blue-400"
+          <Select
+            value={String(stationId ?? '')}
+            onValueChange={(value) => setSelectedId(Number(value))}
           >
+            <SelectTrigger className="sm:w-80">
+              <SelectValue placeholder="Selecione uma estação" />
+            </SelectTrigger>
+            <SelectContent>
             {stations.map((s: Station) => (
-              <option key={s.id} value={s.id}>
+              <SelectItem key={s.id} value={String(s.id)}>
                 {s.attributes.name} ({s.attributes.code})
-              </option>
+              </SelectItem>
             ))}
-          </select>
+            </SelectContent>
+          </Select>
         )}
-      </div>
+      </CardHeader>
 
-      {stationId ? (
+      <CardContent>
+        {stationId ? (
         <StationChart
           stationId={stationId}
           variable="level_m"
@@ -48,10 +61,11 @@ export default function DashboardCharts() {
           to={to}
         />
       ) : (
-        <div className="flex h-48 items-center justify-center text-sm text-gray-400">
+        <div className="flex h-48 items-center justify-center text-sm text-gray-400 dark:text-slate-500">
           Nenhuma estação disponível
         </div>
       )}
-    </div>
+      </CardContent>
+    </Card>
   );
 }

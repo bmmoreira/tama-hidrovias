@@ -3,7 +3,16 @@
 import React from 'react';
 import type { ReactNode } from 'react';
 import clsx from 'clsx';
-import { Loader2, X } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 type ConfirmationModalProps = {
   isOpen: boolean;
@@ -32,71 +41,71 @@ export default function ConfirmationModal({
   onClose,
   onConfirm,
 }: ConfirmationModalProps) {
-  if (!isOpen) {
-    return null;
-  }
-
   return (
-    <>
-      <div
-        className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
-        onClick={loading ? undefined : onClose}
-        data-testid="confirmation-backdrop"
-      />
-
-      <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
-        <div className="w-full max-w-md rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl">
-          <div className="flex items-start justify-between border-b border-gray-100 px-6 py-4">
-            <div className="flex items-start gap-3">
-              {icon ? <span className="mt-0.5 shrink-0">{icon}</span> : null}
-              <div>
-                <h2 className="text-base font-semibold text-gray-900">{title}</h2>
-                {description ? (
-                  <p className="mt-1 text-sm text-gray-500">{description}</p>
-                ) : null}
-              </div>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open && !loading) {
+          onClose();
+        }
+      }}
+    >
+      <DialogContent
+        hideCloseButton={loading}
+        className="max-w-md rounded-2xl border border-border bg-card p-0"
+        onPointerDownOutside={(event) => {
+          if (loading) {
+            event.preventDefault();
+          }
+        }}
+      >
+        <div data-testid="confirmation-backdrop" className="sr-only" />
+        <div className="border-b border-border px-6 py-4">
+          <DialogHeader className="flex-row items-start gap-3 space-y-0 pr-10">
+            {icon ? <span className="mt-0.5 shrink-0">{icon}</span> : null}
+            <div>
+              <DialogTitle className="text-base text-gray-900 dark:text-slate-100">
+                {title}
+              </DialogTitle>
+              {description ? (
+                <DialogDescription className="mt-1 text-sm text-gray-500 dark:text-slate-400">
+                  {description}
+                </DialogDescription>
+              ) : null}
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={loading}
-              className="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
-              aria-label="Fechar"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
+          </DialogHeader>
+        </div>
 
-          <div className="space-y-4 px-6 py-5">
-            {children}
+        <div className="space-y-4 px-6 py-5">
+          {children}
 
-            <div className="flex gap-3 pt-1">
+          <DialogFooter className="pt-1">
+            <DialogClose asChild>
               <button
                 type="button"
-                onClick={onClose}
                 disabled={loading}
-                className="flex-1 rounded-xl border border-gray-200 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex-1 rounded-xl border border-gray-200 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
               >
                 {cancelLabel}
               </button>
-              <button
-                type="button"
-                onClick={onConfirm}
-                disabled={loading}
-                className={clsx(
-                  'flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-medium text-white transition disabled:cursor-not-allowed disabled:opacity-60',
-                  tone === 'danger'
-                    ? 'bg-red-600 hover:bg-red-700'
-                    : 'bg-blue-600 hover:bg-blue-700',
-                )}
-              >
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                {confirmLabel}
-              </button>
-            </div>
-          </div>
+            </DialogClose>
+            <button
+              type="button"
+              onClick={onConfirm}
+              disabled={loading}
+              className={clsx(
+                'flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-medium text-white transition disabled:cursor-not-allowed disabled:opacity-60',
+                tone === 'danger'
+                  ? 'bg-red-600 hover:bg-red-700'
+                  : 'bg-blue-600 hover:bg-blue-700',
+              )}
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              {confirmLabel}
+            </button>
+          </DialogFooter>
         </div>
-      </div>
-    </>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -13,9 +13,20 @@ import Toast from '@/components/Toast';
 import { isAnalystRole } from '@/lib/roles';
 import ProtectedActionButton from '@/components/ProtectedActionButton';
 import ReadOnlyBadge from '@/components/ReadOnlyBadge';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 import StationFormModal from './StationFormModal';
 
 const SOURCES = ['Todas', 'ANA', 'HydroWeb', 'SNIRH', 'Virtual'] as const;
+const ALL_BASINS = '__all_basins__';
 
 type ToastState = {
   message: string;
@@ -101,10 +112,10 @@ export default function StationsPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-gray-900">Estações</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Estações</h1>
             {!canManageStations ? <ReadOnlyBadge /> : null}
           </div>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-slate-400">
             {data?.meta.pagination.total ?? 0} estações cadastradas
           </p>
         </div>
@@ -121,83 +132,93 @@ export default function StationsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:flex-row">
+      <Card className="p-4">
+      <div className="flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-slate-500" />
+          <Input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar por nome ou código"
-            className="w-full rounded-lg border border-gray-200 py-2 pl-9 pr-3 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+            className="pl-9"
           />
         </div>
-        <select
+        <Select
           value={sourceFilter}
-          onChange={(e) =>
-            setSourceFilter(e.target.value as (typeof SOURCES)[number])
+          onValueChange={(value) =>
+            setSourceFilter(value as (typeof SOURCES)[number])
           }
-          className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
         >
+          <SelectTrigger className="sm:w-52">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
           {SOURCES.map((s) => (
-            <option key={s} value={s}>
+            <SelectItem key={s} value={s}>
               {s === 'Todas' ? 'Todas as fontes' : s}
-            </option>
+            </SelectItem>
           ))}
-        </select>
-        <select
-          value={basinFilter}
-          onChange={(e) => setBasinFilter(e.target.value)}
-          className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+          </SelectContent>
+        </Select>
+        <Select
+          value={basinFilter || ALL_BASINS}
+          onValueChange={(value) => setBasinFilter(value === ALL_BASINS ? '' : value)}
         >
-          <option value="">Todas as bacias</option>
+          <SelectTrigger className="sm:w-56">
+            <SelectValue placeholder="Todas as bacias" />
+          </SelectTrigger>
+          <SelectContent>
+          <SelectItem value={ALL_BASINS}>Todas as bacias</SelectItem>
           {basins.map((b) => (
-            <option key={b} value={b}>
+            <SelectItem key={b} value={b}>
               {b}
-            </option>
+            </SelectItem>
           ))}
-        </select>
+          </SelectContent>
+        </Select>
       </div>
+      </Card>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+      <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
-                <th className="px-4 py-3 text-left font-medium text-gray-600">
+              <tr className="border-b border-gray-100 bg-gray-50 dark:border-slate-800 dark:bg-slate-900">
+                <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-slate-300">
                   Código
                 </th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">
+                <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-slate-300">
                   Nome
                 </th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">
+                <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-slate-300">
                   Fonte
                 </th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">
+                <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-slate-300">
                   Bacia
                 </th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">
+                <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-slate-300">
                   Rio
                 </th>
-                <th className="px-4 py-3 text-right font-medium text-gray-600">
+                <th className="px-4 py-3 text-right font-medium text-gray-600 dark:text-slate-300">
                   Lat / Lon
                 </th>
-                <th className="px-4 py-3 text-center font-medium text-gray-600">
+                <th className="px-4 py-3 text-center font-medium text-gray-600 dark:text-slate-300">
                   Status
                 </th>
-                <th className="px-4 py-3 text-right font-medium text-gray-600">
+                <th className="px-4 py-3 text-right font-medium text-gray-600 dark:text-slate-300">
                   Ações
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
               {isLoading &&
                 [...Array(8)].map((_, i) => (
                   <tr key={i}>
                     {[...Array(8)].map((__, j) => (
                       <td key={j} className="px-4 py-3">
-                        <div className="h-4 animate-pulse rounded bg-gray-100" />
+                        <div className="h-4 animate-pulse rounded bg-gray-100 dark:bg-slate-800" />
                       </td>
                     ))}
                   </tr>
@@ -206,7 +227,7 @@ export default function StationsPage() {
                 <tr>
                   <td
                     colSpan={8}
-                    className="px-4 py-8 text-center text-gray-400"
+                    className="px-4 py-8 text-center text-gray-400 dark:text-slate-500"
                   >
                     Nenhuma estação encontrada.
                   </td>
@@ -225,7 +246,7 @@ export default function StationsPage() {
             </tbody>
           </table>
         </div>
-      </div>
+      </Card>
 
       {canManageStations ? (
         <StationFormModal
@@ -347,21 +368,21 @@ function StationRow({
   };
 
   return (
-    <tr className="transition hover:bg-gray-50">
-      <td className="px-4 py-3 font-mono text-xs text-gray-700">{a.code}</td>
-      <td className="px-4 py-3 font-medium text-gray-900">{a.name}</td>
+    <tr className="transition hover:bg-gray-50 dark:hover:bg-slate-900/60">
+      <td className="px-4 py-3 font-mono text-xs text-gray-700 dark:text-slate-300">{a.code}</td>
+      <td className="px-4 py-3 font-medium text-gray-900 dark:text-slate-100">{a.name}</td>
       <td className="px-4 py-3">
         <span
           className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-            sourceColors[a.source ?? ''] ?? 'bg-gray-100 text-gray-600'
+            sourceColors[a.source ?? ''] ?? 'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-slate-300'
           }`}
         >
           {a.source}
         </span>
       </td>
-      <td className="px-4 py-3 text-gray-600">{a.basin || '—'}</td>
-      <td className="px-4 py-3 text-gray-600">{a.river || '—'}</td>
-      <td className="px-4 py-3 text-right font-mono text-xs text-gray-500">
+      <td className="px-4 py-3 text-gray-600 dark:text-slate-300">{a.basin || '—'}</td>
+      <td className="px-4 py-3 text-gray-600 dark:text-slate-300">{a.river || '—'}</td>
+      <td className="px-4 py-3 text-right font-mono text-xs text-gray-500 dark:text-slate-400">
         {a.latitude.toFixed(4)}, {a.longitude.toFixed(4)}
       </td>
       <td className="px-4 py-3 text-center">
@@ -374,7 +395,7 @@ function StationRow({
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center justify-end gap-2">
-          <button
+          <Button
             type="button"
             onClick={onEdit}
             disabled={!canManageStations || isBusy}
@@ -383,12 +404,14 @@ function StationRow({
                 ? 'Editar estação'
                 : 'Somente analistas podem editar estações.'
             }
-            className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-600 transition hover:border-blue-200 hover:text-blue-700 disabled:cursor-not-allowed disabled:border-gray-100 disabled:text-gray-300"
+            variant="outline"
+            size="sm"
+            className="gap-1 border-gray-200 text-gray-600 hover:border-blue-200 hover:text-blue-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-sky-700 dark:hover:text-sky-300"
           >
             <Pencil className="h-3.5 w-3.5" />
             {isEditing ? 'Salvando…' : 'Editar'}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             onClick={onDelete}
             disabled={!canManageStations || isBusy}
@@ -397,11 +420,13 @@ function StationRow({
                 ? 'Excluir estação'
                 : 'Somente analistas podem excluir estações.'
             }
-            className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-600 transition hover:border-red-200 hover:text-red-700 disabled:cursor-not-allowed disabled:border-gray-100 disabled:text-gray-300"
+            variant="outline"
+            size="sm"
+            className="gap-1 border-gray-200 text-gray-600 hover:border-red-200 hover:text-red-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-red-700 dark:hover:text-red-300"
           >
             <Trash2 className="h-3.5 w-3.5" />
             {isDeleting ? 'Excluindo…' : 'Excluir'}
-          </button>
+          </Button>
         </div>
       </td>
     </tr>

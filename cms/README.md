@@ -68,8 +68,40 @@ Any new protected feature must be implemented in two places:
 1. Strapi permission configuration for the target role.
 2. Matching UI and API enforcement in the Next.js application.
 
+## User preferences model
+
+User-scoped interface and map settings are stored outside the plugin user model
+in a dedicated content type:
+
+- `src/api/user-preference/content-types/user-preference/schema.json`
+
+Supporting components:
+
+- `src/components/preferences/appearance-settings.json`
+- `src/components/preferences/map-settings.json`
+- `src/components/preferences/alert-settings.json`
+
+Current-user preferences routes:
+
+- `GET /api/users/me/preferences`
+- `PUT /api/users/me/preferences`
+
+Implementation files:
+
+- `src/api/user-preference/controllers/user-preference.js`
+- `src/api/user-preference/routes/custom-user-preference.js`
+
+This design intentionally keeps `GET /api/users/me` focused on identity and
+role resolution, while mutable dashboard settings are handled by a separate
+route and model.
+
+Operationally, if any file under `src/api/user-preference/` or
+`src/components/preferences/` changes, restart the Strapi service so the schema
+and route definitions are reloaded.
+
 ## Related documentation
 
 - Root overview: `../README.rst`
 - Architecture/auth docs: `../docs/source/authentication.rst`
 - Dashboard customization notes: `../docs/source/dashboard.rst`
+- Preferences and map defaults: `../docs/source/preferences.rst`

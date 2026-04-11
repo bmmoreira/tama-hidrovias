@@ -6,6 +6,7 @@ import useSWR from 'swr';
 import { Layers, Calendar, Database, Map } from 'lucide-react';
 import { getClimateLayers } from '@/lib/strapi';
 import type { ClimateLayer } from '@/lib/strapi';
+import { Card } from '@/components/ui/card';
 
 const MapboxMap = dynamic(() => import('@/components/MapboxMap'), {
   ssr: false,
@@ -44,8 +45,8 @@ export default function ClimateLayersPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Camadas Climáticas</h1>
-        <p className="text-sm text-gray-500">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Camadas Climáticas</h1>
+        <p className="text-sm text-gray-500 dark:text-slate-400">
           GeoTIFFs e camadas raster disponíveis para visualização
         </p>
       </div>
@@ -57,12 +58,12 @@ export default function ClimateLayersPage() {
             [...Array(4)].map((_, i) => (
               <div
                 key={i}
-                className="h-24 animate-pulse rounded-xl bg-gray-100"
+                className="h-24 animate-pulse rounded-xl bg-gray-100 dark:bg-slate-800"
               />
             ))}
 
           {!isLoading && layers.length === 0 && (
-            <div className="flex h-40 items-center justify-center rounded-xl border border-dashed border-gray-200 text-sm text-gray-400">
+            <div className="flex h-40 items-center justify-center rounded-xl border border-dashed border-gray-200 text-sm text-gray-400 dark:border-slate-800 dark:text-slate-500">
               Nenhuma camada climática cadastrada.
             </div>
           )}
@@ -77,24 +78,24 @@ export default function ClimateLayersPage() {
               }
               className={`w-full rounded-xl border p-4 text-left shadow-sm transition hover:border-blue-200 hover:shadow-md ${
                 selectedLayer?.id === layer.id
-                  ? 'border-blue-400 bg-blue-50'
-                  : 'border-gray-200 bg-white'
+                  ? 'border-blue-400 bg-blue-50 dark:border-sky-700 dark:bg-sky-950/40'
+                  : 'border-gray-200 bg-white dark:border-slate-800 dark:bg-slate-950'
               }`}
             >
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 rounded-lg bg-blue-100 p-2 text-blue-700">
+                <div className="mt-0.5 rounded-lg bg-blue-100 p-2 text-blue-700 dark:bg-sky-950/60 dark:text-sky-300">
                   <Layers className="h-4 w-4" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium text-gray-900">
+                  <p className="truncate font-medium text-gray-900 dark:text-slate-100">
                     {layer.attributes.title}
                   </p>
                   {layer.attributes.model && (
-                    <p className="mt-0.5 truncate text-xs text-gray-500">
+                    <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-slate-400">
                       Modelo: {layer.attributes.model}
                     </p>
                   )}
-                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-400">
+                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-400 dark:text-slate-500">
                     <span className="flex items-center gap-1">
                       <Database className="h-3 w-3" />
                       {layer.attributes.variable}
@@ -107,7 +108,7 @@ export default function ClimateLayersPage() {
                   </div>
                 </div>
                 {selectedLayer?.id === layer.id && (
-                  <Map className="h-4 w-4 shrink-0 text-blue-600" />
+                  <Map className="h-4 w-4 shrink-0 text-blue-600 dark:text-sky-300" />
                 )}
               </div>
             </button>
@@ -115,7 +116,7 @@ export default function ClimateLayersPage() {
         </div>
 
         {/* Preview map */}
-        <div className="sticky top-4 h-80 overflow-hidden rounded-xl border border-gray-200 bg-gray-100 shadow-sm lg:h-[500px]">
+        <Card className="sticky top-4 h-80 overflow-hidden bg-gray-100 lg:h-[500px] dark:border-slate-800 dark:bg-slate-900">
           {selectedLayer ? (
             <MapboxMap
               initialViewState={{ longitude: -52, latitude: -15, zoom: 4 }}
@@ -123,19 +124,19 @@ export default function ClimateLayersPage() {
               tileLayerUrl={layerTileUrl(selectedLayer)}
             />
           ) : (
-            <div className="flex h-full flex-col items-center justify-center gap-2 text-gray-400">
-              <Map className="h-10 w-10 text-gray-300" />
+            <div className="flex h-full flex-col items-center justify-center gap-2 text-gray-400 dark:text-slate-500">
+              <Map className="h-10 w-10 text-gray-300 dark:text-slate-700" />
               <p className="text-sm">Selecione uma camada para visualizar</p>
             </div>
           )}
 
           {selectedLayer && (
-            <div className="absolute bottom-3 left-3 rounded-lg bg-white/90 px-3 py-1.5 text-xs text-gray-700 shadow backdrop-blur">
+            <div className="absolute bottom-3 left-3 rounded-lg bg-white/90 px-3 py-1.5 text-xs text-gray-700 shadow backdrop-blur dark:bg-slate-950/90 dark:text-slate-200">
               <strong>{selectedLayer.attributes.title}</strong> ·{' '}
               {selectedLayer.attributes.variable}
             </div>
           )}
-        </div>
+        </Card>
       </div>
     </div>
   );

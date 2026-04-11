@@ -16,6 +16,14 @@ import {
 } from 'recharts';
 import { getStations, getForecasts } from '@/lib/strapi';
 import type { Forecast, StationVariable } from '@/lib/strapi';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const VARIABLES: StationVariable[] = ['level_m', 'flow_m3s', 'precipitation_mm'];
 const VARIABLE_LABELS: Record<StationVariable, string> = {
@@ -83,50 +91,61 @@ export default function ForecastsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Previsões</h1>
-        <p className="text-sm text-gray-500">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Previsões</h1>
+        <p className="text-sm text-gray-500 dark:text-slate-400">
           Previsões hidrológicas para os próximos 15 dias
         </p>
       </div>
 
       {/* Selectors */}
-      <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:flex-row">
-        <select
-          value={activeStationId ?? ''}
-          onChange={(e) => setStationId(Number(e.target.value))}
-          className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+      <Card className="p-4">
+        <div className="flex flex-col gap-3 sm:flex-row">
+        <Select
+          value={String(activeStationId ?? '')}
+          onValueChange={(value) => setStationId(Number(value))}
         >
+          <SelectTrigger className="flex-1">
+            <SelectValue placeholder="Selecione uma estação" />
+          </SelectTrigger>
+          <SelectContent>
           {stations.map((s: Station) => (
-            <option key={s.id} value={s.id}>
+            <SelectItem key={s.id} value={String(s.id)}>
               {s.attributes.name} ({s.attributes.code})
-            </option>
+            </SelectItem>
           ))}
-        </select>
-        <select
+          </SelectContent>
+        </Select>
+        <Select
           value={variable}
-          onChange={(e) =>
-            setVariable(e.target.value as StationVariable)
-          }
-          className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+          onValueChange={(value) => setVariable(value as StationVariable)}
         >
+          <SelectTrigger className="sm:w-56">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
           {VARIABLES.map((v) => (
-            <option key={v} value={v}>
+            <SelectItem key={v} value={v}>
               {VARIABLE_LABELS[v]}
-            </option>
+            </SelectItem>
           ))}
-        </select>
-      </div>
+          </SelectContent>
+        </Select>
+        </div>
+      </Card>
 
       {/* Forecast chart */}
-      <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <h2 className="mb-4 text-sm font-semibold text-gray-700">
+      <Card>
+        <CardHeader>
+        <CardTitle className="mb-0 text-sm font-semibold text-gray-700 dark:text-slate-200">
           Previsão — {VARIABLE_LABELS[variable]}
           {runs[0]?.[0] && (
-            <span className="ml-2 text-xs font-normal text-gray-400">
+            <span className="ml-2 text-xs font-normal text-gray-400 dark:text-slate-500">
               Emissão: {formatDate(runs[0][0])}
             </span>
           )}
-        </h2>
+        </CardTitle>
+        </CardHeader>
+        <CardContent>
 
         {isLoading && (
           <div className="flex h-56 items-center justify-center">
@@ -135,7 +154,7 @@ export default function ForecastsPage() {
         )}
 
         {!isLoading && chartData.length === 0 && (
-          <div className="flex h-56 items-center justify-center text-sm text-gray-400">
+          <div className="flex h-56 items-center justify-center text-sm text-gray-400 dark:text-slate-500">
             Nenhuma previsão disponível para esta estação/variável.
           </div>
         )}
@@ -146,18 +165,18 @@ export default function ForecastsPage() {
               data={chartData}
               margin={{ top: 4, right: 8, left: -16, bottom: 0 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.24)" />
               <XAxis
                 dataKey="date"
-                tick={{ fontSize: 11, fill: '#6b7280' }}
+                tick={{ fontSize: 11, fill: '#94a3b8' }}
                 interval="preserveStartEnd"
               />
               <YAxis
-                tick={{ fontSize: 11, fill: '#6b7280' }}
+                tick={{ fontSize: 11, fill: '#94a3b8' }}
                 tickFormatter={(v: number) => v.toFixed(1)}
               />
               <Tooltip
-                contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                contentStyle={{ fontSize: 12, borderRadius: 8, backgroundColor: '#020817', borderColor: '#1e293b', color: '#e2e8f0' }}
                 formatter={(value: number, name: string) => [
                   `${value.toFixed(2)} ${unit}`,
                   name === 'valor' ? VARIABLE_LABELS[variable] : 'Dispersão',
@@ -176,41 +195,42 @@ export default function ForecastsPage() {
             </LineChart>
           </ResponsiveContainer>
         )}
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Recent runs table */}
       {runs.length > 0 && (
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-          <div className="border-b border-gray-100 px-5 py-3">
-            <h2 className="text-sm font-semibold text-gray-800">
+        <Card className="overflow-hidden">
+          <div className="border-b border-gray-100 px-5 py-3 dark:border-slate-800">
+            <h2 className="text-sm font-semibold text-gray-800 dark:text-slate-100">
               Rodadas Recentes
             </h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100 bg-gray-50">
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">
+                <tr className="border-b border-gray-100 bg-gray-50 dark:border-slate-800 dark:bg-slate-900">
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-slate-300">
                     Modelo
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-slate-300">
                     Emissão
                   </th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-600">
+                  <th className="px-4 py-3 text-right font-medium text-gray-600 dark:text-slate-300">
                     Horizontes (dias)
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
                 {runs.map(([issuedAt, runForecasts]) => (
-                  <tr key={issuedAt} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-gray-900">
+                  <tr key={issuedAt} className="hover:bg-gray-50 dark:hover:bg-slate-900/60">
+                    <td className="px-4 py-3 font-medium text-gray-900 dark:text-slate-100">
                       {runForecasts[0]?.attributes.model ?? '—'}
                     </td>
-                    <td className="px-4 py-3 text-gray-600">
+                    <td className="px-4 py-3 text-gray-600 dark:text-slate-300">
                       {formatDate(issuedAt)}
                     </td>
-                    <td className="px-4 py-3 text-right text-gray-500">
+                    <td className="px-4 py-3 text-right text-gray-500 dark:text-slate-400">
                       {runForecasts.length} prazos
                     </td>
                   </tr>
@@ -218,7 +238,7 @@ export default function ForecastsPage() {
               </tbody>
             </table>
           </div>
-        </div>
+        </Card>
       )}
     </div>
   );

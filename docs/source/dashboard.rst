@@ -179,3 +179,29 @@ When adding a new protected dashboard feature, follow this sequence:
 
 This keeps the role model consistent across product copy, interface behavior,
 and actual authorization.
+
+Preferences And Map Defaults
+----------------------------
+
+The dashboard now includes a dedicated user preferences page:
+
+- ``web/src/app/dashboard/settings/page.tsx``
+- ``web/src/components/ThemeSettingsPanel.tsx``
+
+That page persists user-scoped settings for:
+
+- appearance theme
+- preferred language
+- preferred time zone
+- map base style
+- default map zoom and center coordinates
+- favorite stations
+- alert behavior flags
+
+The map route consumes those saved defaults through:
+
+- ``web/src/app/map/page.tsx``
+- ``web/src/components/MapboxMap.tsx``
+
+For the full technical flow, model details, and route behavior, see
+``preferences.rst``.

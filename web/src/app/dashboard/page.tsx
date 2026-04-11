@@ -23,8 +23,8 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Visão Geral</h1>
-        <p className="text-sm text-gray-500">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Visão Geral</h1>
+        <p className="text-sm text-gray-500 dark:text-slate-400">
           Bem-vindo ao painel de controle do Tama Hidrovias
         </p>
       </div>
@@ -70,13 +70,13 @@ export default async function DashboardPage() {
           <Link
             key={ql.href}
             href={ql.href}
-            className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-blue-200 hover:shadow-md"
+            className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-blue-200 hover:shadow-md dark:border-slate-800 dark:bg-slate-950 dark:hover:border-sky-700"
           >
-            <div className="mb-2 inline-flex rounded-lg bg-blue-50 p-2 text-blue-700">
+            <div className="mb-2 inline-flex rounded-lg bg-blue-50 p-2 text-blue-700 dark:bg-sky-950/60 dark:text-sky-300">
               <ql.Icon className="h-5 w-5" />
             </div>
-            <h3 className="text-sm font-semibold text-gray-800">{ql.label}</h3>
-            <p className="mt-0.5 text-xs text-gray-400">{ql.description}</p>
+            <h3 className="text-sm font-semibold text-gray-800 dark:text-slate-100">{ql.label}</h3>
+            <p className="mt-0.5 text-xs text-gray-400 dark:text-slate-500">{ql.description}</p>
           </Link>
         ))}
       </div>

@@ -4,6 +4,7 @@ import React from 'react';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import clsx from 'clsx';
 import { Lock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 type ProtectedActionButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   allowed: boolean;
@@ -26,21 +27,17 @@ export default function ProtectedActionButton({
 
   return (
     <div className="flex flex-col items-start gap-1 sm:items-end">
-      <button
+      <Button
         {...props}
         disabled={isDisabled}
         title={isDisabled ? deniedReason : title}
-        className={clsx(
-          'inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-white transition',
-          'disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-100',
-          'enabled:bg-blue-600 enabled:hover:bg-blue-700',
-          className,
-        )}
+        variant="default"
+        className={clsx('disabled:bg-gray-300 disabled:text-gray-100 dark:disabled:bg-slate-800 dark:disabled:text-slate-500', className)}
       >
         {children}
-      </button>
+      </Button>
       {!allowed && helperText ? (
-        <p className="inline-flex items-center gap-1 text-xs text-gray-400">
+        <p className="inline-flex items-center gap-1 text-xs text-gray-400 dark:text-slate-500">
           <Lock className="h-3 w-3" />
           {helperText}
         </p>

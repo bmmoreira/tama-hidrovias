@@ -1,0 +1,48 @@
+{
+  "collectionName": "components_preferences_alert_settings",
+  "info": {
+    "displayName": "Alert Settings"
+  },
+  "options": {},
+  "attributes": {
+    "enabled": {
+      "type": "boolean",
+      "default": false
+    },
+    "favoritesOnly": {
+      "type": "boolean",
+      "default": true
+    },
+    "emailNotifications": {
+      "type": "boolean",
+      "default": false
+    },
+    "dashboardNotifications": {
+      "type": "boolean",
+      "default": true
+    },
+    "minimumSeverity": {
+      "type": "enumeration",
+      "enum": ["info", "warning", "critical"],
+      "default": "warning",
+      "required": true
+    },
+    "leadTimeMinutes": {
+      "type": "integer",
+      "default": 60,
+      "required": true
+    },
+    "dailyDigest": {
+      "type": "boolean",
+      "default": false
+    },
+    "stationOfflineAlerts": {
+      "type": "boolean",
+      "default": true
+    },
+    "forecastThresholdAlerts": {
+      "type": "boolean",
+      "default": true
+    }
+  }
+}

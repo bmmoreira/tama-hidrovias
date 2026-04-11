@@ -2,12 +2,22 @@
 
 import React from 'react';
 import { useEffect, useState } from 'react';
-import { Loader2, X } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import {
   createVirtualStation,
   type Station,
   updateStation,
 } from '@/lib/strapi';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 interface StationFormModalProps {
   isOpen: boolean;
@@ -82,10 +92,6 @@ export default function StationFormModal({
     onSubmittingChange?.(loading);
   }, [loading, onSubmittingChange]);
 
-  if (!isOpen) {
-    return null;
-  }
-
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) {
@@ -157,34 +163,37 @@ export default function StationFormModal({
   }
 
   return (
-    <>
-      <div
-        className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
-        onClick={loading ? undefined : onClose}
-      />
-
-      <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
-        <div className="w-full max-w-lg rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl">
-          <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open && !loading) {
+          onClose();
+        }
+      }}
+    >
+      <DialogContent
+        hideCloseButton={loading}
+        className="max-w-lg rounded-2xl border border-border bg-card p-0"
+        onPointerDownOutside={(event) => {
+          if (loading) {
+            event.preventDefault();
+          }
+        }}
+      >
+          <div className="border-b border-gray-100 px-6 py-4 dark:border-slate-800">
+            <DialogHeader>
             <div>
-              <h2 className="text-base font-semibold text-gray-900">
+              <DialogTitle className="text-base text-gray-900 dark:text-slate-100">
                 {isEditing ? 'Editar Estação' : 'Nova Estação Virtual'}
-              </h2>
-              <p className="text-xs text-gray-500">Fonte: {source}</p>
+              </DialogTitle>
+              <DialogDescription className="text-xs text-gray-500 dark:text-slate-400">Fonte: {source}</DialogDescription>
             </div>
-            <button
-              onClick={onClose}
-              disabled={loading}
-              className="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
-              aria-label="Fechar"
-            >
-              <X className="h-5 w-5" />
-            </button>
+            </DialogHeader>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4 px-6 py-5">
             {error ? (
-              <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+              <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-200">
                 {error}
               </div>
             ) : null}
@@ -242,39 +251,37 @@ export default function StationFormModal({
               />
             </div>
 
-            <label className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700">
+            <label className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">
               <input
                 type="checkbox"
                 name="active"
                 checked={form.active}
                 onChange={handleChange}
-                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-900"
               />
               Estação ativa
             </label>
 
-            <div className="flex gap-3 pt-2">
-              <button
-                type="button"
+            <DialogFooter className="pt-2">
+              <Button
+                variant="outline"
                 onClick={onClose}
-                className="flex-1 rounded-xl border border-gray-200 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
                 disabled={loading}
               >
                 Cancelar
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
                 disabled={loading || !form.name || !form.code || !form.latitude || !form.longitude}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-60"
+                className="flex-1"
               >
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                 {loading ? (isEditing ? 'Salvando…' : 'Criando…') : isEditing ? 'Salvar Alterações' : 'Criar Estação'}
-              </button>
-            </div>
+              </Button>
+            </DialogFooter>
           </form>
-        </div>
-      </div>
-    </>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -301,10 +308,10 @@ function FormField({
 }: FormFieldProps) {
   return (
     <div>
-      <label className="mb-1.5 block text-xs font-medium text-gray-700">
+      <label className="mb-1.5 block text-xs font-medium text-gray-700 dark:text-slate-300">
         {label}
       </label>
-      <input
+      <Input
         type={type}
         name={name}
         value={value}
@@ -312,7 +319,6 @@ function FormField({
         required={required}
         placeholder={placeholder}
         step={step}
-        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
       />
     </div>
   );

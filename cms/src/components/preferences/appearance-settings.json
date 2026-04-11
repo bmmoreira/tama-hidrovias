@@ -1,0 +1,26 @@
+{
+  "collectionName": "components_preferences_appearance_settings",
+  "info": {
+    "displayName": "Appearance Settings"
+  },
+  "options": {},
+  "attributes": {
+    "theme": {
+      "type": "enumeration",
+      "enum": ["light", "dark", "system"],
+      "default": "system",
+      "required": true
+    },
+    "language": {
+      "type": "enumeration",
+      "enum": ["pt-BR", "en", "es"],
+      "default": "pt-BR",
+      "required": true
+    },
+    "timeZone": {
+      "type": "string",
+      "default": "America/Sao_Paulo",
+      "required": true
+    }
+  }
+}

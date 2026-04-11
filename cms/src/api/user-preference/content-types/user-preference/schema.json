@@ -1,0 +1,41 @@
+{
+  "kind": "collectionType",
+  "collectionName": "user_preferences",
+  "info": {
+    "singularName": "user-preference",
+    "pluralName": "user-preferences",
+    "displayName": "User Preference"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "user": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user",
+      "required": true,
+      "unique": true
+    },
+    "appearance": {
+      "type": "component",
+      "repeatable": false,
+      "component": "preferences.appearance-settings"
+    },
+    "map": {
+      "type": "component",
+      "repeatable": false,
+      "component": "preferences.map-settings"
+    },
+    "alerts": {
+      "type": "component",
+      "repeatable": false,
+      "component": "preferences.alert-settings"
+    },
+    "favoriteStations": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::station.station"
+    }
+  }
+}

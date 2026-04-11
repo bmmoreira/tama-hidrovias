@@ -3,7 +3,7 @@
 import { useRef, useEffect, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import type { Station } from '@/lib/strapi';
+import type { MapStylePreference, Station } from '@/lib/strapi';
 
 export interface ViewState {
   longitude: number;
@@ -13,6 +13,7 @@ export interface ViewState {
 
 interface MapboxMapProps {
   initialViewState?: ViewState;
+  mapStyle?: MapStylePreference;
   stations?: Station[];
   onStationDoubleClick?: (station: Station) => void;
   tileLayerUrl?: string;
@@ -23,8 +24,16 @@ const LAYER_ID = 'stations-layer';
 const TILE_SOURCE_ID = 'raster-tile-source';
 const TILE_LAYER_ID = 'raster-tile-layer';
 
+const MAPBOX_STYLE_URLS: Record<MapStylePreference, string> = {
+  outdoors: 'mapbox://styles/mapbox/outdoors-v12',
+  streets: 'mapbox://styles/mapbox/streets-v12',
+  satellite: 'mapbox://styles/mapbox/satellite-streets-v12',
+  dark: 'mapbox://styles/mapbox/dark-v11',
+};
+
 export default function MapboxMap({
   initialViewState = { longitude: -52, latitude: -15, zoom: 4 },
+  mapStyle = 'outdoors',
   stations = [],
   onStationDoubleClick,
   tileLayerUrl,
@@ -38,6 +47,10 @@ export default function MapboxMap({
     onDoubleClickRef.current = onStationDoubleClick;
   }, [onStationDoubleClick]);
 
+  const flyTo = useCallback((vs: ViewState) => {
+    mapRef.current?.flyTo({ center: [vs.longitude, vs.latitude], zoom: vs.zoom });
+  }, []);
+
   // Initialise map
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -47,7 +60,7 @@ export default function MapboxMap({
 
     const map = new mapboxgl.Map({
       container: containerRef.current,
-      style: 'mapbox://styles/mapbox/outdoors-v12',
+      style: MAPBOX_STYLE_URLS[mapStyle],
       center: [initialViewState.longitude, initialViewState.latitude],
       zoom: initialViewState.zoom,
       attributionControl: true,
@@ -148,7 +161,7 @@ export default function MapboxMap({
       map.remove();
       mapRef.current = null;
     };
-    // initialViewState intentionally omitted – only used on mount
+    // initialViewState and mapStyle intentionally omitted – only used on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -206,15 +219,13 @@ export default function MapboxMap({
     );
   }, [tileLayerUrl]);
 
-  // Fly to new centre when initialViewState changes externally
-  const flyTo = useCallback((vs: ViewState) => {
-    mapRef.current?.flyTo({ center: [vs.longitude, vs.latitude], zoom: vs.zoom });
-  }, []);
+  useEffect(() => {
+    if (!mapRef.current) {
+      return;
+    }
 
-  // Expose flyTo via imperative handle is not needed here since the map page
-  // drives flyTo by updating props; let the parent call a ref instead.
-  // We keep flyTo available for internal use.
-  void flyTo;
+    flyTo(initialViewState);
+  }, [flyTo, initialViewState]);
 
   return <div ref={containerRef} className="map-container h-full w-full" />;
 }

@@ -1,11 +1,11 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import useSWR from 'swr';
 import { Search, X } from 'lucide-react';
-import { getStations } from '@/lib/strapi';
-import type { Station, StationVariable } from '@/lib/strapi';
+import { getStations, getUserPreferences } from '@/lib/strapi';
+import type { MapStylePreference, Station, StationVariable } from '@/lib/strapi';
 import StationChart from '@/components/StationChart';
 import StationSearchPanel from '@/components/StationSearchPanel';
 
@@ -51,8 +51,16 @@ export default function MapPage() {
   const { data: stationsData } = useSWR('map-stations', () => getStations(), {
     revalidateOnFocus: false,
   });
+  const { data: preferencesData, isLoading: isPreferencesLoading } = useSWR(
+    'user-preferences',
+    () => getUserPreferences(),
+    {
+      revalidateOnFocus: false,
+    },
+  );
 
   const stations = stationsData?.data ?? [];
+  const preferences = preferencesData?.data;
   const { from, to } = getPast30Days();
 
   const handleStationDoubleClick = useCallback((station: Station) => {
@@ -78,16 +86,38 @@ export default function MapPage() {
     latitude: -15,
     zoom: 4,
   });
+  const [mapStyle, setMapStyle] = useState<MapStylePreference>('outdoors');
+
+  useEffect(() => {
+    if (!preferences) {
+      return;
+    }
+
+    setFlyTarget({
+      longitude: preferences.map.centerLongitude,
+      latitude: preferences.map.centerLatitude,
+      zoom: preferences.map.defaultZoom,
+    });
+    setMapStyle(preferences.map.mapStyle);
+  }, [preferences]);
 
   return (
     <div className="relative flex h-screen w-full overflow-hidden">
       {/* Map */}
       <div className="flex-1">
-        <MapboxMap
-          initialViewState={flyTarget}
-          stations={stations}
-          onStationDoubleClick={handleStationDoubleClick}
-        />
+        {!isPreferencesLoading || preferences ? (
+          <MapboxMap
+            key={mapStyle}
+            initialViewState={flyTarget}
+            mapStyle={mapStyle}
+            stations={stations}
+            onStationDoubleClick={handleStationDoubleClick}
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-gray-100 dark:bg-slate-950">
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600" />
+          </div>
+        )}
       </div>
 
       {/* Search button */}

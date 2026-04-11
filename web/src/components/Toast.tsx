@@ -28,8 +28,8 @@ export default function Toast({
       className={clsx(
         'fixed right-4 top-4 z-[80] flex w-full max-w-sm items-start gap-3 rounded-2xl border px-4 py-3 shadow-lg backdrop-blur',
         variant === 'success'
-          ? 'border-emerald-200 bg-emerald-50/95 text-emerald-900'
-          : 'border-red-200 bg-red-50/95 text-red-900',
+          ? 'border-emerald-200 bg-emerald-50/95 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/95 dark:text-emerald-100'
+          : 'border-red-200 bg-red-50/95 text-red-900 dark:border-red-900 dark:bg-red-950/95 dark:text-red-100',
       )}
       role="status"
       aria-live="polite"
@@ -43,7 +43,7 @@ export default function Toast({
       <button
         type="button"
         onClick={onClose}
-        className="rounded-lg p-1 text-current/70 transition hover:bg-black/5 hover:text-current"
+        className="rounded-lg p-1 text-current/70 transition hover:bg-black/5 hover:text-current dark:hover:bg-white/5"
         aria-label="Fechar notificação"
       >
         <X className="h-4 w-4" />

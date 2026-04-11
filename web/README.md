@@ -118,6 +118,33 @@ Important design notes for future development:
 - station create, update, and delete helpers are intentionally routed that way so role checks stay server-side
 - the file is now commented by section to explain how URL resolution, shared fetch behavior, and resource-specific builders work
 
+## User and map preferences
+
+User-scoped dashboard preferences are persisted separately from identity and
+role bootstrap.
+
+Important frontend files:
+
+- `src/app/dashboard/settings/page.tsx`
+- `src/components/ThemeSettingsPanel.tsx`
+- `src/app/api/users/me/preferences/route.ts`
+- `src/app/providers.tsx`
+- `src/app/map/page.tsx`
+- `src/components/MapboxMap.tsx`
+- `src/lib/strapi.ts`
+
+Current implementation notes:
+
+- `GET /api/users/me` remains focused on identity and role bootstrap only
+- `GET/PUT /api/users/me/preferences` is the current-user settings route used by the web app
+- the settings panel saves theme, language, time zone, map defaults, favorite stations, and alert preferences
+- the map page consumes saved map defaults and remounts the map when the saved base style changes
+- the current session theme is updated immediately after save and does not require logout/login
+
+For the deeper architecture and route behavior, prefer the Sphinx page:
+
+- `../docs/source/preferences.rst`
+
 ## Fake auth for UI work
 
 When `FAKE_AUTH=true`, the dashboard layout injects a development session for

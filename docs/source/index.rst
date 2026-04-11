@@ -66,5 +66,6 @@ Contents
    usage
    authentication
    dashboard
+   preferences
    changelog
    api
