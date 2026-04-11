@@ -262,8 +262,11 @@ Customizações implementadas:
 - O painel exibe indicadores visuais de modo leitura para ``viewer`` e usa
   botões protegidos para manter ações visíveis, porém bloqueadas quando o papel
   não permite escrita.
-- A rota interna ``POST /api/stations`` valida o papel no servidor antes de
-  encaminhar a escrita ao Strapi.
+- As rotas internas ``POST /api/stations`` e ``PATCH`` / ``DELETE`` em
+  ``/api/stations/[id]`` validam o papel no servidor antes de encaminhar a
+  escrita ao Strapi.
+- As ações destrutivas do painel usam modal de confirmação próprio e feedback
+  visual por toast, mantendo o fluxo consistente com o restante da interface.
 
 No conjunto Sphinx, essas mesmas customizações aparecem descritas com os termos
 ``dashboard``, ``read-only`` e ``protected actions``.

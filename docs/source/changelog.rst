@@ -21,6 +21,9 @@ Dashboard customization
   actions.
 - Added reusable ``ReadOnlyBadge`` and viewer-mode messaging across the
   dashboard.
+- Added reusable toast-style feedback for station mutation success and error states.
+- Replaced the native delete confirmation with a custom dashboard confirmation modal.
+- Extracted a reusable confirmation modal component and wired destructive dashboard flows to use it directly.
 - Added a read-only banner for viewer sessions in the dashboard layout.
 - Kept restricted actions visible for unauthorized users while enforcing
   analyst-only execution where required.
@@ -29,8 +32,13 @@ Protected write flow
 ~~~~~~~~~~~~~~~~~~~~
 
 - Enforced analyst-only station creation in the internal Next.js API route.
+- Added analyst-only station update and deletion through internal Next.js API routes.
+- Added edit and delete controls to the dashboard stations list.
+- Added row-level loading and disabled states while station edit or delete mutations are running.
 - Kept UI restrictions aligned with server-side authorization for the virtual
-  station flow.
+  station and station-management flows.
+- Added unit coverage for station mutation helpers and analyst-only API guards.
+- Added render-level coverage for station-row busy states across edit and delete flows.
 
 Documentation
 ~~~~~~~~~~~~~

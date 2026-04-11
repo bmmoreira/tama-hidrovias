@@ -1,13 +1,21 @@
 'use client';
 
-import { useState } from 'react';
-import { X, Loader2 } from 'lucide-react';
-import { createVirtualStation } from '@/lib/strapi';
+import React from 'react';
+import { useEffect, useState } from 'react';
+import { Loader2, X } from 'lucide-react';
+import {
+  createVirtualStation,
+  type Station,
+  updateStation,
+} from '@/lib/strapi';
 
-interface VirtualStationModalProps {
+interface StationFormModalProps {
   isOpen: boolean;
+  station?: Station | null;
   onClose: () => void;
-  onCreated: () => void;
+  onSaved: (message: string) => void;
+  onError: (message: string) => void;
+  onSubmittingChange?: (isSubmitting: boolean) => void;
 }
 
 interface FormState {
@@ -17,6 +25,7 @@ interface FormState {
   longitude: string;
   basin: string;
   river: string;
+  active: boolean;
 }
 
 const EMPTY_FORM: FormState = {
@@ -26,23 +35,66 @@ const EMPTY_FORM: FormState = {
   longitude: '',
   basin: '',
   river: '',
+  active: true,
 };
 
-export default function VirtualStationModal({
+function toFormState(station?: Station | null): FormState {
+  if (!station) {
+    return EMPTY_FORM;
+  }
+
+  return {
+    name: station.attributes.name ?? '',
+    code: station.attributes.code ?? '',
+    latitude: String(station.attributes.latitude ?? ''),
+    longitude: String(station.attributes.longitude ?? ''),
+    basin: station.attributes.basin ?? '',
+    river: station.attributes.river ?? '',
+    active: station.attributes.active ?? true,
+  };
+}
+
+export default function StationFormModal({
   isOpen,
+  station,
   onClose,
-  onCreated,
-}: VirtualStationModalProps) {
+  onSaved,
+  onError,
+  onSubmittingChange,
+}: StationFormModalProps) {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (!isOpen) return null;
+  const isEditing = Boolean(station);
+  const source = station?.attributes.source ?? 'Virtual';
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    setForm(toFormState(station));
+    setError(null);
+  }, [isOpen, station]);
+
+  useEffect(() => {
+    onSubmittingChange?.(loading);
+  }, [loading, onSubmittingChange]);
+
+  if (!isOpen) {
+    return null;
+  }
 
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value, type } = e.target;
+
+    setForm((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
+    }));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -56,28 +108,48 @@ export default function VirtualStationModal({
       setError('Latitude inválida. Use um valor entre -90 e 90.');
       return;
     }
+
     if (isNaN(lon) || lon < -180 || lon > 180) {
       setError('Longitude inválida. Use um valor entre -180 e 180.');
       return;
     }
 
+    const payload = {
+      name: form.name.trim(),
+      code: form.code.trim().toUpperCase(),
+      source,
+      latitude: lat,
+      longitude: lon,
+      basin: form.basin.trim(),
+      river: form.river.trim(),
+      active: form.active,
+    } as const;
+
     setLoading(true);
     try {
-      await createVirtualStation({
-        name: form.name.trim(),
-        code: form.code.trim().toUpperCase(),
-        source: 'Virtual',
-        latitude: lat,
-        longitude: lon,
-        basin: form.basin.trim(),
-        river: form.river.trim(),
-        active: true,
-      });
+      if (station) {
+        await updateStation(station.id, payload);
+      } else {
+        await createVirtualStation(payload);
+      }
+
       setForm(EMPTY_FORM);
-      onCreated();
+      onSaved(
+        station
+          ? 'Estação atualizada com sucesso.'
+          : 'Estação criada com sucesso.',
+      );
     } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : isEditing
+            ? 'Erro ao atualizar estação.'
+            : 'Erro ao criar estação virtual.';
+
+      onError(message);
       setError(
-        err instanceof Error ? err.message : 'Erro ao criar estação virtual.',
+        message,
       );
     } finally {
       setLoading(false);
@@ -86,22 +158,23 @@ export default function VirtualStationModal({
 
   return (
     <>
-      {/* Backdrop */}
       <div
         className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
-        onClick={onClose}
+        onClick={loading ? undefined : onClose}
       />
 
-      {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
         <div className="w-full max-w-lg rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl">
-          {/* Header */}
           <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-            <h2 className="text-base font-semibold text-gray-900">
-              Nova Estação Virtual
-            </h2>
+            <div>
+              <h2 className="text-base font-semibold text-gray-900">
+                {isEditing ? 'Editar Estação' : 'Nova Estação Virtual'}
+              </h2>
+              <p className="text-xs text-gray-500">Fonte: {source}</p>
+            </div>
             <button
               onClick={onClose}
+              disabled={loading}
               className="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
               aria-label="Fechar"
             >
@@ -109,13 +182,12 @@ export default function VirtualStationModal({
             </button>
           </div>
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4 px-6 py-5">
-            {error && (
+            {error ? (
               <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
                 {error}
               </div>
-            )}
+            ) : null}
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField
@@ -170,7 +242,17 @@ export default function VirtualStationModal({
               />
             </div>
 
-            {/* Actions */}
+            <label className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                name="active"
+                checked={form.active}
+                onChange={handleChange}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              Estação ativa
+            </label>
+
             <div className="flex gap-3 pt-2">
               <button
                 type="button"
@@ -185,8 +267,8 @@ export default function VirtualStationModal({
                 disabled={loading || !form.name || !form.code || !form.latitude || !form.longitude}
                 className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-60"
               >
-                {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                {loading ? 'Criando…' : 'Criar Estação'}
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                {loading ? (isEditing ? 'Salvando…' : 'Criando…') : isEditing ? 'Salvar Alterações' : 'Criar Estação'}
               </button>
             </div>
           </form>

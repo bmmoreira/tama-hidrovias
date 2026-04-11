@@ -77,10 +77,21 @@ Behavior:
 This makes the product behavior clearer for read-only users and reduces the
 impression that features are missing.
 
-Current Protected Flow
-----------------------
+Feedback Pattern
+----------------
 
-The current write-protected dashboard flow is virtual station creation.
+Station mutations now use toast-style feedback for non-blocking status updates.
+
+- ``web/src/components/Toast.tsx`` provides reusable success and error notifications.
+- create, update, and delete actions on the stations screen emit toast feedback.
+- destructive delete now uses a custom dashboard confirmation modal before execution.
+- ``web/src/components/ConfirmationModal.tsx`` now provides the reusable confirmation shell used directly by destructive dashboard flows.
+
+Current Protected Flows
+-----------------------
+
+The current write-protected dashboard flows are station creation, station
+editing, and station deletion.
 
 UI implementation:
 
@@ -91,21 +102,30 @@ Current behavior:
 - the ``Nova Estacao Virtual`` action is always visible
 - only ``analyst`` users can click it
 - non-analyst users see the control disabled with explanatory text
-- the modal is only rendered for authorized users
+- analysts can also edit stations directly from the list
+- analysts can delete stations directly from the list
+- the station form modal is reused for create and edit flows
+- the delete flow uses the shared confirmation modal instead of the browser confirm dialog
+- the row being mutated shows a loading label and disables both row actions until completion
+
+At the moment, station deletion is the only destructive dashboard flow. Any
+future destructive action should reuse ``web/src/components/ConfirmationModal.tsx``
+directly to keep the interaction pattern consistent.
 
 Server Enforcement
 ------------------
 
 UI restrictions are not the only protection layer.
 
-The route:
+The routes:
 
 - ``web/src/app/api/stations/route.ts``
+- ``web/src/app/api/stations/[id]/route.ts``
 
-enforces the same rule on the server side:
+enforce the same rule on the server side:
 
 - reads the session role from the NextAuth token
-- returns ``403`` for non-analyst ``POST`` requests
+- returns ``403`` for non-analyst ``POST``, ``PATCH``, and ``DELETE`` requests
 - forwards authorized requests to Strapi only after that role check passes
 
 This prevents direct browser calls from bypassing the UI restriction.
@@ -136,9 +156,15 @@ The main custom pieces added to the platform are:
 - unit test coverage for role resolution in ``web/src/lib/auth-role.test.ts``
 - read-only badge component
 - protected action button component
+- toast notification component for mutation feedback
+- generic confirmation modal component for reusable destructive-action UX
+- reusable station form modal for create and edit
+- reusable delete confirmation modal for destructive station actions
 - dashboard viewer banner
-- analyst-only server enforcement for station creation
+- analyst-only server enforcement for station creation, update, and deletion
 - Strapi Users & Permissions extension for role bootstrap and ``users/me`` role population
+- unit coverage for station mutation helpers and analyst-only station route guards
+- component-level interaction coverage for the custom delete confirmation modal
 
 Operational Guidance
 --------------------

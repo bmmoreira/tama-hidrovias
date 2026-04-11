@@ -48,6 +48,7 @@ The authentication system is centered in these files:
 - ``web/src/lib/strapi.ts``
   Shared frontend data layer. Browser requests go to internal Next.js API routes.
 - ``web/src/app/api/stations/route.ts``
+- ``web/src/app/api/stations/[id]/route.ts``
 - ``web/src/app/api/measurements/route.ts``
 - ``web/src/app/api/forecasts/route.ts``
 - ``web/src/app/api/climate-layers/route.ts``
@@ -159,12 +160,18 @@ This means dashboard protection happens on the server before the page renders.
 Current Write Path Example
 --------------------------
 
-Virtual station creation is the main example of the current authenticated write path:
+Station management is the clearest example of the current authenticated write path:
 
-1. ``VirtualStationModal`` submits form data.
-2. The client calls the internal route ``POST /api/stations``.
+1. ``StationFormModal`` submits create or edit form data, or the stations table
+   triggers delete.
+2. The client calls one of the internal routes:
+
+   - ``POST /api/stations``
+   - ``PATCH /api/stations/[id]``
+   - ``DELETE /api/stations/[id]``
+
 3. The route reads the NextAuth token from the request cookies.
-4. The route forwards the request to Strapi ``POST /api/stations`` with
+4. The route forwards the request to the corresponding Strapi station endpoint with
    ``Authorization: Bearer <strapi-jwt>``.
 5. Strapi permissions decide whether that user can create the record.
 
@@ -174,8 +181,9 @@ the request is forwarded:
 - ``web/src/app/api/stations/route.ts`` only allows ``analyst`` sessions to
   issue ``POST`` requests.
 
-The stations screen also keeps the action visible for unauthorized users, but
-disabled, through ``web/src/components/ProtectedActionButton.tsx``.
+The stations screen keeps the create action visible through
+``web/src/components/ProtectedActionButton.tsx`` and keeps list-level edit and
+delete actions visible but disabled for non-analyst users.
 
 This is the pattern to follow for future authenticated mutations.
 

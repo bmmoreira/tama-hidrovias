@@ -58,21 +58,65 @@ This component:
 - keeps the call-to-action visible
 - shows a tooltip and helper text explaining why the action is blocked
 
+### Feedback and notifications
+
+Station create, update, and delete flows now emit toast-style feedback instead
+of relying on blocking browser alerts for result messaging.
+
+- `src/components/Toast.tsx` provides the reusable notification UI
+- the stations page shows success toasts for create, update, and delete
+- the stations page shows error toasts when a mutation fails
+- the delete flow uses a custom confirmation modal before destructive actions
+
+Reusable confirmation pattern:
+
+- `src/components/ConfirmationModal.tsx` is the shared confirmation shell used directly by destructive dashboard flows
+
 ### Current analyst-only flow
 
-The main protected flow implemented today is virtual station creation.
+The main protected flows implemented today are station creation, station edit,
+and station deletion.
 
 Frontend behavior:
 
-- `src/app/dashboard/stations/page.tsx` shows the action button to everyone
-- viewers see the button disabled with explanatory text
-- only analysts can open the creation modal
+- `src/app/dashboard/stations/page.tsx` shows station actions in the list itself
+- viewers see write controls disabled with explanatory text via button titles
+- analysts can open the station form modal for both create and edit flows
+- analysts can trigger station deletion from the table actions column
+- the row being edited or deleted is temporarily disabled while its mutation is in flight
+
+Reusable station form UI:
+
+- `src/app/dashboard/stations/StationFormModal.tsx`
+
+Reusable delete confirmation UI:
+
+- `src/components/ConfirmationModal.tsx`
+
+This modal is currently used for:
+
+- confirming station deletion
+
+If another destructive dashboard action is added later, it should use the same
+shared confirmation shell instead of introducing a flow-specific modal.
 
 Server-side enforcement:
 
 - `src/app/api/stations/route.ts` rejects non-analyst `POST` requests with `403`
+- `src/app/api/stations/[id]/route.ts` rejects non-analyst `PATCH` and `DELETE` requests with `403`
 
 This means the restriction is enforced both in UI and in the server route.
+
+## Shared Strapi data layer
+
+The frontend data layer lives in `src/lib/strapi.ts`.
+
+Important design notes for future development:
+
+- reads can resolve against Strapi directly on the server, or through internal routes in the browser
+- writes must continue to go through internal Next.js API routes
+- station create, update, and delete helpers are intentionally routed that way so role checks stay server-side
+- the file is now commented by section to explain how URL resolution, shared fetch behavior, and resource-specific builders work
 
 ## Fake auth for UI work
 
@@ -92,6 +136,12 @@ npm run test:unit
 
 Current coverage includes the pure helper in `src/lib/auth-role.ts`, which
 verifies that Strapi role payloads resolve to the expected session role.
+
+Additional coverage now includes:
+
+- `src/lib/strapi.test.ts` for station update/delete mutation helpers
+- `src/app/api/stations/[id]/route.test.ts` for analyst-only PATCH/DELETE guard behavior
+- `src/app/dashboard/stations/page.test.tsx` for row busy-state behavior across edit and delete flows
 
 ## Related documentation
 

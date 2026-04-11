@@ -1,22 +1,39 @@
 'use client';
 
+import React from 'react';
 import type { Station } from '@/lib/strapi';
 
 import { useState } from 'react';
 import useSWR from 'swr';
 import { useSession } from 'next-auth/react';
-import { Plus, Search, Radio } from 'lucide-react';
-import { getStations } from '@/lib/strapi';
+import { Pencil, Plus, Search, Trash2, TriangleAlert } from 'lucide-react';
+import { deleteStation, getStations } from '@/lib/strapi';
+import ConfirmationModal from '@/components/ConfirmationModal';
+import Toast from '@/components/Toast';
 import { isAnalystRole } from '@/lib/roles';
 import ProtectedActionButton from '@/components/ProtectedActionButton';
 import ReadOnlyBadge from '@/components/ReadOnlyBadge';
-import VirtualStationModal from './VirtualStationModal';
+import StationFormModal from './StationFormModal';
 
 const SOURCES = ['Todas', 'ANA', 'HydroWeb', 'SNIRH', 'Virtual'] as const;
+
+type ToastState = {
+  message: string;
+  variant: 'success' | 'error';
+};
+
+type RowMutationState = {
+  stationId: number;
+  action: 'edit' | 'delete';
+} | null;
 
 export default function StationsPage() {
   const { data: session } = useSession();
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingStation, setEditingStation] = useState<Station | null>(null);
+  const [confirmingDeleteStation, setConfirmingDeleteStation] = useState<Station | null>(null);
+  const [rowMutation, setRowMutation] = useState<RowMutationState>(null);
+  const [toast, setToast] = useState<ToastState | null>(null);
   const [query, setQuery] = useState('');
   const [sourceFilter, setSourceFilter] = useState<(typeof SOURCES)[number]>(
     'Todas',
@@ -44,22 +61,55 @@ export default function StationsPage() {
     return matchQuery && matchSource && matchBasin;
   });
 
-  const canCreateVirtualStations = isAnalystRole(session?.user?.role);
+  const canManageStations = isAnalystRole(session?.user?.role);
+
+  function showToast(message: string, variant: ToastState['variant']) {
+    setToast({ message, variant });
+  }
+
+  async function handleDeleteStation() {
+    if (!confirmingDeleteStation) {
+      return;
+    }
+
+    setRowMutation({ stationId: confirmingDeleteStation.id, action: 'delete' });
+    try {
+      await deleteStation(confirmingDeleteStation.id);
+      await mutate();
+      showToast('Estação excluída com sucesso.', 'success');
+      setConfirmingDeleteStation(null);
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : 'Erro ao excluir estação.',
+        'error',
+      );
+    } finally {
+      setRowMutation(null);
+    }
+  }
 
   return (
     <div className="space-y-5">
+      {toast ? (
+        <Toast
+          message={toast.message}
+          variant={toast.variant}
+          onClose={() => setToast(null)}
+        />
+      ) : null}
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold text-gray-900">Estações</h1>
-            {!canCreateVirtualStations ? <ReadOnlyBadge /> : null}
+            {!canManageStations ? <ReadOnlyBadge /> : null}
           </div>
           <p className="text-sm text-gray-500">
             {data?.meta.pagination.total ?? 0} estações cadastradas
           </p>
         </div>
         <ProtectedActionButton
-          allowed={canCreateVirtualStations}
+          allowed={canManageStations}
           onClick={() => setModalOpen(true)}
           title="Criar nova estação virtual"
           deniedReason="Somente analistas podem criar estações virtuais."
@@ -136,13 +186,16 @@ export default function StationsPage() {
                 <th className="px-4 py-3 text-center font-medium text-gray-600">
                   Status
                 </th>
+                <th className="px-4 py-3 text-right font-medium text-gray-600">
+                  Ações
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {isLoading &&
                 [...Array(8)].map((_, i) => (
                   <tr key={i}>
-                    {[...Array(7)].map((__, j) => (
+                    {[...Array(8)].map((__, j) => (
                       <td key={j} className="px-4 py-3">
                         <div className="h-4 animate-pulse rounded bg-gray-100" />
                       </td>
@@ -152,7 +205,7 @@ export default function StationsPage() {
               {!isLoading && filtered.length === 0 && (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="px-4 py-8 text-center text-gray-400"
                   >
                     Nenhuma estação encontrada.
@@ -160,29 +213,132 @@ export default function StationsPage() {
                 </tr>
               )}
               {filtered.map((station: Station) => (
-                <StationRow key={station.id} station={station} />
+                <StationRow
+                  key={station.id}
+                  station={station}
+                  canManageStations={canManageStations}
+                  rowMutation={rowMutation}
+                  onEdit={() => setEditingStation(station)}
+                  onDelete={() => setConfirmingDeleteStation(station)}
+                />
               ))}
             </tbody>
           </table>
         </div>
       </div>
 
-      {canCreateVirtualStations ? (
-        <VirtualStationModal
+      {canManageStations ? (
+        <StationFormModal
           isOpen={modalOpen}
           onClose={() => setModalOpen(false)}
-          onCreated={() => {
+          onSaved={(message) => {
             setModalOpen(false);
+            showToast(message, 'success');
             mutate();
           }}
+          onError={(message) => showToast(message, 'error')}
         />
+      ) : null}
+
+      {canManageStations ? (
+        <StationFormModal
+          isOpen={Boolean(editingStation)}
+          station={editingStation}
+          onClose={() => {
+            setEditingStation(null);
+            setRowMutation(null);
+          }}
+          onSaved={(message) => {
+            setEditingStation(null);
+            setRowMutation(null);
+            showToast(message, 'success');
+            mutate();
+          }}
+          onError={(message) => showToast(message, 'error')}
+          onSubmittingChange={(isSubmitting) => {
+            if (!editingStation) {
+              return;
+            }
+
+            setRowMutation((current) => {
+              if (isSubmitting) {
+                return { stationId: editingStation.id, action: 'edit' };
+              }
+
+              if (
+                current?.stationId === editingStation.id &&
+                current.action === 'edit'
+              ) {
+                return null;
+              }
+
+              return current;
+            });
+          }}
+        />
+      ) : null}
+
+      {canManageStations ? (
+        <ConfirmationModal
+          isOpen={Boolean(confirmingDeleteStation)}
+          title="Confirmar exclusão"
+          description="Esta ação remove a estação do cadastro atual do painel."
+          confirmLabel={
+            rowMutation?.action === 'delete' ? 'Excluindo…' : 'Excluir estação'
+          }
+          loading={rowMutation?.action === 'delete'}
+          tone="danger"
+          icon={
+            <span className="rounded-full bg-red-50 p-2 text-red-600">
+              <TriangleAlert className="h-5 w-5" />
+            </span>
+          }
+          onClose={() => {
+            if (rowMutation?.action === 'delete') {
+              return;
+            }
+
+            setConfirmingDeleteStation(null);
+          }}
+          onConfirm={handleDeleteStation}
+        >
+          {confirmingDeleteStation ? (
+            <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-900">
+              <p className="font-medium">
+                {confirmingDeleteStation.attributes.name} (
+                {confirmingDeleteStation.attributes.code})
+              </p>
+              <p className="mt-1 text-red-800">
+                Se a estação possuir integrações ou registros dependentes no
+                Strapi, a exclusão poderá ser recusada pela API.
+              </p>
+            </div>
+          ) : null}
+        </ConfirmationModal>
       ) : null}
     </div>
   );
 }
 
-function StationRow({ station }: { station: Station }) {
+function StationRow({
+  station,
+  canManageStations,
+  rowMutation,
+  onEdit,
+  onDelete,
+}: {
+  station: Station;
+  canManageStations: boolean;
+  rowMutation: RowMutationState;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
   const a = station.attributes;
+  const isEditing =
+    rowMutation?.stationId === station.id && rowMutation.action === 'edit';
+  const isDeleting =
+    rowMutation?.stationId === station.id && rowMutation.action === 'delete';
+  const isBusy = isEditing || isDeleting;
   const sourceColors: Record<string, string> = {
     ANA: 'bg-blue-100 text-blue-700',
     HydroWeb: 'bg-green-100 text-green-700',
@@ -215,6 +371,38 @@ function StationRow({ station }: { station: Station }) {
           }`}
           title={a.active ? 'Ativa' : 'Inativa'}
         />
+      </td>
+      <td className="px-4 py-3">
+        <div className="flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={onEdit}
+            disabled={!canManageStations || isBusy}
+            title={
+              canManageStations
+                ? 'Editar estação'
+                : 'Somente analistas podem editar estações.'
+            }
+            className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-600 transition hover:border-blue-200 hover:text-blue-700 disabled:cursor-not-allowed disabled:border-gray-100 disabled:text-gray-300"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            {isEditing ? 'Salvando…' : 'Editar'}
+          </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            disabled={!canManageStations || isBusy}
+            title={
+              canManageStations
+                ? 'Excluir estação'
+                : 'Somente analistas podem excluir estações.'
+            }
+            className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-600 transition hover:border-red-200 hover:text-red-700 disabled:cursor-not-allowed disabled:border-gray-100 disabled:text-gray-300"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            {isDeleting ? 'Excluindo…' : 'Excluir'}
+          </button>
+        </div>
       </td>
     </tr>
   );
