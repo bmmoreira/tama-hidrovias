@@ -1,17 +1,21 @@
 'use client';
 
 import type { Station } from '@/lib/strapi';
-'use client';
 
 import { useState } from 'react';
 import useSWR from 'swr';
+import { useSession } from 'next-auth/react';
 import { Plus, Search, Radio } from 'lucide-react';
 import { getStations } from '@/lib/strapi';
+import { isAnalystRole } from '@/lib/roles';
+import ProtectedActionButton from '@/components/ProtectedActionButton';
+import ReadOnlyBadge from '@/components/ReadOnlyBadge';
 import VirtualStationModal from './VirtualStationModal';
 
 const SOURCES = ['Todas', 'ANA', 'HydroWeb', 'SNIRH', 'Virtual'] as const;
 
 export default function StationsPage() {
+  const { data: session } = useSession();
   const [modalOpen, setModalOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [sourceFilter, setSourceFilter] = useState<(typeof SOURCES)[number]>(
@@ -40,22 +44,30 @@ export default function StationsPage() {
     return matchQuery && matchSource && matchBasin;
   });
 
+  const canCreateVirtualStations = isAnalystRole(session?.user?.role);
+
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Estações</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-gray-900">Estações</h1>
+            {!canCreateVirtualStations ? <ReadOnlyBadge /> : null}
+          </div>
           <p className="text-sm text-gray-500">
             {data?.meta.pagination.total ?? 0} estações cadastradas
           </p>
         </div>
-        <button
+        <ProtectedActionButton
+          allowed={canCreateVirtualStations}
           onClick={() => setModalOpen(true)}
-          className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700"
+          title="Criar nova estação virtual"
+          deniedReason="Somente analistas podem criar estações virtuais."
+          helperText="Somente analistas podem executar esta ação."
         >
-          <Plus className="h-4 w-4" />
-          Nova Estação Virtual
-        </button>
+            <Plus className="h-4 w-4" />
+            Nova Estação Virtual
+        </ProtectedActionButton>
       </div>
 
       {/* Filters */}
@@ -155,14 +167,16 @@ export default function StationsPage() {
         </div>
       </div>
 
-      <VirtualStationModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onCreated={() => {
-          setModalOpen(false);
-          mutate();
-        }}
-      />
+      {canCreateVirtualStations ? (
+        <VirtualStationModal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          onCreated={() => {
+            setModalOpen(false);
+            mutate();
+          }}
+        />
+      ) : null}
     </div>
   );
 }

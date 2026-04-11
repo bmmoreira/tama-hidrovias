@@ -4,10 +4,14 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { Droplets, Menu, X, LogOut, User } from 'lucide-react';
+import ReadOnlyBadge from '@/components/ReadOnlyBadge';
+import { getRoleLabel, isViewerRole } from '@/lib/roles';
 
 export default function Navbar() {
   const { data: session } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
+  const roleLabel = getRoleLabel(session?.user?.role);
+  const isViewer = isViewerRole(session?.user?.role);
 
   return (
     <header className="sticky top-0 z-40 border-b border-gray-200 bg-white/90 backdrop-blur">
@@ -39,8 +43,11 @@ export default function Navbar() {
               </Link>
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4 text-gray-400" />
-                <span className="text-sm text-gray-700">{session.user?.name}</span>
+                <span className="text-sm text-gray-700">
+                  {session.user?.name} ({roleLabel})
+                </span>
               </div>
+              {isViewer ? <ReadOnlyBadge /> : null}
               <button
                 onClick={() => signOut({ callbackUrl: '/' })}
                 className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600 transition hover:border-red-200 hover:text-red-600"
@@ -91,8 +98,13 @@ export default function Navbar() {
                 </Link>
                 <div className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500">
                   <User className="h-4 w-4" />
-                  {session.user?.name}
+                  {session.user?.name} ({roleLabel})
                 </div>
+                {isViewer ? (
+                  <div className="px-3 py-1">
+                    <ReadOnlyBadge />
+                  </div>
+                ) : null}
                 <button
                   onClick={() => {
                     setMenuOpen(false);

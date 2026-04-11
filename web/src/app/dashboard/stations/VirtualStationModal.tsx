@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import { X, Loader2 } from 'lucide-react';
-import { strapiPost } from '@/lib/strapi';
-import { useSession } from 'next-auth/react';
+import { createVirtualStation } from '@/lib/strapi';
 
 interface VirtualStationModalProps {
   isOpen: boolean;
@@ -34,7 +33,6 @@ export default function VirtualStationModal({
   onClose,
   onCreated,
 }: VirtualStationModalProps) {
-  const { data: session } = useSession();
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +63,7 @@ export default function VirtualStationModal({
 
     setLoading(true);
     try {
-      await strapiPost('/api/stations', {
+      await createVirtualStation({
         name: form.name.trim(),
         code: form.code.trim().toUpperCase(),
         source: 'Virtual',

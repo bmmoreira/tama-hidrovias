@@ -11,6 +11,8 @@ import {
   Settings,
 } from 'lucide-react';
 import clsx from 'clsx';
+import ReadOnlyBadge from '@/components/ReadOnlyBadge';
+import { canAccessAdmin, isViewerRole } from '@/lib/roles';
 
 const links = [
   { href: '/dashboard', label: 'Visão Geral', Icon: LayoutDashboard },
@@ -28,7 +30,8 @@ const adminLink = { href: '/dashboard/admin', label: 'Admin', Icon: Settings };
 export default function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const isAdmin = (session as any)?.role === 'admin' || (session as any)?.role === 'superAdmin';
+  const isAdmin = canAccessAdmin(session?.user?.role);
+  const isViewer = isViewerRole(session?.user?.role);
 
   const allLinks = isAdmin ? [...links, adminLink] : links;
 
@@ -57,6 +60,11 @@ export default function Sidebar() {
           );
         })}
       </nav>
+      {isViewer ? (
+        <div className="border-t border-gray-100 p-3">
+          <ReadOnlyBadge className="w-full justify-center" />
+        </div>
+      ) : null}
     </aside>
   );
 }
