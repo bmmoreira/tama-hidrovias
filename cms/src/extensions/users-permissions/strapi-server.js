@@ -1,7 +1,44 @@
 'use strict';
 
+const { sanitize } = require('@strapi/utils');
+
 module.exports = (plugin) => {
   const originalBootstrap = plugin.bootstrap;
+
+  plugin.controllers.user.me = async (ctx) => {
+    const authUser = ctx.state.user;
+
+    if (!authUser) {
+      return ctx.unauthorized();
+    }
+
+    const user = await strapi.entityService.findOne(
+      'plugin::users-permissions.user',
+      authUser.id,
+      {
+        populate: {
+          role: true,
+        },
+      }
+    );
+
+    const userSchema = strapi.getModel('plugin::users-permissions.user');
+    const sanitizedUser = await sanitize.contentAPI.output(user, userSchema, {
+      auth: ctx.state.auth,
+    });
+
+    ctx.body = user?.role
+      ? {
+          ...sanitizedUser,
+          role: {
+            id: user.role.id,
+            name: user.role.name,
+            type: user.role.type,
+            description: user.role.description,
+          },
+        }
+      : sanitizedUser;
+  };
 
   plugin.bootstrap = async ({ strapi }) => {
     if (originalBootstrap) {

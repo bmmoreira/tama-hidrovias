@@ -21,6 +21,46 @@ TileServer-GL.
    :depth: 2
    :local:
 
+Idioma e Terminologia
+---------------------
+
+O projeto usa dois registros de documentação:
+
+- O ``README.rst`` na raiz prioriza **português** para onboarding, operação do
+  ambiente e visão geral da plataforma.
+- A documentação Sphinx em ``docs/source/`` prioriza **inglês** para referência
+  técnica, arquitetura, autenticação, changelog e detalhes de implementação.
+
+Para manter consistência entre os dois conjuntos de documentos, os termos de
+produto e autorização abaixo devem ser interpretados como equivalentes:
+
++------------------------+-----------------------------------------------+
+| Termo no README        | Termo preferido na documentação técnica       |
++========================+===============================================+
+| painel                 | dashboard                                     |
++------------------------+-----------------------------------------------+
+| modo leitura           | read-only mode                                |
++------------------------+-----------------------------------------------+
+| perfil                 | role                                          |
++------------------------+-----------------------------------------------+
+| estação virtual        | virtual station                               |
++------------------------+-----------------------------------------------+
+| criação e edição       | write actions / write flows                   |
++------------------------+-----------------------------------------------+
+
+Os nomes de papéis da aplicação permanecem em inglês no código e na
+documentação, mesmo quando o texto explicativo estiver em português:
+
+- ``authenticated``
+- ``viewer``
+- ``analyst``
+
+Sempre que houver divergência entre texto descritivo e comportamento do
+sistema, a referência normativa deve ser:
+
+1. documentação Sphinx em ``docs/source/`` para arquitetura e fluxos técnicos;
+2. arquivos de implementação no ``web/`` e no ``cms/`` para comportamento em runtime.
+
 Arquitetura
 -----------
 
@@ -77,6 +117,8 @@ executáveis vivem nos diretórios de serviço:
 
 Início Rápido com Docker
 -------------------------
+
+Este fluxo corresponde ao ``Quick Start`` descrito na documentação técnica.
 
 .. code-block:: bash
 
@@ -176,6 +218,63 @@ Strapi
     npm install
     npm run develop    # http://localhost:1337/admin
 
+Autenticação
+------------
+
+O frontend usa **NextAuth** e o CMS usa **Strapi Users & Permissions**.
+
+- O login do usuário acontece no ``web`` via NextAuth Credentials Provider.
+- As credenciais são validadas no Strapi por ``/api/auth/local``.
+- O JWT do Strapi fica apenas no servidor do Next.js.
+- O navegador usa rotas internas do Next.js para operações autenticadas.
+
+Para a documentação completa do sistema de autenticação, consulte
+``docs/source/authentication.rst``.
+
+Ao longo deste README, o termo **painel** corresponde ao termo **dashboard**
+usado na documentação Sphinx.
+
+Perfis e Customizações
+----------------------
+
+O projeto passou a ter uma camada explícita de perfis e comportamento de
+painel para diferenciar usuários com acesso somente leitura daqueles com
+acesso operacional.
+
+Perfis documentados hoje:
+
+- ``authenticated``: papel padrão do Strapi. Deve ser tratado como fallback e
+  não recebe permissões de escrita no painel.
+- ``viewer``: acesso de leitura ao painel. Pode navegar, consultar dados,
+  relatórios e mapas, mas não executa ações de criação ou edição.
+- ``analyst``: acesso operacional ao painel. Além da leitura, pode executar
+  fluxos de escrita já liberados pela aplicação e pelo Strapi.
+
+Customizações implementadas:
+
+- O Strapi cria automaticamente os papéis ``viewer`` e ``analyst`` em
+  ``cms/src/extensions/users-permissions/strapi-server.js``.
+- O endpoint ``/api/users/me`` foi sobrescrito para devolver o papel populado,
+  o que permite ao NextAuth montar a sessão com ``session.user.role`` de forma
+  confiável.
+- O frontend centraliza normalização e checagens de papel em
+  ``web/src/lib/roles.ts``.
+- O painel exibe indicadores visuais de modo leitura para ``viewer`` e usa
+  botões protegidos para manter ações visíveis, porém bloqueadas quando o papel
+  não permite escrita.
+- A rota interna ``POST /api/stations`` valida o papel no servidor antes de
+  encaminhar a escrita ao Strapi.
+
+No conjunto Sphinx, essas mesmas customizações aparecem descritas com os termos
+``dashboard``, ``read-only`` e ``protected actions``.
+
+Para detalhes operacionais e inventário das customizações, consulte também:
+
+- ``docs/source/authentication.rst``
+- ``docs/source/dashboard.rst``
+- ``web/README.md``
+- ``cms/README.md``
+
 Estrutura de Dados
 ------------------
 
@@ -223,6 +322,8 @@ Copie o arquivo apropriado para ``.env`` e preencha os valores:
      - Token público do Mapbox GL JS
    * - ``NEXT_PUBLIC_STRAPI_URL``
      - URL pública do Strapi acessível pelo navegador
+   * - ``STRAPI_INTERNAL_URL``
+     - URL interna usada pelo servidor Next.js para falar com o Strapi sem expor o JWT ao navegador
    * - ``NEXT_PUBLIC_TILESERVER_URL``
      - URL pública do TileServer acessível pelo navegador
    * - ``FAKE_AUTH``

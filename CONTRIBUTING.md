@@ -58,6 +58,16 @@ pytest
 - Use `web/.env.example` for frontend-only variables in local development.
 - Use `cms/.env.example` for Strapi-only variables in local development.
 - Do not commit `.env`, `.env.local`, or other machine-specific env files.
+- For authentication, keep `NEXT_PUBLIC_STRAPI_URL` browser-facing and `STRAPI_INTERNAL_URL` server-facing.
+
+## Authentication
+
+The project authentication system is documented separately in
+`docs/source/authentication.rst`.
+
+- `web` uses NextAuth for the app session.
+- `cms` remains the source of truth for users and roles.
+- The Strapi JWT must stay on the server side and should not be exposed to browser code.
 
 ## Contribution Notes
 

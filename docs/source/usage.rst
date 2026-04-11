@@ -49,6 +49,22 @@ Python Pipeline
    pip install -e .
    pytest
 
+Authentication
+~~~~~~~~~~~~~~
+
+The project uses NextAuth in ``web`` and Strapi Users & Permissions in ``cms``.
+
+- The login form posts credentials to NextAuth.
+- NextAuth authenticates against Strapi ``/api/auth/local``.
+- The Strapi JWT is kept server-side and is not exposed to the browser.
+- Authenticated browser requests should go through internal Next.js API routes.
+
+See :doc:`authentication` for the full architecture, file map, roles, and
+extension pattern.
+
+Dashboard permissions and role-specific UI customizations are documented in
+:doc:`dashboard`.
+
 Environment Files
 -----------------
 
