@@ -16,7 +16,7 @@ services:
       - tama-network
 
   strapi:
-    build: ./strapi
+    build: ./cms
     ports:
       - "1337:1337"
     env_file:
@@ -33,13 +33,13 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      - ./strapi:/srv/app
+      - ./cms:/srv/app
       - /srv/app/node_modules
     networks:
       - tama-network
 
   nextjs:
-    build: ./nextjs
+    build: ./web
     ports:
       - "3000:3000"
     env_file:
@@ -59,7 +59,7 @@ services:
       - tama-network
 
   python-worker:
-    build: ./python
+    build: ./pipeline
     command: python -m tama_hidrovias.automation.pipeline
     env_file:
       - .env

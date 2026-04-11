@@ -1,15 +1,33 @@
+
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 
+// Fake auth logic for development
+function isFakeAuthEnabled() {
+  return process.env.FAKE_AUTH === 'true';
+}
+
+const fakeSession = {
+  user: {
+    name: 'Dev User',
+    email: 'dev@example.com',
+  },
+};
+
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getServerSession(authOptions);
+  let session = null;
+  if (isFakeAuthEnabled()) {
+    session = fakeSession;
+  } else {
+    session = await getServerSession(authOptions);
+  }
 
   if (!session) {
     redirect('/login');

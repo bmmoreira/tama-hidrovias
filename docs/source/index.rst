@@ -1,13 +1,15 @@
-Welcome to Lumache's documentation!
-===================================
+Tama Hidrovias Documentation
+============================
 
-**Lumache** (/lu'make/) is a Python library for cooks and food lovers
-that creates recipes mixing random ingredients.
-It pulls data from the `Open Food Facts database <https://world.openfoodfacts.org/>`_
-and offers a *simple* and *intuitive* API.
+Tama Hidrovias is a multi-service hydrology platform for forecast generation,
+data processing, raster serving, and interactive map visualization.
 
-Check out the :doc:`usage` section for further information, including
-how to :ref:`installation` the project.
+The repository is organized as a coordinated set of services:
+
+- ``web/`` for the frontend application
+- ``cms/`` for the CMS and API
+- ``pipeline/`` for the data pipeline
+- ``tileserver/`` for raster tile delivery
 
 .. note::
 

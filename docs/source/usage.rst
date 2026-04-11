@@ -3,32 +3,53 @@ Usage
 
 .. _installation:
 
-Installation
-------------
+Development Setup
+-----------------
 
-To use Lumache, first install it using pip:
+The repository root is an orchestration layer. For most work, run the service
+you are actively changing.
 
-.. code-block:: console
+Full stack with Docker
+~~~~~~~~~~~~~~~~~~~~~~
 
-   (.venv) $ pip install lumache
+.. code-block:: bash
 
-Creating recipes
-----------------
+   cp .env.example .env
+   docker compose up --build
 
-To retrieve a list of random ingredients,
-you can use the ``lumache.get_random_ingredients()`` function:
+Frontend
+~~~~~~~~
 
-.. autofunction:: lumache.get_random_ingredients
+.. code-block:: bash
 
-The ``kind`` parameter should be either ``"meat"``, ``"fish"``,
-or ``"veggies"``. Otherwise, :py:func:`lumache.get_random_ingredients`
-will raise an exception.
+   cd web
+   npm install
+   npm run dev
 
-.. autoexception:: lumache.InvalidKindError
+Strapi API
+~~~~~~~~~~
 
-For example:
+.. code-block:: bash
 
->>> import lumache
->>> lumache.get_random_ingredients()
-['shells', 'gorgonzola', 'parsley']
+   cd cms
+   npm install
+   npm run develop
 
+Python Pipeline
+~~~~~~~~~~~~~~~
+
+.. code-block:: bash
+
+   cd pipeline
+   python -m venv .venv
+   source .venv/bin/activate
+   pip install -r requirements.txt
+   pip install -e .
+   pytest
+
+Environment Files
+-----------------
+
+- Use ``/.env.example`` as the shared Docker Compose template.
+- Use ``web/.env.example`` for frontend-specific local development.
+- Use ``cms/.env.example`` for Strapi-specific local development.

@@ -122,6 +122,8 @@ celerybeat.pid
 
 # Environments
 .env
+.env.local
+.env.*.local
 .venv
 env/
 venv/
@@ -179,9 +181,11 @@ data/shapefiles/*.dbf
 data/shapefiles/*.prj
 data/shapefiles/*.shx
 
-# Strapi
-strapi/.tmp/
-strapi/build/
-strapi/dist/
-strapi/exports/
-
+# CMS
+cms/.cache/
+cms/.strapi/
+cms/.strapi-updater.json
+cms/.tmp/
+cms/build/
+cms/dist/
+cms/exports/

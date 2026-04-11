@@ -8,14 +8,12 @@ export default function HomePage() {
       <section className="relative flex flex-1 flex-col items-center justify-center bg-gradient-to-br from-blue-900 via-green-700 to-cyan-600 px-6 py-24 text-white">
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
         <div className="relative z-10 mx-auto max-w-3xl text-center">
-          <div className="mb-6 flex justify-center">
-            <img src="/logo5.png" alt="Logo" className="h-32 w-32" />
-          </div>
+          
           <h1 className="mb-4 text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
             TaMa Hidrovias
           </h1>
           <p className="mb-8 text-lg text-blue-100 sm:text-xl">
-            Plataforma de monitoramento hidrológico para hidrovias na região dos rios Madeira e Tapajós. Cadeia de previsão integrada em escala de temporal.
+            Plataforma de monitoramento hidrológico para hidrovias na região dos rios Madeira e Tapajós. Cadeia de previsão integrada.
           </p>
 
           <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
@@ -79,13 +77,13 @@ const features = [
     Icon: Map,
     title: 'Mapa Interativo',
     description:
-      'Visualize estações hidrométricas os rios Madeira e Tapajós com dados e séries históricas.',
+      'Visualize estações virtuais hidrométricas os rios Madeira e Tapajós com dados e séries históricas.',
   },
   {
     Icon: SatelliteIcon,
     title: 'Medições em Altimetria',
     description:
-      'Acesse dados de nível d\'água e altimetria de diversas fontes para monitoramento contínuo das hidrovias.',
+      'Acesse dados de nível d\'água e altimetria para monitoramento contínuo das hidrovias.',
   },
   {
     Icon: Droplets,

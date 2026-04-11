@@ -9,7 +9,7 @@ This package provides end-to-end automation for collecting, processing, bias-cor
 ## Package structure
 
 ```
-python/
+pipeline/
 ├── tama_hidrovias/
 │   ├── data_collection/   # ANA, HydroWeb, SNIRH collectors
 │   ├── climate_models/    # ERA5, CHIRPS, GFS downloaders
@@ -24,7 +24,7 @@ python/
 ## Quick start
 
 ```bash
-pip install -e python/
+pip install -e pipeline/
 cp .env.example .env   # fill in API keys and Strapi credentials
 python -m tama_hidrovias.automation.pipeline
 ```
@@ -41,6 +41,6 @@ python -m tama_hidrovias.automation.pipeline
 ## Running tests
 
 ```bash
-cd python
+cd pipeline
 pytest tests/ -v
 ```

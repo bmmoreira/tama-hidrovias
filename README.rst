@@ -4,12 +4,16 @@ Tama Hidrovias – Plataforma de Previsão Hidrológica
 .. image:: https://img.shields.io/badge/license-MIT-blue.svg
    :target: LICENSE
 
-**Tama Hidrovias** é uma plataforma integrada de previsão hidrológica para a região dos rios Madeira e Tapajós, focada no monitoramento de hidrovias e gestão de recursos hídricos. O sistema processa dados climáticos, recorta regiões hidrográficas específicas e serve camadas raster interativas para visualização em mapas 
-hidrográficas brasileiras. O sistema combina dados de reanálise climática,
-processamento geoespacial em Python, uma API headless Strapi, visualização interativa com
-Next.js e serviço de camadas raster via TileServer-GL.
+**Tama Hidrovias** é uma plataforma integrada de previsão hidrológica para a
+região dos rios Madeira e Tapajós, focada no monitoramento de hidrovias e
+gestão de recursos hídricos. O sistema processa dados climáticos, recorta
+regiões hidrográficas específicas e serve camadas raster interativas para
+visualização em mapas hidrográficos brasileiros. A plataforma combina dados de
+reanálise climática, processamento geoespacial em Python, uma API headless
+Strapi, visualização interativa com Next.js e serviço de camadas raster via
+TileServer-GL.
 
-.. image:: images/logo5.png
+.. image:: assets/logo5.png
    :alt: Logo da plataforma Tama Hidrovias
    :width: 200px
 
@@ -50,6 +54,25 @@ Arquitetura
               │   porta 3000       │
               │   Mapbox GL JS     │
               └────────────────────┘
+
+Estrutura do Repositório
+------------------------
+
+O repositório raiz funciona como camada de orquestração. As aplicações
+executáveis vivem nos diretórios de serviço:
+
+.. code-block:: text
+
+    tama-hidrovias/
+    ├── web/           # frontend
+    ├── cms/           # CMS e API
+    ├── pipeline/      # pipeline de dados e testes
+    ├── tileserver/    # serviço de tiles raster
+    ├── data/          # dados locais brutos e processados
+    ├── docs/          # documentação Sphinx
+    ├── assets/        # branding compartilhada (fonte canônica)
+    ├── CONTRIBUTING.md
+    └── docker-compose.yml
 
 Início Rápido com Docker
 -------------------------
@@ -111,17 +134,19 @@ Python
 
 .. code-block:: bash
 
-    cd python
+    cd pipeline
     python -m venv .venv
     source .venv/bin/activate
-    pip install -e ".[dev]"
+    pip install -r requirements.txt
+    pip install -e .
+    pytest
 
 Next.js
 ~~~~~~~
 
 .. code-block:: bash
 
-    cd nextjs
+    cd web
     npm install
     npm run dev        # http://localhost:3000
 
@@ -130,7 +155,7 @@ Strapi
 
 .. code-block:: bash
 
-    cd strapi
+    cd cms
     npm install
     npm run develop    # http://localhost:1337/admin
 
@@ -153,7 +178,13 @@ Estrutura de Dados
 Variáveis de Ambiente
 ---------------------
 
-Copie ``.env.example`` para ``.env`` e preencha os valores:
+Arquivos recomendados por contexto:
+
+- ``/.env.example``: variáveis compartilhadas usadas pelo ``docker compose``
+- ``web/.env.example``: desenvolvimento isolado do frontend
+- ``cms/.env.example``: desenvolvimento isolado do Strapi
+
+Copie o arquivo apropriado para ``.env`` e preencha os valores:
 
 .. list-table::
    :header-rows: 1
@@ -169,10 +200,16 @@ Copie ``.env.example`` para ``.env`` e preencha os valores:
      - Segredo JWT para o painel Strapi
    * - ``NEXT_PUBLIC_MAPBOX_TOKEN``
      - Token público do Mapbox GL JS
+   * - ``NEXT_PUBLIC_STRAPI_URL``
+     - URL pública do Strapi acessível pelo navegador
+   * - ``NEXT_PUBLIC_TILESERVER_URL``
+     - URL pública do TileServer acessível pelo navegador
+   * - ``FAKE_AUTH``
+     - Define ``true`` para liberar o dashboard com sessão falsa em desenvolvimento
    * - ``CDS_API_KEY``
      - Chave da API Copernicus Climate Data Store
-   * - ``STRAPI_API_TOKEN``
-     - Token de acesso completo à API Strapi
+   * - ``STRAPI_TOKEN``
+     - Token bearer usado pelo pipeline Python para publicar dados no Strapi
 
 Licença
 -------
