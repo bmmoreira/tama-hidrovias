@@ -38,7 +38,7 @@ services:
     networks:
       - tama-network
 
-  nextjs:
+  web:
     build: ./web
     ports:
       - "3000:3000"
