@@ -166,13 +166,18 @@ For the deeper architecture and route behavior, prefer the Sphinx page:
 ## MapView GeoJSON route
 
 The separate `mapview` route is implemented as an experimental or expandable
-map surface that consumes a Strapi-backed GeoJSON overlay.
+map surface that consumes a Strapi-backed GeoJSON overlay while reusing the
+shared station explorer controls from the public `/map` route.
 
 Important files:
 
+- `src/app/map/page.tsx`
 - `src/app/mapview/page.tsx`
 - `src/app/mapview/mapview-state.ts`
+- `src/components/MapboxMap.tsx`
 - `src/components/maps/MapBase.tsx`
+- `src/components/maps/StationExplorerOverlay.tsx`
+- `src/components/maps/useStationExplorer.ts`
 - `src/app/api/map-feature-collections/route.ts`
 - `src/lib/strapi.ts`
 
@@ -183,6 +188,7 @@ Current route flow:
 3. The page fetches the GeoJSON overlay through `/api/map-feature-collections`.
 4. The Next route proxies to Strapi `GET /api/map-feature-collections/public`.
 5. `MapBase.tsx` renders the returned `featureCollection` as a Mapbox GeoJSON source and circle layer.
+6. The route mounts `StationExplorerOverlay.tsx` as a child of `MapBase.tsx` so the reusable station search and chart controls are rendered above the map.
 
 Current rendering behavior:
 
@@ -193,6 +199,8 @@ Current rendering behavior:
 - popup labels and action text are localized through runtime i18next
 - the popup overlay uses a theme-aware light/dark backdrop instead of native Mapbox popup styling
 - the web data layer now requests up to 500 stations by default so seeded feature-linked stations are not lost to Strapi default pagination
+- the public `/map` route and the GeoJSON `/mapview` route now share the same station explorer controller and overlay component
+- both `MapboxMap.tsx` and `MapBase.tsx` accept children so route-level overlays can be mounted without duplicating map-renderer internals
 
 Station and feature matching:
 
@@ -212,6 +220,7 @@ Development notes:
 - keep browser-side reads on the internal Next route instead of calling Strapi directly
 - if the GeoJSON contract changes, update both `src/lib/strapi.ts` types and `src/components/maps/MapBase.tsx`
 - if the popup or style rules depend on new properties, keep those transformations local to `MapBase.tsx`
+- keep reusable station search and chart-sheet behavior inside `src/components/maps/StationExplorerOverlay.tsx` and `src/components/maps/useStationExplorer.ts`
 
 Hydration and i18n note:
 

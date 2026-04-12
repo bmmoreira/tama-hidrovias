@@ -231,6 +231,11 @@ Map defaults are applied through two main hook points:
 - ``web/src/app/map/page.tsx``
 - ``web/src/components/MapboxMap.tsx``
 
+The public map page now also mounts a shared station explorer overlay through:
+
+- ``web/src/components/maps/StationExplorerOverlay.tsx``
+- ``web/src/components/maps/useStationExplorer.ts``
+
 Current behavior:
 
 1. The map page loads user preferences with ``getUserPreferences()``.
@@ -242,6 +247,9 @@ Current behavior:
    changes.
 6. The map page remounts ``MapboxMap`` when ``mapStyle`` changes by using the
    style as a React ``key``.
+7. The page mounts the reusable station explorer as a child of ``MapboxMap`` so
+    the same search panel and station detail sheet can be reused in other map
+    routes.
 
 The remount-on-style-change behavior is intentional. Mapbox base-style changes
 can clear custom layers and sources, so remounting is the simplest way to keep
@@ -251,6 +259,8 @@ Current implementation files:
 
 - ``web/src/app/map/page.tsx``
 - ``web/src/components/MapboxMap.tsx``
+- ``web/src/components/maps/StationExplorerOverlay.tsx``
+- ``web/src/components/maps/useStationExplorer.ts``
 
 When the user is not authenticated, the map page falls back to the global app
 settings model instead of per-user preferences. This keeps the public map and

@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, type ReactNode } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import type { MapStylePreference, Station } from '@/lib/strapi';
@@ -17,6 +17,7 @@ interface MapboxMapProps {
   stations?: Station[];
   onStationDoubleClick?: (station: Station) => void;
   tileLayerUrl?: string;
+  children?: ReactNode;
 }
 
 const SOURCE_ID = 'stations-source';
@@ -37,6 +38,7 @@ export default function MapboxMap({
   stations = [],
   onStationDoubleClick,
   tileLayerUrl,
+  children,
 }: MapboxMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -227,5 +229,10 @@ export default function MapboxMap({
     flyTo(initialViewState);
   }, [flyTo, initialViewState]);
 
-  return <div ref={containerRef} className="map-container h-full w-full" />;
+  return (
+    <div className="relative h-full w-full">
+      <div ref={containerRef} className="map-container h-full w-full" />
+      {children}
+    </div>
+  );
 }

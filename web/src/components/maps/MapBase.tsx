@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Map, {
   Layer,
   type MapLayerMouseEvent,
@@ -42,6 +42,7 @@ interface MapboxMapProps {
   featureCollectionLayerStyle?: FeatureCollectionLayerSettings;
   onStationDoubleClick?: (station: Station) => void;
   tileLayerUrl?: string;
+  children?: ReactNode;
 }
 
 const MAPBOX_STYLE_URLS: Record<MapStylePreference, string> = {
@@ -194,6 +195,7 @@ export default function MainMap({
   featureCollection,
   featureCollectionLayerStyle,
   tileLayerUrl,
+  children,
 }: MapboxMapProps) {
   const mapRef = useRef<MapRef | null>(null);
   const [popupFeature, setPopupFeature] = useState<PopupFeature | null>(null);
@@ -297,6 +299,8 @@ export default function MainMap({
         }}
         data={detailFeature}
       />
+
+      {children}
     </div>
   );
 }

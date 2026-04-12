@@ -273,6 +273,9 @@ Fluxo atual:
 - o Strapi devolve um registro com o campo JSON ``featureCollection``
 - o componente ``web/src/components/maps/MapBase.tsx`` renderiza esse payload
   como ``Source`` + ``Layer`` do Mapbox
+- os controles compartilhados de busca e detalhe de estação agora vivem em
+  ``web/src/components/maps/StationExplorerOverlay.tsx`` e podem ser montados
+  tanto em ``/map`` quanto em ``/mapview``
 
 No backend Strapi existe o single type ``Map Feature Collection`` com:
 

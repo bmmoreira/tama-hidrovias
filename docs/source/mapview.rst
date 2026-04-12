@@ -9,9 +9,10 @@ The ``/mapview`` route now renders a dedicated map implementation that combines:
 - guest or user map defaults for the initial viewport and base style
 - a GeoJSON ``FeatureCollection`` loaded from Strapi and rendered as a Mapbox
   ``geojson`` source and circle layer
+- the shared station explorer overlay used by other map routes
 
-This route is intentionally separate from the older ``/map`` implementation so
-new map experiments can evolve without destabilizing the existing map page.
+This route still uses its own GeoJSON renderer, but now shares station search
+and station detail overlay controls with the public ``/map`` route.
 
 Current Runtime Files
 ---------------------
@@ -21,6 +22,8 @@ Frontend route and component files:
 - ``web/src/app/mapview/page.tsx``
 - ``web/src/app/mapview/mapview-state.ts``
 - ``web/src/components/maps/MapBase.tsx``
+- ``web/src/components/maps/StationExplorerOverlay.tsx``
+- ``web/src/components/maps/useStationExplorer.ts``
 - ``web/src/app/api/map-feature-collections/route.ts``
 - ``web/src/lib/strapi.ts``
 
@@ -54,6 +57,9 @@ Request flow for the GeoJSON overlay:
    ``web/src/components/maps/MapBase.tsx``.
 8. ``MapBase`` renders it through ``<Source type="geojson" />`` and a circle
    ``<Layer />``.
+9. The page mounts ``StationExplorerOverlay`` as a child of ``MapBase`` so the
+   shared station search trigger, search panel, and station chart sheet sit on
+   top of the GeoJSON map.
 
 Current route list:
 
@@ -217,6 +223,10 @@ content:
 - optional raster tiles when ``tileLayerUrl`` is provided
 - the Strapi-backed GeoJSON overlay as a ``Source`` + circle ``Layer``
 
+``MapBase`` also now accepts overlay children from the route layer. That makes
+it possible to keep the GeoJSON renderer focused on map behavior while reusing
+the same station explorer controls in multiple map pages.
+
 GeoJSON overlay behavior:
 
 - rendered with a circle layer
@@ -314,6 +324,10 @@ Current runtime behavior:
 - all popup labels and button text are resolved through runtime i18n
 - the action row currently exposes mock buttons for future detail and favorite
    flows plus a working close action
+- ``StationExplorerOverlay.tsx`` provides the reusable station search button,
+   left/bottom search panel, station chart sheet, and optional legend
+- ``useStationExplorer.ts`` centralizes the selection, open/close, and active
+   variable state so ``/map`` and ``/mapview`` reuse the same controller logic
 
 Station Matching And Bootstrap Seeding
 --------------------------------------
