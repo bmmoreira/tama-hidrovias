@@ -1,0 +1,31 @@
+{
+  "kind": "collectionType",
+  "collectionName": "map_feature_collections",
+  "info": {
+    "singularName": "map-feature-collection",
+    "pluralName": "map-feature-collections",
+    "displayName": "Map Feature Collection",
+    "description": "GeoJSON feature collections used by the web map"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "geojsonFile": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": [
+        "files"
+      ]
+    },
+    "featureCollection": {
+      "type": "json",
+      "required": true
+    }
+  }
+}

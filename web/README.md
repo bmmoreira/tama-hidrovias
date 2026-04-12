@@ -163,6 +163,44 @@ For the deeper architecture and route behavior, prefer the Sphinx page:
 
 - `../docs/source/preferences.rst`
 
+## MapView GeoJSON route
+
+The separate `mapview` route is implemented as an experimental or expandable
+map surface that consumes a Strapi-backed GeoJSON overlay.
+
+Important files:
+
+- `src/app/mapview/page.tsx`
+- `src/app/mapview/mapview-state.ts`
+- `src/components/maps/MapBase.tsx`
+- `src/app/api/map-feature-collections/route.ts`
+- `src/lib/strapi.ts`
+
+Current route flow:
+
+1. The browser opens `/mapview`.
+2. The page loads guest or user map defaults from app settings or preferences.
+3. The page fetches the GeoJSON overlay through `/api/map-feature-collections`.
+4. The Next route proxies to Strapi `GET /api/map-feature-collections/public`.
+5. `MapBase.tsx` renders the returned `featureCollection` as a Mapbox GeoJSON source and circle layer.
+
+Current rendering behavior:
+
+- station markers still come from `/api/stations`
+- the GeoJSON overlay is rendered separately from station markers
+- clicking a GeoJSON point opens a popup from feature properties
+- the current popup supports `name`, `sat`, `river`, `basin`, `value`, `change`, `anomalia`, `s_date`, and `e_date`
+
+Development notes:
+
+- keep browser-side reads on the internal Next route instead of calling Strapi directly
+- if the GeoJSON contract changes, update both `src/lib/strapi.ts` types and `src/components/maps/MapBase.tsx`
+- if the popup or style rules depend on new properties, keep those transformations local to `MapBase.tsx`
+
+For the full technical flow and Strapi upload process, see:
+
+- `../docs/source/mapview.rst`
+
 ## Fake auth for UI work
 
 When `FAKE_AUTH=true`, the dashboard layout injects a development session for

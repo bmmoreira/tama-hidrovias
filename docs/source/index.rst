@@ -67,5 +67,6 @@ Contents
    authentication
    dashboard
    preferences
+   mapview
    changelog
    api

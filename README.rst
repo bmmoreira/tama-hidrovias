@@ -258,6 +258,46 @@ Next.js
 .. code-block:: bash
 
     cd web
+
+Mapa ``/mapview`` e camadas GeoJSON
+-----------------------------------
+
+O projeto agora inclui uma rota dedicada ``/mapview`` no frontend para testar e
+evoluir uma visualização baseada em Mapbox com sobreposição GeoJSON carregada a
+partir do Strapi.
+
+Fluxo atual:
+
+- o frontend chama ``/api/map-feature-collections`` no próprio app Next.js
+- essa rota faz proxy para ``GET /api/map-feature-collections/public`` no Strapi
+- o Strapi devolve um registro com o campo JSON ``featureCollection``
+- o componente ``web/src/components/maps/MapBase.tsx`` renderiza esse payload
+  como ``Source`` + ``Layer`` do Mapbox
+
+No backend Strapi existe o collection type ``Map Feature Collection`` com:
+
+- ``name``
+- ``geojsonFile`` para upload opcional do arquivo fonte
+- ``featureCollection`` com o GeoJSON efetivamente servido ao frontend
+
+Como atualizar os dados:
+
+1. abra ``http://localhost:1337/admin``
+2. edite o registro de ``Map Feature Collection``
+3. envie um arquivo ``.geojson`` ou ``.json`` em ``geojsonFile`` ou edite o
+   campo ``featureCollection`` manualmente
+4. salve o registro
+5. recarregue ``http://localhost:3000/mapview``
+
+O ciclo de vida do Strapi valida o GeoJSON e importa automaticamente o arquivo
+enviado para o campo JSON ao salvar.
+
+Para detalhes técnicos completos, rotas, fluxo de carregamento e caminhos de
+expansão, consulte:
+
+- ``docs/source/mapview.rst``
+- ``cms/README.md``
+- ``web/README.md``
     npm install
     npm run dev        # http://localhost:3000
 

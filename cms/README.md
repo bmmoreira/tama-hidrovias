@@ -164,9 +164,55 @@ Implementation files:
 This model is used by the web dashboard admin page to define the guest default
 language and public map view while keeping per-user preferences independent.
 
+## Map Feature Collection model
+
+The CMS now includes a dedicated collection type for GeoJSON overlays used by
+the web `mapview` route.
+
+Content type:
+
+- `src/api/map-feature-collection/content-types/map-feature-collection/schema.json`
+
+Current fields:
+
+- `name`
+- `geojsonFile`
+- `featureCollection`
+
+Routes:
+
+- `GET /api/map-feature-collections/public`
+
+Implementation files:
+
+- `src/api/map-feature-collection/controllers/map-feature-collection.js`
+- `src/api/map-feature-collection/routes/custom-map-feature-collection.js`
+- `src/api/map-feature-collection/content-types/map-feature-collection/lifecycles.js`
+- `src/api/map-feature-collection/utils/geojson.js`
+
+Operational behavior:
+
+- bootstrap ensures one default mock record exists for local development
+- admins can upload a `.geojson` or `.json` file into `geojsonFile`
+- on save, the lifecycle imports and validates the uploaded file into `featureCollection`
+- admins can also edit `featureCollection` directly as raw JSON
+- lifecycle validation rejects payloads that are not valid GeoJSON `FeatureCollection` objects with point features
+
+Recommended workflow:
+
+1. open Strapi admin
+2. edit the `Map Feature Collection` entry
+3. upload a new `geojsonFile` or paste JSON into `featureCollection`
+4. save the entry
+5. refresh `/mapview` in the web app
+
+If any file under `src/api/map-feature-collection/` changes, restart Strapi so
+the new schema, routes, or lifecycles are loaded.
+
 ## Related documentation
 
 - Root overview: `../README.rst`
 - Architecture/auth docs: `../docs/source/authentication.rst`
 - Dashboard customization notes: `../docs/source/dashboard.rst`
 - Preferences and map defaults: `../docs/source/preferences.rst`
+- MapView GeoJSON flow: `../docs/source/mapview.rst`

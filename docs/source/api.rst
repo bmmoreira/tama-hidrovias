@@ -40,6 +40,22 @@ Runtime shape:
 This route family is used for the default dashboard language and public map
 fallback state. It is documented in more detail in ``preferences.rst``.
 
+Current Map Feature Collection Endpoints
+----------------------------------------
+
+The ``/mapview`` route now consumes a Strapi-backed GeoJSON overlay through a
+dedicated public endpoint and a matching Next.js proxy.
+
+Runtime shape:
+
+- Strapi public route: ``/api/map-feature-collections/public``
+- Next.js proxy route: ``web/src/app/api/map-feature-collections/route.ts``
+- Web page route: ``/mapview``
+
+This route family is used to deliver a GeoJSON ``FeatureCollection`` stored in
+Strapi and rendered by ``web/src/components/maps/MapBase.tsx``. It is
+documented in more detail in ``mapview.rst``.
+
 Python package layout
 ---------------------
 

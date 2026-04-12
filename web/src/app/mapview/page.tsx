@@ -1,15 +1,23 @@
 'use client';
 
+import React from 'react';
 import dynamic from 'next/dynamic';
 import { useState, useCallback, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import useSWR from 'swr';
-import { getAppSettings, getStations, getUserPreferences } from '@/lib/strapi';
+import {
+  getAppSettings,
+  getMapFeatureCollection,
+  getStations,
+  getUserPreferences,
+} from '@/lib/strapi';
 import type { MapStylePreference, Station, StationVariable } from '@/lib/strapi';
 import { useTranslation } from '@/lib/use-app-translation';
+import StationSearchPanel from '@/components/StationSearchPanel';
+import { MAPVIEW_DEFAULT_STATE, resolveMapViewState } from './mapview-state';
 
 // Dynamic import to avoid SSR issues with mapbox-gl
-const MapboxMap = dynamic(() => import('@/components/MapboxMap'), {
+const MapboxMap = dynamic(() => import('@/components/maps/MapBase'), {
   ssr: false,
   loading: () => (
     <div className="flex h-full w-full items-center justify-center bg-gray-100">
@@ -46,6 +54,13 @@ export default function MapPage() {
   const { data: appSettingsData } = useSWR('app-settings', () => getAppSettings(), {
     revalidateOnFocus: false,
   });
+  const { data: featureCollectionData } = useSWR(
+    'map-feature-collection',
+    () => getMapFeatureCollection(),
+    {
+      revalidateOnFocus: false,
+    },
+  );
   const { data: preferencesData, isLoading: isPreferencesLoading } = useSWR(
     status === 'authenticated' ? 'user-preferences' : null,
     () => getUserPreferences(),
@@ -56,6 +71,7 @@ export default function MapPage() {
 
   const stations = stationsData?.data ?? [];
   const appSettings = appSettingsData?.data;
+  const featureCollection = featureCollectionData?.data?.featureCollection;
   const preferences = preferencesData?.data;
   const { from, to } = getPast30Days();
   const variableLabels: Record<StationVariable, string> = {
@@ -81,26 +97,16 @@ export default function MapPage() {
     });
   }, []);
 
-  const [flyTarget, setFlyTarget] = useState({
-    longitude: -52,
-    latitude: -15,
-    zoom: 4,
-  });
-  const [mapStyle, setMapStyle] = useState<MapStylePreference>('outdoors');
+  const [flyTarget, setFlyTarget] = useState(MAPVIEW_DEFAULT_STATE.flyTarget);
+  const [mapStyle, setMapStyle] = useState<MapStylePreference>(
+    MAPVIEW_DEFAULT_STATE.mapStyle,
+  );
 
   useEffect(() => {
-    const source = preferences?.map ?? appSettings?.map;
+    const nextState = resolveMapViewState(preferences?.map, appSettings?.map);
 
-    if (!source) {
-      return;
-    }
-
-    setFlyTarget({
-      longitude: source.centerLongitude,
-      latitude: source.centerLatitude,
-      zoom: source.defaultZoom,
-    });
-    setMapStyle(source.mapStyle);
+    setFlyTarget(nextState.flyTarget);
+    setMapStyle(nextState.mapStyle);
   }, [appSettings, preferences]);
 
   return (
@@ -113,6 +119,7 @@ export default function MapPage() {
             initialViewState={flyTarget}
             mapStyle={mapStyle}
             stations={stations}
+            featureCollection={featureCollection}
             onStationDoubleClick={handleStationDoubleClick}
           />
         ) : (

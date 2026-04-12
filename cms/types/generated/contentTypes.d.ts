@@ -477,6 +477,39 @@ export interface ApiForecastForecast extends Schema.CollectionType {
   };
 }
 
+export interface ApiMapFeatureCollectionMapFeatureCollection
+  extends Schema.CollectionType {
+  collectionName: 'map_feature_collections';
+  info: {
+    description: 'GeoJSON feature collections used by the web map';
+    displayName: 'Map Feature Collection';
+    pluralName: 'map-feature-collections';
+    singularName: 'map-feature-collection';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    createdAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::map-feature-collection.map-feature-collection',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    featureCollection: Attribute.JSON & Attribute.Required;
+    geojsonFile: Attribute.Media<'files'>;
+    name: Attribute.String & Attribute.Required & Attribute.Unique;
+    updatedAt: Attribute.DateTime;
+    updatedBy: Attribute.Relation<
+      'api::map-feature-collection.map-feature-collection',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
 export interface ApiMeasurementMeasurement extends Schema.CollectionType {
   collectionName: 'measurements';
   info: {
@@ -1050,6 +1083,7 @@ declare module '@strapi/types' {
       'api::app-setting.app-setting': ApiAppSettingAppSetting;
       'api::climate-layer.climate-layer': ApiClimateLayerClimateLayer;
       'api::forecast.forecast': ApiForecastForecast;
+      'api::map-feature-collection.map-feature-collection': ApiMapFeatureCollectionMapFeatureCollection;
       'api::measurement.measurement': ApiMeasurementMeasurement;
       'api::station.station': ApiStationStation;
       'api::user-preference.user-preference': ApiUserPreferenceUserPreference;

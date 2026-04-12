@@ -108,6 +108,9 @@ Dashboard permissions and role-specific UI customizations are documented in
 Preferences, runtime i18n behavior, and global guest map defaults are
 documented in :doc:`preferences`.
 
+The dedicated ``/mapview`` GeoJSON overlay flow, including the Strapi upload
+path and the Next.js proxy route, is documented in :doc:`mapview`.
+
 Environment Files
 -----------------
 
