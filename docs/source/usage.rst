@@ -65,6 +65,9 @@ extension pattern.
 Dashboard permissions and role-specific UI customizations are documented in
 :doc:`dashboard`.
 
+Preferences, runtime i18n behavior, and global guest map defaults are
+documented in :doc:`preferences`.
+
 Environment Files
 -----------------
 

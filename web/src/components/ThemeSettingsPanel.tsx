@@ -3,7 +3,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Check, Loader2, Monitor, Moon, Search, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { useTranslation } from '@/lib/use-app-translation';
 import useSWR from 'swr';
+import { USER_PREFERENCES_UPDATED_EVENT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import {
   getStations,
@@ -27,61 +29,19 @@ import {
 } from '@/components/ui/select';
 
 const OPTIONS = [
-  {
-    value: 'light',
-    label: 'Claro',
-    description: 'Interface com fundos claros e alto contraste para luz ambiente.',
-    Icon: Sun,
-  },
-  {
-    value: 'dark',
-    label: 'Escuro',
-    description: 'Interface com fundos escuros para reduzir brilho e fadiga visual.',
-    Icon: Moon,
-  },
-  {
-    value: 'system',
-    label: 'Sistema',
-    description: 'Segue automaticamente a preferencia do dispositivo.',
-    Icon: Monitor,
-  },
+  { value: 'light', Icon: Sun },
+  { value: 'dark', Icon: Moon },
+  { value: 'system', Icon: Monitor },
 ] as const;
 
-const MAP_STYLE_OPTIONS: Array<{
-  value: MapStylePreference;
-  label: string;
-  description: string;
-}> = [
-  {
-    value: 'outdoors',
-    label: 'Outdoors',
-    description: 'Mapa topografico com relevo e contexto ambiental.',
-  },
-  {
-    value: 'streets',
-    label: 'Streets',
-    description: 'Mapa urbano mais neutro para navegacao geral.',
-  },
-  {
-    value: 'satellite',
-    label: 'Satellite',
-    description: 'Imagem de satelite com rotulos de referencia.',
-  },
-  {
-    value: 'dark',
-    label: 'Dark',
-    description: 'Base escura com contraste forte para ambientes de operacao.',
-  },
+const MAP_STYLE_OPTIONS: Array<{ value: MapStylePreference }> = [
+  { value: 'outdoors' },
+  { value: 'streets' },
+  { value: 'satellite' },
+  { value: 'dark' },
 ];
 
-const LANGUAGE_OPTIONS: Array<{
-  value: LanguagePreference;
-  label: string;
-}> = [
-  { value: 'pt-BR', label: 'Portugues (Brasil)' },
-  { value: 'en', label: 'English' },
-  { value: 'es', label: 'Espanol' },
-];
+const LANGUAGE_OPTIONS: LanguagePreference[] = ['pt-BR', 'en', 'es', 'fr'];
 
 const TIME_ZONE_OPTIONS = [
   'America/Sao_Paulo',
@@ -141,6 +101,7 @@ const DEFAULT_FORM_STATE: FormState = {
 };
 
 export default function ThemeSettingsPanel() {
+  const { t } = useTranslation();
   const { setTheme } = useTheme();
   const [form, setForm] = useState<FormState>(DEFAULT_FORM_STATE);
   const [hasInitialized, setHasInitialized] = useState(false);
@@ -164,6 +125,41 @@ export default function ThemeSettingsPanel() {
 
   const preferences = preferencesData?.data;
   const stations = stationsData?.data ?? [];
+  const localizedThemeOptions = OPTIONS.map(({ value, Icon }) => ({
+    value,
+    Icon,
+    label:
+      value === 'light'
+        ? t('settings.light')
+        : value === 'dark'
+          ? t('settings.dark')
+          : t('settings.system'),
+    description:
+      value === 'light'
+        ? t('settings.lightDescription')
+        : value === 'dark'
+          ? t('settings.darkDescription')
+          : t('settings.systemDescription'),
+  }));
+  const localizedMapStyleOptions = MAP_STYLE_OPTIONS.map(({ value }) => ({
+    value,
+    label:
+      value === 'outdoors'
+        ? t('settings.outdoors')
+        : value === 'streets'
+          ? t('settings.streets')
+          : value === 'satellite'
+            ? t('settings.satellite')
+            : t('settings.darkMap'),
+    description:
+      value === 'outdoors'
+        ? t('settings.outdoorsDescription')
+        : value === 'streets'
+          ? t('settings.streetsDescription')
+          : value === 'satellite'
+            ? t('settings.satelliteDescription')
+            : t('settings.darkMapDescription'),
+  }));
 
   useEffect(() => {
     if (!preferences || hasInitialized) {
@@ -263,7 +259,7 @@ export default function ThemeSettingsPanel() {
         centerLatitude: String(updatedPreferences.data.map.centerLatitude),
         centerLongitude: String(updatedPreferences.data.map.centerLongitude),
         favoriteStationIds: updatedPreferences.data.favoriteStations.map(
-          (station) => station.id,
+          (station: Station) => station.id,
         ),
         alertsEnabled: updatedPreferences.data.alerts.enabled,
         favoritesOnly: updatedPreferences.data.alerts.favoritesOnly,
@@ -288,7 +284,7 @@ export default function ThemeSettingsPanel() {
       );
       setFeedback({
         type: 'success',
-        message: 'Preferencias salvas com sucesso.',
+        message: t('settings.saved'),
       });
     } catch (error) {
       setFeedback({
@@ -296,7 +292,7 @@ export default function ThemeSettingsPanel() {
         message:
           error instanceof Error
             ? error.message
-            : 'Nao foi possivel salvar as preferencias.',
+            : t('settings.saveError'),
       });
     } finally {
       setIsSaving(false);
@@ -307,14 +303,14 @@ export default function ThemeSettingsPanel() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Aparencia</CardTitle>
+          <CardTitle>{t('settings.appearance')}</CardTitle>
           <CardDescription>
-            Tema, idioma e fuso horario persistidos por usuario.
+            {t('settings.appearanceDescription')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-3 md:grid-cols-3">
-            {OPTIONS.map(({ value, label, description, Icon }) => {
+            {localizedThemeOptions.map(({ value, label, description, Icon }) => {
               const active = form.theme === value;
               return (
                 <button
@@ -346,7 +342,7 @@ export default function ThemeSettingsPanel() {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <label className="text-xs font-medium text-gray-700 dark:text-slate-300">
-                Idioma preferencial
+                {t('settings.preferredLanguage')}
               </label>
               <Select
                 value={form.language}
@@ -361,9 +357,15 @@ export default function ThemeSettingsPanel() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {LANGUAGE_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
+                  {LANGUAGE_OPTIONS.map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {value === 'pt-BR'
+                        ? t('settings.portugueseBrazil')
+                        : value === 'en'
+                          ? t('settings.english')
+                          : value === 'es'
+                            ? t('settings.spanish')
+                            : t('settings.french')}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -371,7 +373,7 @@ export default function ThemeSettingsPanel() {
             </div>
             <div className="space-y-2">
               <label className="text-xs font-medium text-gray-700 dark:text-slate-300">
-                Fuso horario
+                {t('settings.timeZone')}
               </label>
               <Select
                 value={form.timeZone}
@@ -400,15 +402,15 @@ export default function ThemeSettingsPanel() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Mapa</CardTitle>
+          <CardTitle>{t('settings.map')}</CardTitle>
           <CardDescription>
-            Padrao usado na pagina de mapa para estilo, zoom e centro inicial.
+            {t('settings.mapDescription')}
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2 md:col-span-2">
             <label className="text-xs font-medium text-gray-700 dark:text-slate-300">
-              Estilo do mapa
+              {t('settings.mapStyle')}
             </label>
             <Select
               value={form.mapStyle}
@@ -423,7 +425,7 @@ export default function ThemeSettingsPanel() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {MAP_STYLE_OPTIONS.map((option) => (
+                {localizedMapStyleOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>
@@ -432,7 +434,7 @@ export default function ThemeSettingsPanel() {
             </Select>
             <p className="text-xs text-gray-500 dark:text-slate-400">
               {
-                MAP_STYLE_OPTIONS.find((option) => option.value === form.mapStyle)
+                localizedMapStyleOptions.find((option) => option.value === form.mapStyle)
                   ?.description
               }
             </p>
@@ -440,7 +442,7 @@ export default function ThemeSettingsPanel() {
 
           <div className="space-y-2">
             <label className="text-xs font-medium text-gray-700 dark:text-slate-300">
-              Zoom padrao
+              {t('settings.defaultZoom')}
             </label>
             <Input
               type="number"
@@ -456,7 +458,7 @@ export default function ThemeSettingsPanel() {
           </div>
           <div className="space-y-2">
             <label className="text-xs font-medium text-gray-700 dark:text-slate-300">
-              Latitude central
+              {t('settings.centerLatitude')}
             </label>
             <Input
               type="number"
@@ -472,7 +474,7 @@ export default function ThemeSettingsPanel() {
           </div>
           <div className="space-y-2 md:col-span-2">
             <label className="text-xs font-medium text-gray-700 dark:text-slate-300">
-              Longitude central
+              {t('settings.centerLongitude')}
             </label>
             <Input
               type="number"
@@ -491,9 +493,9 @@ export default function ThemeSettingsPanel() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Estacoes Favoritas</CardTitle>
+          <CardTitle>{t('settings.favoriteStations')}</CardTitle>
           <CardDescription>
-            Selecione as estacoes que voce quer destacar e acompanhar primeiro.
+            {t('settings.favoriteStationsDescription')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -503,7 +505,7 @@ export default function ThemeSettingsPanel() {
               type="text"
               value={stationQuery}
               onChange={(event) => setStationQuery(event.target.value)}
-              placeholder="Buscar estacao por nome ou codigo"
+              placeholder={t('settings.stationSearchPlaceholder')}
               className="pl-9"
             />
           </div>
@@ -512,11 +514,11 @@ export default function ThemeSettingsPanel() {
             <div className="max-h-72 overflow-y-auto p-2">
               {isStationsLoading ? (
                 <div className="flex items-center justify-center py-8 text-sm text-gray-500 dark:text-slate-400">
-                  Carregando estacoes...
+                  {t('settings.loadingStations')}
                 </div>
               ) : filteredStations.length === 0 ? (
                 <div className="flex items-center justify-center py-8 text-sm text-gray-500 dark:text-slate-400">
-                  Nenhuma estacao encontrada.
+                  {t('settings.noStations')}
                 </div>
               ) : (
                 filteredStations.map((station: Station) => {
@@ -563,16 +565,16 @@ export default function ThemeSettingsPanel() {
           </div>
 
           <p className="text-xs text-gray-500 dark:text-slate-400">
-            {form.favoriteStationIds.length} estacao(oes) favorita(s) selecionada(s).
+            {t('settings.favoriteCount', { count: form.favoriteStationIds.length })}
           </p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Alertas</CardTitle>
+          <CardTitle>{t('settings.alerts')}</CardTitle>
           <CardDescription>
-            Preferencias operacionais para notificacoes de estacoes favoritas e eventos criticos.
+            {t('settings.alertsDescription')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -580,38 +582,38 @@ export default function ThemeSettingsPanel() {
             {[
               {
                 key: 'alertsEnabled',
-                label: 'Alertas habilitados',
-                description: 'Ativa a avaliacao das regras de alerta para o usuario.',
+                label: t('settings.alertsEnabled'),
+                description: t('settings.alertsEnabledDescription'),
               },
               {
                 key: 'favoritesOnly',
-                label: 'Somente favoritas',
-                description: 'Restringe alertas as estacoes marcadas como favoritas.',
+                label: t('settings.favoritesOnly'),
+                description: t('settings.favoritesOnlyDescription'),
               },
               {
                 key: 'emailNotifications',
-                label: 'Notificacoes por e-mail',
-                description: 'Reserva de canal para a futura entrega por e-mail.',
+                label: t('settings.emailNotifications'),
+                description: t('settings.emailNotificationsDescription'),
               },
               {
                 key: 'dashboardNotifications',
-                label: 'Notificacoes no painel',
-                description: 'Mostra alertas diretamente na interface autenticada.',
+                label: t('settings.dashboardNotifications'),
+                description: t('settings.dashboardNotificationsDescription'),
               },
               {
                 key: 'dailyDigest',
-                label: 'Resumo diario',
-                description: 'Agrupa alertas nao urgentes em um resumo consolidado.',
+                label: t('settings.dailyDigest'),
+                description: t('settings.dailyDigestDescription'),
               },
               {
                 key: 'stationOfflineAlerts',
-                label: 'Estacao sem atualizacao',
-                description: 'Destaca ausencia de dados recentes nas estacoes monitoradas.',
+                label: t('settings.stationOfflineAlerts'),
+                description: t('settings.stationOfflineAlertsDescription'),
               },
               {
                 key: 'forecastThresholdAlerts',
-                label: 'Alertas de previsao',
-                description: 'Permite regras futuras baseadas em previsoes e limiares.',
+                label: t('settings.forecastThresholdAlerts'),
+                description: t('settings.forecastThresholdAlertsDescription'),
               },
             ].map(({ key, label, description }) => (
               <label
@@ -644,7 +646,7 @@ export default function ThemeSettingsPanel() {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <label className="text-xs font-medium text-gray-700 dark:text-slate-300">
-                Severidade minima
+                {t('settings.minimumSeverity')}
               </label>
               <Select
                 value={form.minimumSeverity}
@@ -661,7 +663,11 @@ export default function ThemeSettingsPanel() {
                 <SelectContent>
                   {ALERT_SEVERITY_OPTIONS.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
-                      {option.label}
+                      {option.value === 'info'
+                        ? t('settings.info')
+                        : option.value === 'warning'
+                          ? t('settings.warning')
+                          : t('settings.critical')}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -669,7 +675,7 @@ export default function ThemeSettingsPanel() {
             </div>
             <div className="space-y-2">
               <label className="text-xs font-medium text-gray-700 dark:text-slate-300">
-                Antecedencia do alerta (minutos)
+                {t('settings.alertLeadTime')}
               </label>
               <Input
                 type="number"
@@ -692,15 +698,15 @@ export default function ThemeSettingsPanel() {
         <CardContent className="flex flex-col gap-3 pt-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-medium text-gray-900 dark:text-slate-100">
-              Persistencia por usuario
+              {t('settings.persistenceTitle')}
             </p>
             <p className="text-sm text-gray-500 dark:text-slate-400">
-              As preferencias ficam associadas ao usuario autenticado no Strapi.
+              {t('settings.persistenceDescription')}
             </p>
           </div>
           <Button onClick={handleSave} disabled={isSaving || isLoading || !hasInitialized}>
             {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {isSaving ? 'Salvando...' : 'Salvar preferencias'}
+            {isSaving ? t('settings.saving') : t('settings.save')}
           </Button>
         </CardContent>
       </Card>
@@ -720,7 +726,7 @@ export default function ThemeSettingsPanel() {
 
       {!hasInitialized && isLoading ? (
         <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-4 text-sm text-gray-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
-          Carregando preferencias salvas...
+          {t('settings.loadingPreferences')}
         </div>
       ) : null}
     </div>

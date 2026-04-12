@@ -6,6 +6,7 @@ import { getStations } from '@/lib/strapi';
 import type { Station } from '@/lib/strapi';
 import StationChart from '@/components/StationChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useTranslation } from '@/lib/use-app-translation';
 import {
   Select,
   SelectContent,
@@ -15,6 +16,7 @@ import {
 } from '@/components/ui/select';
 
 export default function DashboardCharts() {
+  const { t } = useTranslation();
   const { data: stationsData } = useSWR('dashboard-stations', () =>
     getStations({ 'pagination[pageSize]': '10' }),
   );
@@ -31,7 +33,7 @@ export default function DashboardCharts() {
     <Card>
       <CardHeader className="mb-0 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <CardTitle className="text-base text-gray-800 dark:text-slate-100">
-          Medições Recentes
+          {t('dashboard.recentMeasurementsChart')}
         </CardTitle>
         {stations.length > 0 && (
           <Select
@@ -39,7 +41,7 @@ export default function DashboardCharts() {
             onValueChange={(value) => setSelectedId(Number(value))}
           >
             <SelectTrigger className="sm:w-80">
-              <SelectValue placeholder="Selecione uma estação" />
+              <SelectValue placeholder={t('dashboard.selectStation')} />
             </SelectTrigger>
             <SelectContent>
             {stations.map((s: Station) => (
@@ -62,7 +64,7 @@ export default function DashboardCharts() {
         />
       ) : (
         <div className="flex h-48 items-center justify-center text-sm text-gray-400 dark:text-slate-500">
-          Nenhuma estação disponível
+          {t('dashboard.noStation')}
         </div>
       )}
       </CardContent>

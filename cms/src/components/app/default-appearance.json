@@ -1,0 +1,15 @@
+{
+  "collectionName": "components_app_default_appearances",
+  "info": {
+    "displayName": "Default Appearance"
+  },
+  "options": {},
+  "attributes": {
+    "language": {
+      "type": "enumeration",
+      "enum": ["pt-BR", "en", "es", "fr"],
+      "default": "pt-BR",
+      "required": true
+    }
+  }
+}

@@ -13,7 +13,7 @@ import {
 } from 'recharts';
 import { getMeasurements } from '@/lib/strapi';
 import type { Measurement, StationVariable } from '@/lib/strapi';
-import { cn } from '@/lib/utils';
+import { useTranslation } from '@/lib/use-app-translation';
 
 interface StationChartProps {
   stationId: number;
@@ -77,6 +77,7 @@ export default function StationChart({
   from,
   to,
 }: StationChartProps) {
+  const { t } = useTranslation();
   const { data, error, isLoading } = useSWR(
     ['measurements', stationId, variable, from, to],
     () => getMeasurements(stationId, variable, from, to),
@@ -88,7 +89,7 @@ export default function StationChart({
   if (error) {
     return (
       <div className="flex h-48 items-center justify-center rounded-lg bg-red-50 text-sm text-red-600">
-        Erro ao carregar medições.
+        {t('stationChart.loadError')}
       </div>
     );
   }
@@ -98,7 +99,7 @@ export default function StationChart({
   if (measurements.length === 0) {
     return (
       <div className="flex h-48 items-center justify-center rounded-lg bg-gray-50 text-sm text-gray-400">
-        Nenhuma medição encontrada para o período selecionado.
+        {t('stationChart.noMeasurements')}
       </div>
     );
   }

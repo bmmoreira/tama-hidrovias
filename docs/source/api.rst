@@ -25,6 +25,21 @@ Runtime shape:
 This route is used for user-scoped appearance, map, favorites, and alert
 preferences. It is documented in more detail in ``preferences.rst``.
 
+Current Global App Settings Endpoints
+-------------------------------------
+
+The platform also exposes a global app settings model for guest-facing
+dashboard and map defaults.
+
+Runtime shape:
+
+- Strapi public route: ``/api/app-settings/public``
+- Strapi admin routes: ``/api/app-settings/current``
+- Next.js proxy route: ``web/src/app/api/app-settings/route.ts``
+
+This route family is used for the default dashboard language and public map
+fallback state. It is documented in more detail in ``preferences.rst``.
+
 Python package layout
 ---------------------
 

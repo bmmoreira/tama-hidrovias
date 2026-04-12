@@ -1,7 +1,28 @@
 import Link from 'next/link';
 import { Droplets, Map, LayoutDashboard, ArrowRight, SatelliteIcon } from 'lucide-react';
+import { getRequestTranslationMessages } from '@/lib/server-language';
 
-export default function HomePage() {
+export default async function HomePage() {
+  const { messages } = await getRequestTranslationMessages();
+
+  const features = [
+    {
+      Icon: Map,
+      title: messages.home.interactiveMapTitle,
+      description: messages.home.interactiveMapDescription,
+    },
+    {
+      Icon: SatelliteIcon,
+      title: messages.home.altimetryTitle,
+      description: messages.home.altimetryDescription,
+    },
+    {
+      Icon: Droplets,
+      title: messages.home.forecastTitle,
+      description: messages.home.forecastDescription,
+    },
+  ] as const;
+
   return (
     <main className="flex min-h-screen flex-col">
       {/* Hero */}
@@ -13,7 +34,7 @@ export default function HomePage() {
             TaMa Hidrovias
           </h1>
           <p className="mb-8 text-lg text-blue-100 sm:text-xl">
-            Plataforma de monitoramento hidrológico para hidrovias na região dos rios Madeira e Tapajós. Cadeia de previsão integrada.
+            {messages.home.heroDescription}
           </p>
 
           <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
@@ -22,14 +43,14 @@ export default function HomePage() {
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-8 py-4 text-base font-semibold text-blue-900 shadow-lg transition hover:bg-blue-50 hover:shadow-xl"
             >
               <Map className="h-5 w-5" />
-              Ver Mapa Público
+              {messages.home.publicMap}
             </Link>
             <Link
               href="/dashboard"
               className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-white/60 px-8 py-4 text-base font-semibold text-white backdrop-blur-sm transition hover:border-white hover:bg-white/10"
             >
               <LayoutDashboard className="h-5 w-5" />
-              Painel de Controle
+              {messages.home.dashboard}
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
@@ -40,7 +61,7 @@ export default function HomePage() {
       <section className="bg-white px-6 py-16">
         <div className="mx-auto max-w-5xl">
           <h2 className="mb-10 text-center text-2xl font-semibold text-gray-800 sm:text-3xl">
-            Recursos da Plataforma
+            {messages.home.featuresTitle}
           </h2>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {features.map((f) => (
@@ -64,31 +85,9 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="border-t border-gray-200 bg-white px-6 py-8 text-center text-sm text-gray-400">
         <p>
-          © {new Date().getFullYear()} TaMa Hidrovias · Dados hidrológicos
-          abertos para o Brasil
+          © {new Date().getFullYear()} TaMa Hidrovias · {messages.home.footer}
         </p>
       </footer>
     </main>
   );
 }
-
-const features = [
-  {
-    Icon: Map,
-    title: 'Mapa Interativo',
-    description:
-      'Visualize estações virtuais hidrométricas os rios Madeira e Tapajós com dados e séries históricas.',
-  },
-  {
-    Icon: SatelliteIcon,
-    title: 'Medições em Altimetria',
-    description:
-      'Acesse dados de nível d\'água e altimetria para monitoramento contínuo das hidrovias.',
-  },
-  {
-    Icon: Droplets,
-    title: 'Previsões Hidrológicas',
-    description:
-      'Previsões de 1 dia a 6 meses geradas por modelos numéricos para planejamento de recursos hídricos.',
-  },
-] as const;

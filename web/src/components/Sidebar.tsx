@@ -12,32 +12,37 @@ import {
   Settings,
 } from 'lucide-react';
 import clsx from 'clsx';
+import { useTranslation } from '@/lib/use-app-translation';
 import ReadOnlyBadge from '@/components/ReadOnlyBadge';
 import { canAccessAdmin, isViewerRole } from '@/lib/roles';
 
-const links = [
-  { href: '/dashboard', label: 'Visão Geral', Icon: LayoutDashboard },
-  { href: '/dashboard/stations', label: 'Estações', Icon: Radio },
-  { href: '/dashboard/forecasts', label: 'Previsões', Icon: BarChart2 },
-  {
-    href: '/dashboard/climate-layers',
-    label: 'Camadas Climáticas',
-    Icon: Layers,
-  },
-  {
-    href: '/dashboard/settings',
-    label: 'Preferências',
-    Icon: SlidersHorizontal,
-  },
-];
-
-const adminLink = { href: '/dashboard/admin', label: 'Admin', Icon: Settings };
-
 export default function Sidebar() {
+  const { t } = useTranslation();
   const pathname = usePathname();
   const { data: session } = useSession();
   const isAdmin = canAccessAdmin(session?.user?.role);
   const isViewer = isViewerRole(session?.user?.role);
+
+  const links = [
+    { href: '/dashboard', label: t('sidebar.overview'), Icon: LayoutDashboard },
+    { href: '/dashboard/stations', label: t('sidebar.stations'), Icon: Radio },
+    { href: '/dashboard/forecasts', label: t('sidebar.forecasts'), Icon: BarChart2 },
+    {
+      href: '/dashboard/climate-layers',
+      label: t('sidebar.climateLayers'),
+      Icon: Layers,
+    },
+    {
+      href: '/dashboard/settings',
+      label: t('sidebar.preferences'),
+      Icon: SlidersHorizontal,
+    },
+  ];
+  const adminLink = {
+    href: '/dashboard/admin',
+    label: t('sidebar.admin'),
+    Icon: Settings,
+  };
 
   const allLinks = isAdmin ? [...links, adminLink] : links;
 

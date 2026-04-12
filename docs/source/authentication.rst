@@ -132,6 +132,29 @@ Important implementation files:
 This route intentionally stays separate from ``/api/users/me`` so identity and
 role bootstrap remain isolated from mutable UI preferences.
 
+Current Global Settings Proxy
+-----------------------------
+
+The same server-held token pattern is also used for global app settings writes.
+
+Web-facing route:
+
+- ``GET /api/app-settings``
+- ``PUT /api/app-settings``
+
+Important implementation files:
+
+- ``web/src/app/api/app-settings/route.ts``
+- ``cms/src/api/app-setting/controllers/app-setting.js``
+- ``cms/src/api/app-setting/routes/custom-app-setting.js``
+
+Current behavior:
+
+- unauthenticated users can read the public fallback settings through the proxy
+- only admin-capable dashboard users can issue ``PUT`` updates
+- guest-facing language and map defaults therefore remain centrally managed
+  without exposing Strapi credentials to the browser
+
 Roles and Authorization
 -----------------------
 

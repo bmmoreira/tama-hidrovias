@@ -7,6 +7,7 @@ import { Layers, Calendar, Database, Map } from 'lucide-react';
 import { getClimateLayers } from '@/lib/strapi';
 import type { ClimateLayer } from '@/lib/strapi';
 import { Card } from '@/components/ui/card';
+import { useTranslation } from '@/lib/use-app-translation';
 
 const MapboxMap = dynamic(() => import('@/components/MapboxMap'), {
   ssr: false,
@@ -34,6 +35,7 @@ function formatDate(dateStr?: string): string {
 }
 
 export default function ClimateLayersPage() {
+  const { t } = useTranslation();
   const [selectedLayer, setSelectedLayer] = useState<ClimateLayer | null>(null);
 
   const { data, isLoading } = useSWR('climate-layers', () =>
@@ -45,9 +47,9 @@ export default function ClimateLayersPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Camadas Climáticas</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">{t('climate.title')}</h1>
         <p className="text-sm text-gray-500 dark:text-slate-400">
-          GeoTIFFs e camadas raster disponíveis para visualização
+          {t('climate.subtitle')}
         </p>
       </div>
 
@@ -64,7 +66,7 @@ export default function ClimateLayersPage() {
 
           {!isLoading && layers.length === 0 && (
             <div className="flex h-40 items-center justify-center rounded-xl border border-dashed border-gray-200 text-sm text-gray-400 dark:border-slate-800 dark:text-slate-500">
-              Nenhuma camada climática cadastrada.
+              {t('climate.noLayers')}
             </div>
           )}
 
@@ -92,7 +94,7 @@ export default function ClimateLayersPage() {
                   </p>
                   {layer.attributes.model && (
                     <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-slate-400">
-                      Modelo: {layer.attributes.model}
+                      {t('climate.model')}: {layer.attributes.model}
                     </p>
                   )}
                   <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-400 dark:text-slate-500">
@@ -126,7 +128,7 @@ export default function ClimateLayersPage() {
           ) : (
             <div className="flex h-full flex-col items-center justify-center gap-2 text-gray-400 dark:text-slate-500">
               <Map className="h-10 w-10 text-gray-300 dark:text-slate-700" />
-              <p className="text-sm">Selecione uma camada para visualizar</p>
+              <p className="text-sm">{t('climate.selectLayer')}</p>
             </div>
           )}
 

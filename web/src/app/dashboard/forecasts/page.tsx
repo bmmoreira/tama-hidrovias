@@ -17,6 +17,7 @@ import {
 import { getStations, getForecasts } from '@/lib/strapi';
 import type { Forecast, StationVariable } from '@/lib/strapi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useTranslation } from '@/lib/use-app-translation';
 import {
   Select,
   SelectContent,
@@ -26,12 +27,6 @@ import {
 } from '@/components/ui/select';
 
 const VARIABLES: StationVariable[] = ['level_m', 'flow_m3s', 'precipitation_mm'];
-const VARIABLE_LABELS: Record<StationVariable, string> = {
-  level_m: 'Nível (m)',
-  flow_m3s: 'Vazão (m³/s)',
-  precipitation_mm: 'Chuva (mm)',
-  water_surface_elevation_m: 'Altimetria (m)',
-};
 const VARIABLE_UNITS: Record<StationVariable, string> = {
   level_m: 'm',
   flow_m3s: 'm³/s',
@@ -47,9 +42,17 @@ function formatDate(ts: string): string {
 }
 
 export default function ForecastsPage() {
+  const { t } = useTranslation();
   const [stationId, setStationId] = useState<number | null>(null);
   const [variable, setVariable] =
     useState<StationVariable>('level_m');
+
+  const variableLabels: Record<StationVariable, string> = {
+    level_m: t('forecasts.level'),
+    flow_m3s: t('forecasts.flow'),
+    precipitation_mm: t('forecasts.precipitation'),
+    water_surface_elevation_m: t('forecasts.elevation'),
+  };
 
   const { data: stationsData } = useSWR('forecast-stations', () =>
     getStations(),
@@ -91,9 +94,9 @@ export default function ForecastsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Previsões</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">{t('forecasts.title')}</h1>
         <p className="text-sm text-gray-500 dark:text-slate-400">
-          Previsões hidrológicas para os próximos 15 dias
+          {t('forecasts.subtitle')}
         </p>
       </div>
 
@@ -105,7 +108,7 @@ export default function ForecastsPage() {
           onValueChange={(value) => setStationId(Number(value))}
         >
           <SelectTrigger className="flex-1">
-            <SelectValue placeholder="Selecione uma estação" />
+            <SelectValue placeholder={t('forecasts.selectStation')} />
           </SelectTrigger>
           <SelectContent>
           {stations.map((s: Station) => (
@@ -125,7 +128,7 @@ export default function ForecastsPage() {
           <SelectContent>
           {VARIABLES.map((v) => (
             <SelectItem key={v} value={v}>
-              {VARIABLE_LABELS[v]}
+              {variableLabels[v]}
             </SelectItem>
           ))}
           </SelectContent>
@@ -137,10 +140,10 @@ export default function ForecastsPage() {
       <Card>
         <CardHeader>
         <CardTitle className="mb-0 text-sm font-semibold text-gray-700 dark:text-slate-200">
-          Previsão — {VARIABLE_LABELS[variable]}
+          {t('forecasts.forecastLabel')} — {variableLabels[variable]}
           {runs[0]?.[0] && (
             <span className="ml-2 text-xs font-normal text-gray-400 dark:text-slate-500">
-              Emissão: {formatDate(runs[0][0])}
+              {t('forecasts.issuedAt')}: {formatDate(runs[0][0])}
             </span>
           )}
         </CardTitle>
@@ -155,7 +158,7 @@ export default function ForecastsPage() {
 
         {!isLoading && chartData.length === 0 && (
           <div className="flex h-56 items-center justify-center text-sm text-gray-400 dark:text-slate-500">
-            Nenhuma previsão disponível para esta estação/variável.
+            {t('forecasts.noForecasts')}
           </div>
         )}
 
@@ -179,14 +182,14 @@ export default function ForecastsPage() {
                 contentStyle={{ fontSize: 12, borderRadius: 8, backgroundColor: '#020817', borderColor: '#1e293b', color: '#e2e8f0' }}
                 formatter={(value: number, name: string) => [
                   `${value.toFixed(2)} ${unit}`,
-                  name === 'valor' ? VARIABLE_LABELS[variable] : 'Dispersão',
+                  name === 'valor' ? variableLabels[variable] : 'Dispersão',
                 ]}
               />
               <Legend wrapperStyle={{ fontSize: 12 }} />
               <Line
                 type="monotone"
                 dataKey="valor"
-                name={VARIABLE_LABELS[variable]}
+                name={variableLabels[variable]}
                 stroke="#2563eb"
                 strokeWidth={2}
                 dot={false}
@@ -203,7 +206,7 @@ export default function ForecastsPage() {
         <Card className="overflow-hidden">
           <div className="border-b border-gray-100 px-5 py-3 dark:border-slate-800">
             <h2 className="text-sm font-semibold text-gray-800 dark:text-slate-100">
-              Rodadas Recentes
+              {t('forecasts.recentRuns')}
             </h2>
           </div>
           <div className="overflow-x-auto">
@@ -211,13 +214,13 @@ export default function ForecastsPage() {
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50 dark:border-slate-800 dark:bg-slate-900">
                   <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-slate-300">
-                    Modelo
+                    {t('forecasts.model')}
                   </th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-slate-300">
-                    Emissão
+                    {t('forecasts.issuance')}
                   </th>
                   <th className="px-4 py-3 text-right font-medium text-gray-600 dark:text-slate-300">
-                    Horizontes (dias)
+                    {t('forecasts.horizons')}
                   </th>
                 </tr>
               </thead>
@@ -231,7 +234,7 @@ export default function ForecastsPage() {
                       {formatDate(issuedAt)}
                     </td>
                     <td className="px-4 py-3 text-right text-gray-500 dark:text-slate-400">
-                      {runForecasts.length} prazos
+                      {runForecasts.length} {t('forecasts.leadTimes')}
                     </td>
                   </tr>
                 ))}

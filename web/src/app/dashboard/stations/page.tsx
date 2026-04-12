@@ -7,6 +7,7 @@ import { useState } from 'react';
 import useSWR from 'swr';
 import { useSession } from 'next-auth/react';
 import { Pencil, Plus, Search, Trash2, TriangleAlert } from 'lucide-react';
+import { useTranslation } from '@/lib/use-app-translation';
 import { deleteStation, getStations } from '@/lib/strapi';
 import ConfirmationModal from '@/components/ConfirmationModal';
 import Toast from '@/components/Toast';
@@ -25,7 +26,7 @@ import {
 import { Button } from '@/components/ui/button';
 import StationFormModal from './StationFormModal';
 
-const SOURCES = ['Todas', 'ANA', 'HydroWeb', 'SNIRH', 'Virtual'] as const;
+const SOURCES = ['all', 'ANA', 'HydroWeb', 'SNIRH', 'Virtual'] as const;
 const ALL_BASINS = '__all_basins__';
 
 type ToastState = {
@@ -39,6 +40,7 @@ type RowMutationState = {
 } | null;
 
 export default function StationsPage() {
+  const { t } = useTranslation();
   const { data: session } = useSession();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingStation, setEditingStation] = useState<Station | null>(null);
@@ -47,7 +49,7 @@ export default function StationsPage() {
   const [toast, setToast] = useState<ToastState | null>(null);
   const [query, setQuery] = useState('');
   const [sourceFilter, setSourceFilter] = useState<(typeof SOURCES)[number]>(
-    'Todas',
+    'all',
   );
   const [basinFilter, setBasinFilter] = useState('');
 
@@ -67,7 +69,7 @@ export default function StationsPage() {
       s.attributes.name.toLowerCase().includes(query.toLowerCase()) ||
       s.attributes.code.toLowerCase().includes(query.toLowerCase());
     const matchSource =
-      sourceFilter === 'Todas' || s.attributes.source === sourceFilter;
+      sourceFilter === 'all' || s.attributes.source === sourceFilter;
     const matchBasin = !basinFilter || s.attributes.basin === basinFilter;
     return matchQuery && matchSource && matchBasin;
   });
@@ -87,11 +89,11 @@ export default function StationsPage() {
     try {
       await deleteStation(confirmingDeleteStation.id);
       await mutate();
-      showToast('Estação excluída com sucesso.', 'success');
+      showToast(t('stations.deleted'), 'success');
       setConfirmingDeleteStation(null);
     } catch (error) {
       showToast(
-        error instanceof Error ? error.message : 'Erro ao excluir estação.',
+        error instanceof Error ? error.message : t('stations.deleteError'),
         'error',
       );
     } finally {
@@ -112,22 +114,22 @@ export default function StationsPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Estações</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">{t('stations.title')}</h1>
             {!canManageStations ? <ReadOnlyBadge /> : null}
           </div>
           <p className="text-sm text-gray-500 dark:text-slate-400">
-            {data?.meta.pagination.total ?? 0} estações cadastradas
+            {t('stations.registeredCount', { count: data?.meta.pagination.total ?? 0 })}
           </p>
         </div>
         <ProtectedActionButton
           allowed={canManageStations}
           onClick={() => setModalOpen(true)}
-          title="Criar nova estação virtual"
-          deniedReason="Somente analistas podem criar estações virtuais."
-          helperText="Somente analistas podem executar esta ação."
+          title={t('stations.createTitle')}
+          deniedReason={t('stations.analystCreateOnly')}
+          helperText={t('stations.analystActionOnly')}
         >
             <Plus className="h-4 w-4" />
-            Nova Estação Virtual
+            {t('stations.createButton')}
         </ProtectedActionButton>
       </div>
 
@@ -140,7 +142,7 @@ export default function StationsPage() {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar por nome ou código"
+            placeholder={t('stations.searchPlaceholder')}
             className="pl-9"
           />
         </div>
@@ -156,7 +158,7 @@ export default function StationsPage() {
           <SelectContent>
           {SOURCES.map((s) => (
             <SelectItem key={s} value={s}>
-              {s === 'Todas' ? 'Todas as fontes' : s}
+              {s === 'all' ? t('stations.allSources') : s}
             </SelectItem>
           ))}
           </SelectContent>
@@ -166,10 +168,10 @@ export default function StationsPage() {
           onValueChange={(value) => setBasinFilter(value === ALL_BASINS ? '' : value)}
         >
           <SelectTrigger className="sm:w-56">
-            <SelectValue placeholder="Todas as bacias" />
+            <SelectValue placeholder={t('stations.allBasins')} />
           </SelectTrigger>
           <SelectContent>
-          <SelectItem value={ALL_BASINS}>Todas as bacias</SelectItem>
+          <SelectItem value={ALL_BASINS}>{t('stations.allBasins')}</SelectItem>
           {basins.map((b) => (
             <SelectItem key={b} value={b}>
               {b}
@@ -187,28 +189,28 @@ export default function StationsPage() {
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50 dark:border-slate-800 dark:bg-slate-900">
                 <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-slate-300">
-                  Código
+                  {t('stations.code')}
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-slate-300">
-                  Nome
+                  {t('stations.name')}
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-slate-300">
-                  Fonte
+                  {t('stations.source')}
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-slate-300">
-                  Bacia
+                  {t('stations.basin')}
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-slate-300">
-                  Rio
+                  {t('stations.river')}
                 </th>
                 <th className="px-4 py-3 text-right font-medium text-gray-600 dark:text-slate-300">
-                  Lat / Lon
+                  {t('stations.latLon')}
                 </th>
                 <th className="px-4 py-3 text-center font-medium text-gray-600 dark:text-slate-300">
-                  Status
+                  {t('stations.status')}
                 </th>
                 <th className="px-4 py-3 text-right font-medium text-gray-600 dark:text-slate-300">
-                  Ações
+                  {t('stations.actions')}
                 </th>
               </tr>
             </thead>
@@ -229,7 +231,7 @@ export default function StationsPage() {
                     colSpan={8}
                     className="px-4 py-8 text-center text-gray-400 dark:text-slate-500"
                   >
-                    Nenhuma estação encontrada.
+                    {t('stations.empty')}
                   </td>
                 </tr>
               )}
@@ -239,6 +241,7 @@ export default function StationsPage() {
                   station={station}
                   canManageStations={canManageStations}
                   rowMutation={rowMutation}
+                  t={t}
                   onEdit={() => setEditingStation(station)}
                   onDelete={() => setConfirmingDeleteStation(station)}
                 />
@@ -302,10 +305,10 @@ export default function StationsPage() {
       {canManageStations ? (
         <ConfirmationModal
           isOpen={Boolean(confirmingDeleteStation)}
-          title="Confirmar exclusão"
-          description="Esta ação remove a estação do cadastro atual do painel."
+          title={t('stations.confirmDelete')}
+          description={t('stations.confirmDeleteDescription')}
           confirmLabel={
-            rowMutation?.action === 'delete' ? 'Excluindo…' : 'Excluir estação'
+            rowMutation?.action === 'delete' ? t('stations.deleting') : t('stations.deleteStation')
           }
           loading={rowMutation?.action === 'delete'}
           tone="danger"
@@ -330,8 +333,7 @@ export default function StationsPage() {
                 {confirmingDeleteStation.attributes.code})
               </p>
               <p className="mt-1 text-red-800">
-                Se a estação possuir integrações ou registros dependentes no
-                Strapi, a exclusão poderá ser recusada pela API.
+                {t('stations.deleteDependencyWarning')}
               </p>
             </div>
           ) : null}
@@ -345,12 +347,14 @@ function StationRow({
   station,
   canManageStations,
   rowMutation,
+  t,
   onEdit,
   onDelete,
 }: {
   station: Station;
   canManageStations: boolean;
   rowMutation: RowMutationState;
+  t: (key: string, options?: Record<string, unknown>) => string;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -390,7 +394,7 @@ function StationRow({
           className={`inline-block h-2 w-2 rounded-full ${
             a.active ? 'bg-green-500' : 'bg-gray-300'
           }`}
-          title={a.active ? 'Ativa' : 'Inativa'}
+          title={a.active ? t('stations.active') : t('stations.inactive')}
         />
       </td>
       <td className="px-4 py-3">
@@ -401,15 +405,15 @@ function StationRow({
             disabled={!canManageStations || isBusy}
             title={
               canManageStations
-                ? 'Editar estação'
-                : 'Somente analistas podem editar estações.'
+                ? t('stations.editStation')
+                : t('stations.analystEditOnly')
             }
             variant="outline"
             size="sm"
             className="gap-1 border-gray-200 text-gray-600 hover:border-blue-200 hover:text-blue-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-sky-700 dark:hover:text-sky-300"
           >
             <Pencil className="h-3.5 w-3.5" />
-            {isEditing ? 'Salvando…' : 'Editar'}
+            {isEditing ? t('stations.saving') : t('stations.edit')}
           </Button>
           <Button
             type="button"
@@ -417,15 +421,15 @@ function StationRow({
             disabled={!canManageStations || isBusy}
             title={
               canManageStations
-                ? 'Excluir estação'
-                : 'Somente analistas podem excluir estações.'
+                ? t('stations.deleteStation')
+                : t('stations.analystDeleteOnly')
             }
             variant="outline"
             size="sm"
             className="gap-1 border-gray-200 text-gray-600 hover:border-red-200 hover:text-red-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-red-700 dark:hover:text-red-300"
           >
             <Trash2 className="h-3.5 w-3.5" />
-            {isDeleting ? 'Excluindo…' : 'Excluir'}
+            {isDeleting ? t('stations.deleting') : 'Excluir'}
           </Button>
         </div>
       </td>

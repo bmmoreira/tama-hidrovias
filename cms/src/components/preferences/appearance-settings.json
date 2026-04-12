@@ -13,7 +13,7 @@
     },
     "language": {
       "type": "enumeration",
-      "enum": ["pt-BR", "en", "es"],
+      "enum": ["pt-BR", "en", "es", "fr"],
       "default": "pt-BR",
       "required": true
     },

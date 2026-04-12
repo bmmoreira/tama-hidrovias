@@ -99,6 +99,32 @@ Operationally, if any file under `src/api/user-preference/` or
 `src/components/preferences/` changes, restart the Strapi service so the schema
 and route definitions are reloaded.
 
+## Global app settings model
+
+Guest-facing dashboard and map defaults are stored in a separate app settings
+content type:
+
+- `src/api/app-setting/content-types/app-setting/schema.json`
+
+Supporting components:
+
+- `src/components/app/default-appearance.json`
+- `src/components/app/default-map.json`
+
+Routes:
+
+- `GET /api/app-settings/public`
+- `GET /api/app-settings/current`
+- `PUT /api/app-settings/current`
+
+Implementation files:
+
+- `src/api/app-setting/controllers/app-setting.js`
+- `src/api/app-setting/routes/custom-app-setting.js`
+
+This model is used by the web dashboard admin page to define the guest default
+language and public map view while keeping per-user preferences independent.
+
 ## Related documentation
 
 - Root overview: `../README.rst`

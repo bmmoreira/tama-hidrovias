@@ -1,0 +1,30 @@
+{
+  "collectionName": "components_app_default_maps",
+  "info": {
+    "displayName": "Default Map"
+  },
+  "options": {},
+  "attributes": {
+    "mapStyle": {
+      "type": "enumeration",
+      "enum": ["outdoors", "streets", "satellite", "dark"],
+      "default": "outdoors",
+      "required": true
+    },
+    "defaultZoom": {
+      "type": "decimal",
+      "default": 4,
+      "required": true
+    },
+    "centerLatitude": {
+      "type": "decimal",
+      "default": -15,
+      "required": true
+    },
+    "centerLongitude": {
+      "type": "decimal",
+      "default": -52,
+      "required": true
+    }
+  }
+}

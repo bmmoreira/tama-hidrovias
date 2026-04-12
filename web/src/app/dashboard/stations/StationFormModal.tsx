@@ -3,9 +3,11 @@
 import React from 'react';
 import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { useTranslation } from '@/lib/use-app-translation';
 import {
   createVirtualStation,
   type Station,
+  type StationMutationInput,
   updateStation,
 } from '@/lib/strapi';
 import {
@@ -72,12 +74,19 @@ export default function StationFormModal({
   onError,
   onSubmittingChange,
 }: StationFormModalProps) {
+  const { t } = useTranslation();
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const isEditing = Boolean(station);
-  const source = station?.attributes.source ?? 'Virtual';
+  const source: StationMutationInput['source'] =
+    station?.attributes.source === 'ANA' ||
+    station?.attributes.source === 'HydroWeb' ||
+    station?.attributes.source === 'SNIRH' ||
+    station?.attributes.source === 'Virtual'
+      ? station.attributes.source
+      : 'Virtual';
 
   useEffect(() => {
     if (!isOpen) {
@@ -111,12 +120,12 @@ export default function StationFormModal({
     const lon = parseFloat(form.longitude);
 
     if (isNaN(lat) || lat < -90 || lat > 90) {
-      setError('Latitude inválida. Use um valor entre -90 e 90.');
+      setError(t('stationModal.invalidLatitude'));
       return;
     }
 
     if (isNaN(lon) || lon < -180 || lon > 180) {
-      setError('Longitude inválida. Use um valor entre -180 e 180.');
+      setError(t('stationModal.invalidLongitude'));
       return;
     }
 
@@ -142,16 +151,16 @@ export default function StationFormModal({
       setForm(EMPTY_FORM);
       onSaved(
         station
-          ? 'Estação atualizada com sucesso.'
-          : 'Estação criada com sucesso.',
+          ? t('stationModal.updated')
+          : t('stationModal.created'),
       );
     } catch (err) {
       const message =
         err instanceof Error
           ? err.message
           : isEditing
-            ? 'Erro ao atualizar estação.'
-            : 'Erro ao criar estação virtual.';
+            ? t('stationModal.updateError')
+            : t('stationModal.createError');
 
       onError(message);
       setError(
@@ -184,9 +193,9 @@ export default function StationFormModal({
             <DialogHeader>
             <div>
               <DialogTitle className="text-base text-gray-900 dark:text-slate-100">
-                {isEditing ? 'Editar Estação' : 'Nova Estação Virtual'}
+                {isEditing ? t('stationModal.editTitle') : t('stationModal.createTitle')}
               </DialogTitle>
-              <DialogDescription className="text-xs text-gray-500 dark:text-slate-400">Fonte: {source}</DialogDescription>
+              <DialogDescription className="text-xs text-gray-500 dark:text-slate-400">{t('stationModal.source')}: {source}</DialogDescription>
             </div>
             </DialogHeader>
           </div>
@@ -200,7 +209,7 @@ export default function StationFormModal({
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField
-                label="Nome da Estação *"
+                label={t('stationModal.stationName')}
                 name="name"
                 value={form.name}
                 onChange={handleChange}
@@ -208,7 +217,7 @@ export default function StationFormModal({
                 placeholder="Ex.: Estação Virtual Rio Negro"
               />
               <FormField
-                label="Código *"
+                label={t('stationModal.code')}
                 name="code"
                 value={form.code}
                 onChange={handleChange}
@@ -216,7 +225,7 @@ export default function StationFormModal({
                 placeholder="Ex.: VIRT-001"
               />
               <FormField
-                label="Latitude *"
+                label={t('stationModal.latitude')}
                 name="latitude"
                 value={form.latitude}
                 onChange={handleChange}
@@ -226,7 +235,7 @@ export default function StationFormModal({
                 step="any"
               />
               <FormField
-                label="Longitude *"
+                label={t('stationModal.longitude')}
                 name="longitude"
                 value={form.longitude}
                 onChange={handleChange}
@@ -236,14 +245,14 @@ export default function StationFormModal({
                 step="any"
               />
               <FormField
-                label="Bacia Hidrográfica"
+                label={t('stationModal.basin')}
                 name="basin"
                 value={form.basin}
                 onChange={handleChange}
                 placeholder="Ex.: Bacia Amazônica"
               />
               <FormField
-                label="Rio"
+                label={t('stationModal.river')}
                 name="river"
                 value={form.river}
                 onChange={handleChange}
@@ -259,7 +268,7 @@ export default function StationFormModal({
                 onChange={handleChange}
                 className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-900"
               />
-              Estação ativa
+              {t('stationModal.active')}
             </label>
 
             <DialogFooter className="pt-2">
@@ -268,7 +277,7 @@ export default function StationFormModal({
                 onClick={onClose}
                 disabled={loading}
               >
-                Cancelar
+                {t('stationModal.cancel')}
               </Button>
               <Button
                 type="submit"
@@ -276,7 +285,13 @@ export default function StationFormModal({
                 className="flex-1"
               >
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                {loading ? (isEditing ? 'Salvando…' : 'Criando…') : isEditing ? 'Salvar Alterações' : 'Criar Estação'}
+                {loading
+                  ? isEditing
+                    ? t('stationModal.saveLoading')
+                    : t('stationModal.createLoading')
+                  : isEditing
+                    ? t('stationModal.saveChanges')
+                    : t('stationModal.create')}
               </Button>
             </DialogFooter>
           </form>

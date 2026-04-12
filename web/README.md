@@ -138,8 +138,26 @@ Current implementation notes:
 - `GET /api/users/me` remains focused on identity and role bootstrap only
 - `GET/PUT /api/users/me/preferences` is the current-user settings route used by the web app
 - the settings panel saves theme, language, time zone, map defaults, favorite stations, and alert preferences
+- the web app uses runtime i18next localization for `pt-BR`, `en`, `es`, and `fr`
 - the map page consumes saved map defaults and remounts the map when the saved base style changes
 - the current session theme is updated immediately after save and does not require logout/login
+
+## Global app settings and admin page
+
+Guest-facing defaults are configured separately from per-user preferences.
+
+Important frontend files:
+
+- `src/app/dashboard/admin/page.tsx`
+- `src/components/AppSettingsPanel.tsx`
+- `src/app/api/app-settings/route.ts`
+- `src/lib/server-language.ts`
+
+Current implementation notes:
+
+- the admin page controls the default dashboard language and guest map defaults
+- unauthenticated map sessions fall back to the app settings model instead of user preferences
+- the root app shell resolves language on the server before hydration, so the initial HTML and loading UI no longer default blindly to Portuguese
 
 For the deeper architecture and route behavior, prefer the Sphinx page:
 

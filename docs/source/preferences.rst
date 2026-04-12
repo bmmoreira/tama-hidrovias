@@ -15,7 +15,7 @@ map settings.
 Current preference scope includes:
 
 - theme selection
-- preferred language for future internationalization work
+- preferred language for runtime interface localization
 - preferred time zone for future date/time formatting work
 - default map style
 - default map zoom and center coordinates
@@ -146,8 +146,44 @@ That component currently:
 - hydrates the form from the saved backend payload
 - saves updates with ``updateUserPreferences()``
 - applies the returned saved theme immediately through ``next-themes``
+- applies the saved language through the shared i18next runtime
 - emits an in-app update event so the current session reflects the saved theme
   without requiring logout or a fresh login
+
+Global Defaults And Admin Page
+------------------------------
+
+Guest-facing defaults are stored separately from per-user preferences in a
+dedicated global settings model:
+
+- ``api::app-setting.app-setting``
+
+Related Strapi files:
+
+- ``cms/src/api/app-setting/content-types/app-setting/schema.json``
+- ``cms/src/api/app-setting/controllers/app-setting.js``
+- ``cms/src/api/app-setting/routes/custom-app-setting.js``
+- ``cms/src/components/app/default-appearance.json``
+- ``cms/src/components/app/default-map.json``
+
+Current app settings routes:
+
+- Strapi public route: ``GET /api/app-settings/public``
+- Strapi admin route: ``GET /api/app-settings/current``
+- Strapi admin route: ``PUT /api/app-settings/current``
+- Next.js proxy route: ``web/src/app/api/app-settings/route.ts``
+
+The dashboard admin page is rendered in:
+
+- ``web/src/app/dashboard/admin/page.tsx``
+- ``web/src/components/AppSettingsPanel.tsx``
+
+That page currently controls:
+
+- default dashboard language for guests and fallback sessions
+- guest map base style
+- guest map default zoom
+- guest map default center latitude and longitude
 
 Theme Persistence Hook Points
 -----------------------------
@@ -203,12 +239,49 @@ Current implementation files:
 - ``web/src/app/map/page.tsx``
 - ``web/src/components/MapboxMap.tsx``
 
+When the user is not authenticated, the map page falls back to the global app
+settings model instead of per-user preferences. This keeps the public map and
+initial landing experience aligned with the admin-defined defaults.
+
+Runtime I18n And SSR Resolution
+-------------------------------
+
+Application copy now ships with runtime localization for these languages:
+
+- ``pt-BR``
+- ``en``
+- ``es``
+- ``fr``
+
+The shared translation runtime lives in:
+
+- ``web/src/lib/i18n.ts``
+- ``web/src/lib/use-app-translation.ts``
+- ``web/src/components/AppI18nProvider.tsx``
+
+The initial request language is resolved on the server in:
+
+- ``web/src/lib/server-language.ts``
+
+Current resolution order:
+
+1. Authenticated user preference from ``/api/users/me/preferences`` when a
+   valid NextAuth session carries a Strapi JWT.
+2. Global default language from ``/api/app-settings/public``.
+3. ``pt-BR`` as a final application fallback.
+
+This request-time resolution is used to:
+
+- set the root ``<html lang>`` attribute in ``web/src/app/layout.tsx``
+- localize the public landing page on first response
+- localize server-rendered loading UI such as ``web/src/app/map/loading.tsx``
+
 Current Limitations
 -------------------
 
 - The map preferences currently affect the main map route only.
-- Language and time zone are persisted, but full application i18n and timezone-
-  aware formatting have not been implemented yet.
+- Timezone-aware numeric and date formatting is still incomplete across the
+  application.
 - Alert settings are stored as user intent only. Per-station operational alert
   rules still require a dedicated subscription model if alerting grows beyond
   preference storage.

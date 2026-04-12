@@ -1,31 +1,69 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { SessionProvider } from 'next-auth/react';
 import { useSession } from 'next-auth/react';
 import type { Session } from 'next-auth';
 import { ThemeProvider, useTheme } from 'next-themes';
-import type { ThemePreference } from '@/lib/strapi';
+import AppI18nProvider from '@/components/AppI18nProvider';
+import {
+  APP_SETTINGS_UPDATED_EVENT,
+  DEFAULT_LANGUAGE,
+  USER_PREFERENCES_UPDATED_EVENT,
+  normalizeLanguage,
+} from '@/lib/i18n';
+import type { LanguagePreference, ThemePreference } from '@/lib/strapi';
 
 interface ProvidersProps {
   children: React.ReactNode;
   session?: Session | null;
+  initialLanguage: LanguagePreference;
 }
 
 const THEME_VALUES = new Set<ThemePreference>(['light', 'dark', 'system']);
-const USER_PREFERENCES_UPDATED_EVENT = 'user-preferences-updated';
+const LANGUAGE_VALUES = new Set<LanguagePreference>(['pt-BR', 'en', 'es', 'fr']);
 
-function UserThemePreferenceSync() {
+function RuntimePreferenceSync({
+  onLanguageChange,
+}: {
+  onLanguageChange: (language: LanguagePreference) => void;
+}) {
   const { status } = useSession();
   const { setTheme } = useTheme();
-  const hasLoadedRef = useRef(false);
+  const hasLoadedUserPreferencesRef = useRef(false);
 
   useEffect(() => {
-    if (status !== 'authenticated' || hasLoadedRef.current) {
+    void fetch('/api/app-settings', {
+      cache: 'no-store',
+      headers: {
+        Accept: 'application/json',
+      },
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          return null;
+        }
+
+        return response.json();
+      })
+      .then((payload) => {
+        const language = payload?.data?.appearance?.language;
+
+        if (LANGUAGE_VALUES.has(language)) {
+          onLanguageChange(language);
+        }
+      })
+      .catch(() => {
+        onLanguageChange(DEFAULT_LANGUAGE);
+      });
+  }, [onLanguageChange]);
+
+  useEffect(() => {
+    if (status !== 'authenticated' || hasLoadedUserPreferencesRef.current) {
       return;
     }
 
-    hasLoadedRef.current = true;
+    hasLoadedUserPreferencesRef.current = true;
 
     void fetch('/api/users/me/preferences', {
       cache: 'no-store',
@@ -42,22 +80,44 @@ function UserThemePreferenceSync() {
       })
       .then((payload) => {
         const theme = payload?.data?.appearance?.theme;
+        const language = payload?.data?.appearance?.language;
 
         if (THEME_VALUES.has(theme)) {
           setTheme(theme);
+        }
+
+        if (LANGUAGE_VALUES.has(language)) {
+          onLanguageChange(language);
         }
       })
       .catch(() => {
         // Ignore preference sync failures and keep local theme fallback.
       });
-  }, [setTheme, status]);
+  }, [onLanguageChange, setTheme, status]);
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+      return;
+    }
+
+    hasLoadedUserPreferencesRef.current = false;
+  }, [status]);
 
   useEffect(() => {
     function handlePreferencesUpdated(event: Event) {
-      const detail = (event as CustomEvent<{ theme?: ThemePreference }>).detail;
+      const detail = (
+        event as CustomEvent<{
+          theme?: ThemePreference;
+          language?: LanguagePreference;
+        }>
+      ).detail;
 
       if (detail?.theme && THEME_VALUES.has(detail.theme)) {
         setTheme(detail.theme);
+      }
+
+      if (detail?.language && LANGUAGE_VALUES.has(detail.language)) {
+        onLanguageChange(detail.language);
       }
     }
 
@@ -72,12 +132,38 @@ function UserThemePreferenceSync() {
         handlePreferencesUpdated as EventListener,
       );
     };
-  }, [setTheme]);
+  }, [onLanguageChange, setTheme]);
+
+  useEffect(() => {
+    function handleAppSettingsUpdated(event: Event) {
+      const detail = (event as CustomEvent<{ language?: LanguagePreference }>).detail;
+
+      if (detail?.language && LANGUAGE_VALUES.has(detail.language)) {
+        onLanguageChange(detail.language);
+      }
+    }
+
+    window.addEventListener(
+      APP_SETTINGS_UPDATED_EVENT,
+      handleAppSettingsUpdated as EventListener,
+    );
+
+    return () => {
+      window.removeEventListener(
+        APP_SETTINGS_UPDATED_EVENT,
+        handleAppSettingsUpdated as EventListener,
+      );
+    };
+  }, [onLanguageChange]);
 
   return null;
 }
 
-export function Providers({ children, session }: ProvidersProps) {
+export function Providers({ children, initialLanguage, session }: ProvidersProps) {
+  const [language, setLanguage] = useState<LanguagePreference>(
+    normalizeLanguage(initialLanguage ?? DEFAULT_LANGUAGE),
+  );
+
   return (
     <ThemeProvider
       attribute="class"
@@ -86,8 +172,10 @@ export function Providers({ children, session }: ProvidersProps) {
       disableTransitionOnChange
     >
       <SessionProvider session={session}>
-        <UserThemePreferenceSync />
-        {children}
+        <AppI18nProvider language={normalizeLanguage(language)}>
+          <RuntimePreferenceSync onLanguageChange={setLanguage} />
+          {children}
+        </AppI18nProvider>
       </SessionProvider>
     </ThemeProvider>
   );

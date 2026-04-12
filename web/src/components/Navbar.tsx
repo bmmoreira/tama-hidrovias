@@ -5,11 +5,13 @@ import { useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ChevronDown, Droplets, LogOut, Menu, Settings, User, X } from 'lucide-react';
+import { useTranslation } from '@/lib/use-app-translation';
 import ReadOnlyBadge from '@/components/ReadOnlyBadge';
 import ThemeToggle from '@/components/ThemeToggle';
 import { getRoleLabel, isViewerRole } from '@/lib/roles';
 
 export default function Navbar() {
+  const { t } = useTranslation();
   const { data: session } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
   const roleLabel = getRoleLabel(session?.user?.role);
@@ -34,7 +36,7 @@ export default function Navbar() {
             href="/map"
             className="text-sm text-gray-600 transition hover:text-blue-700 dark:text-slate-300 dark:hover:text-sky-300"
           >
-            Mapa
+            {t('nav.map')}
           </Link>
           {session ? (
             <>
@@ -42,7 +44,7 @@ export default function Navbar() {
                 href="/dashboard"
                 className="text-sm text-gray-600 transition hover:text-blue-700 dark:text-slate-300 dark:hover:text-sky-300"
               >
-                Painel
+                {t('nav.dashboard')}
               </Link>
               {isViewer ? <ReadOnlyBadge /> : null}
               <DropdownMenu.Root>
@@ -62,7 +64,7 @@ export default function Navbar() {
                     className="z-50 min-w-56 rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl outline-none dark:border-slate-700 dark:bg-slate-950"
                   >
                     <div className="px-3 py-2 text-xs uppercase tracking-[0.18em] text-gray-400 dark:text-slate-500">
-                      Conta
+                      {t('nav.account')}
                     </div>
                     <DropdownMenu.Item asChild>
                       <Link
@@ -70,7 +72,7 @@ export default function Navbar() {
                         className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none transition hover:bg-gray-50 dark:text-slate-200 dark:hover:bg-slate-800"
                       >
                         <Settings className="h-4 w-4" />
-                        Preferencias
+                        {t('nav.settings')}
                       </Link>
                     </DropdownMenu.Item>
                     <DropdownMenu.Separator className="my-1 h-px bg-gray-100 dark:bg-slate-800" />
@@ -79,7 +81,7 @@ export default function Navbar() {
                       className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-600 outline-none transition hover:bg-red-50 dark:hover:bg-red-950/40"
                     >
                       <LogOut className="h-4 w-4" />
-                      Sair
+                      {t('nav.logout')}
                     </DropdownMenu.Item>
                   </DropdownMenu.Content>
                 </DropdownMenu.Portal>
@@ -90,7 +92,7 @@ export default function Navbar() {
               href="/login"
               className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
             >
-              Entrar
+              {t('nav.login')}
             </Link>
           )}
         </div>
@@ -99,7 +101,7 @@ export default function Navbar() {
         <button
           className="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 sm:hidden dark:text-slate-300 dark:hover:bg-slate-800"
           onClick={() => setMenuOpen((o) => !o)}
-          aria-label="Menu"
+          aria-label={t('nav.menu')}
         >
           {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
@@ -117,7 +119,7 @@ export default function Navbar() {
               className="rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-slate-200 dark:hover:bg-slate-800"
               onClick={() => setMenuOpen(false)}
             >
-              Mapa
+              {t('nav.map')}
             </Link>
             {session ? (
               <>
@@ -126,14 +128,14 @@ export default function Navbar() {
                   className="rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-slate-200 dark:hover:bg-slate-800"
                   onClick={() => setMenuOpen(false)}
                 >
-                  Painel
+                  {t('nav.dashboard')}
                 </Link>
                 <Link
                   href="/dashboard/settings"
                   className="rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-slate-200 dark:hover:bg-slate-800"
                   onClick={() => setMenuOpen(false)}
                 >
-                  Preferencias
+                  {t('nav.settings')}
                 </Link>
                 <div className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 dark:text-slate-400">
                   <User className="h-4 w-4" />
@@ -152,7 +154,7 @@ export default function Navbar() {
                   className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
                 >
                   <LogOut className="h-4 w-4" />
-                  Sair
+                  {t('nav.logout')}
                 </button>
               </>
             ) : (
@@ -161,7 +163,7 @@ export default function Navbar() {
                 className="rounded-lg px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50 dark:text-sky-300 dark:hover:bg-slate-800"
                 onClick={() => setMenuOpen(false)}
               >
-                Entrar
+                {t('nav.login')}
               </Link>
             )}
           </nav>

@@ -2,7 +2,7 @@
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
-import ReadOnlyBadge from '@/components/ReadOnlyBadge';
+import DashboardReadOnlyBanner from '@/components/DashboardReadOnlyBanner';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 import { isViewerRole } from '@/lib/roles';
@@ -45,19 +45,7 @@ export default async function DashboardLayout({
       <div className="flex flex-1 flex-col md:flex-row">
         <Sidebar />
         <main className="flex-1 overflow-auto bg-gray-50 p-4 md:p-6 dark:bg-slate-950">
-          {isViewer ? (
-            <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between dark:border-amber-900 dark:from-amber-950 dark:to-slate-950">
-              <div>
-                <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
-                  Seu acesso ao painel esta em modo leitura.
-                </p>
-                <p className="text-sm text-amber-700 dark:text-amber-300">
-                  Voce pode explorar dados e relatorios, mas acoes de criacao e edicao permanecem bloqueadas.
-                </p>
-              </div>
-              <ReadOnlyBadge className="self-start sm:self-center" />
-            </div>
-          ) : null}
+          {isViewer ? <DashboardReadOnlyBanner /> : null}
           {children}
         </main>
       </div>

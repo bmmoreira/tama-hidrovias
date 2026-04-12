@@ -2,12 +2,14 @@
 
 import dynamic from 'next/dynamic';
 import { useState, useCallback, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import useSWR from 'swr';
 import { Search, X } from 'lucide-react';
-import { getStations, getUserPreferences } from '@/lib/strapi';
+import { getAppSettings, getStations, getUserPreferences } from '@/lib/strapi';
 import type { MapStylePreference, Station, StationVariable } from '@/lib/strapi';
 import StationChart from '@/components/StationChart';
 import StationSearchPanel from '@/components/StationSearchPanel';
+import { useTranslation } from '@/lib/use-app-translation';
 
 // Dynamic import to avoid SSR issues with mapbox-gl
 const MapboxMap = dynamic(() => import('@/components/MapboxMap'), {
@@ -25,12 +27,6 @@ const VARIABLES: StationVariable[] = [
   'precipitation_mm',
   'water_surface_elevation_m',
 ];
-const VARIABLE_LABELS: Record<StationVariable, string> = {
-  level_m: 'Nível',
-  flow_m3s: 'Vazão',
-  precipitation_mm: 'Chuva',
-  water_surface_elevation_m: 'Altimetria',
-};
 
 function getPast30Days() {
   const to = new Date();
@@ -43,6 +39,8 @@ function getPast30Days() {
 }
 
 export default function MapPage() {
+  const { t } = useTranslation();
+  const { status } = useSession();
   const [panelOpen, setPanelOpen] = useState(false);
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
   const [activeVariable, setActiveVariable] = useState<StationVariable>('level_m');
@@ -51,8 +49,11 @@ export default function MapPage() {
   const { data: stationsData } = useSWR('map-stations', () => getStations(), {
     revalidateOnFocus: false,
   });
+  const { data: appSettingsData } = useSWR('app-settings', () => getAppSettings(), {
+    revalidateOnFocus: false,
+  });
   const { data: preferencesData, isLoading: isPreferencesLoading } = useSWR(
-    'user-preferences',
+    status === 'authenticated' ? 'user-preferences' : null,
     () => getUserPreferences(),
     {
       revalidateOnFocus: false,
@@ -60,8 +61,15 @@ export default function MapPage() {
   );
 
   const stations = stationsData?.data ?? [];
+  const appSettings = appSettingsData?.data;
   const preferences = preferencesData?.data;
   const { from, to } = getPast30Days();
+  const variableLabels: Record<StationVariable, string> = {
+    level_m: t('stationSearch.level'),
+    flow_m3s: t('stationSearch.flow'),
+    precipitation_mm: t('stationSearch.precipitation'),
+    water_surface_elevation_m: t('stationSearch.elevation'),
+  };
 
   const handleStationDoubleClick = useCallback((station: Station) => {
     setSelectedStation(station);
@@ -89,17 +97,19 @@ export default function MapPage() {
   const [mapStyle, setMapStyle] = useState<MapStylePreference>('outdoors');
 
   useEffect(() => {
-    if (!preferences) {
+    const source = preferences?.map ?? appSettings?.map;
+
+    if (!source) {
       return;
     }
 
     setFlyTarget({
-      longitude: preferences.map.centerLongitude,
-      latitude: preferences.map.centerLatitude,
-      zoom: preferences.map.defaultZoom,
+      longitude: source.centerLongitude,
+      latitude: source.centerLatitude,
+      zoom: source.defaultZoom,
     });
-    setMapStyle(preferences.map.mapStyle);
-  }, [preferences]);
+    setMapStyle(source.mapStyle);
+  }, [appSettings, preferences]);
 
   return (
     <div className="relative flex h-screen w-full overflow-hidden">
@@ -124,10 +134,10 @@ export default function MapPage() {
       <button
         onClick={() => setPanelOpen(true)}
         className="absolute left-4 top-4 z-20 flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-lg transition hover:bg-gray-50 md:left-4"
-        aria-label="Abrir busca de estações"
+        aria-label={t('map.openStationSearch')}
       >
         <Search className="h-4 w-4 text-gray-500" />
-        <span className="hidden sm:inline">Buscar estações</span>
+        <span className="hidden sm:inline">{t('map.searchStations')}</span>
       </button>
 
       {/* Station search panel */}
@@ -159,7 +169,7 @@ export default function MapPage() {
             <button
               onClick={() => setBottomSheetOpen(false)}
               className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-              aria-label="Fechar painel"
+              aria-label={t('map.closePanel')}
             >
               <X className="h-4 w-4" />
             </button>
@@ -177,7 +187,7 @@ export default function MapPage() {
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
-                {VARIABLE_LABELS[v]}
+                {variableLabels[v]}
               </button>
             ))}
           </div>
@@ -191,7 +201,7 @@ export default function MapPage() {
               to={to}
             />
             <p className="mt-1 text-right text-xs text-gray-400">
-              Últimos 30 dias
+              {t('map.last30Days')}
             </p>
           </div>
         </div>
@@ -199,7 +209,7 @@ export default function MapPage() {
 
       {/* Legend */}
       <div className="absolute bottom-4 left-4 z-10 hidden rounded-xl bg-white/90 px-3 py-2 text-xs shadow-lg backdrop-blur md:block">
-        <p className="mb-1 font-semibold text-gray-700">Fonte</p>
+        <p className="mb-1 font-semibold text-gray-700">{t('map.source')}</p>
         {[
           { label: 'ANA', color: '#2563eb' },
           { label: 'HydroWeb', color: '#16a34a' },

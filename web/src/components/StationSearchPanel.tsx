@@ -6,15 +6,9 @@ import { Search, X, ChevronRight } from 'lucide-react';
 import { getStations } from '@/lib/strapi';
 import type { Station } from '@/lib/strapi';
 import clsx from 'clsx';
+import { useTranslation } from '@/lib/use-app-translation';
 
-const SOURCES = ['Todas', 'ANA', 'HydroWeb', 'SNIRH', 'Virtual'] as const;
-const VARIABLES = [
-  { value: 'Todas', label: 'Todas as variáveis' },
-  { value: 'level_m', label: 'Nível' },
-  { value: 'flow_m3s', label: 'Vazão' },
-  { value: 'precipitation_mm', label: 'Chuva' },
-  { value: 'water_surface_elevation_m', label: 'Altimetria' },
-] as const;
+const SOURCES = ['all', 'ANA', 'HydroWeb', 'SNIRH', 'Virtual'] as const;
 
 interface StationSearchPanelProps {
   onStationSelect: (station: Station) => void;
@@ -27,9 +21,18 @@ export default function StationSearchPanel({
   isOpen,
   onClose,
 }: StationSearchPanelProps) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
-  const [source, setSource] = useState<(typeof SOURCES)[number]>('Todas');
-  const [variable, setVariable] = useState('Todas');
+  const [source, setSource] = useState<(typeof SOURCES)[number]>('all');
+  const [variable, setVariable] = useState('all');
+
+  const variables = [
+    { value: 'all', label: t('stationSearch.allVariables') },
+    { value: 'level_m', label: t('stationSearch.level') },
+    { value: 'flow_m3s', label: t('stationSearch.flow') },
+    { value: 'precipitation_mm', label: t('stationSearch.precipitation') },
+    { value: 'water_surface_elevation_m', label: t('stationSearch.elevation') },
+  ] as const;
 
   const { data, isLoading } = useSWR('stations-search', () => getStations(), {
     revalidateOnFocus: false,
@@ -43,7 +46,7 @@ export default function StationSearchPanel({
         s.attributes.name.toLowerCase().includes(query.toLowerCase()) ||
         s.attributes.code.toLowerCase().includes(query.toLowerCase());
       const matchSource =
-        source === 'Todas' || s.attributes.source === source;
+        source === 'all' || s.attributes.source === source;
       // variable filtering is metadata-level; we filter by source only for now
       void variable;
       return matchQuery && matchSource;
@@ -76,12 +79,12 @@ export default function StationSearchPanel({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
           <h2 className="text-base font-semibold text-gray-800">
-            Buscar Estações
+            {t('stationSearch.title')}
           </h2>
           <button
             onClick={onClose}
             className="rounded-lg p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
-            aria-label="Fechar painel"
+            aria-label={t('map.closePanel')}
           >
             <X className="h-5 w-5" />
           </button>
@@ -96,7 +99,7 @@ export default function StationSearchPanel({
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Nome ou código da estação"
+              placeholder={t('stationSearch.queryPlaceholder')}
               className="w-full rounded-lg border border-gray-200 py-2 pl-9 pr-4 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
             />
           </div>
@@ -111,7 +114,7 @@ export default function StationSearchPanel({
           >
             {SOURCES.map((s) => (
               <option key={s} value={s}>
-                {s === 'Todas' ? 'Todas as fontes' : s}
+                {s === 'all' ? t('stationSearch.allSources') : s}
               </option>
             ))}
           </select>
@@ -122,7 +125,7 @@ export default function StationSearchPanel({
             onChange={(e) => setVariable(e.target.value)}
             className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
           >
-            {VARIABLES.map((v) => (
+            {variables.map((v) => (
               <option key={v.value} value={v.value}>
                 {v.label}
               </option>
@@ -145,7 +148,7 @@ export default function StationSearchPanel({
 
           {!isLoading && filtered.length === 0 && (
             <p className="px-4 py-6 text-center text-sm text-gray-400">
-              Nenhuma estação encontrada.
+              {t('stationSearch.noResults')}
             </p>
           )}
 
@@ -175,8 +178,7 @@ export default function StationSearchPanel({
         {/* Station count */}
         {!isLoading && (
           <p className="border-t border-gray-100 px-4 py-2 text-center text-xs text-gray-400">
-            {filtered.length} estação{filtered.length !== 1 ? 'ões' : ''}{' '}
-            encontrada{filtered.length !== 1 ? 's' : ''}
+            {t('stationSearch.count', { count: filtered.length })}
           </p>
         )}
       </aside>

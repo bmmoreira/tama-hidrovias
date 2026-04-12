@@ -1,0 +1,27 @@
+{
+  "kind": "collectionType",
+  "collectionName": "app_settings",
+  "info": {
+    "singularName": "app-setting",
+    "pluralName": "app-settings",
+    "displayName": "App Setting",
+    "description": "Global dashboard defaults and guest-facing settings"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "appearance": {
+      "type": "component",
+      "repeatable": false,
+      "component": "app.default-appearance",
+      "required": true
+    },
+    "map": {
+      "type": "component",
+      "repeatable": false,
+      "component": "app.default-map",
+      "required": true
+    }
+  }
+}

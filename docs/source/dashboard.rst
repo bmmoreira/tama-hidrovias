@@ -203,5 +203,47 @@ The map route consumes those saved defaults through:
 - ``web/src/app/map/page.tsx``
 - ``web/src/components/MapboxMap.tsx``
 
+Global Admin Settings
+---------------------
+
+The dashboard now also exposes a global admin settings page:
+
+- ``web/src/app/dashboard/admin/page.tsx``
+- ``web/src/components/AppSettingsPanel.tsx``
+
+This page is intended for elevated operational users and currently controls:
+
+- the default dashboard language used for guests and fallback sessions
+- the public map base style for unauthenticated users
+- the public map default zoom level
+- the public map default center latitude and longitude
+
+The admin page writes through the internal Next.js proxy route:
+
+- ``web/src/app/api/app-settings/route.ts``
+
+That route forwards changes to the Strapi app settings controller and keeps the
+browser isolated from the Strapi bearer token.
+
+Runtime I18n
+------------
+
+The dashboard and shared web surfaces now use a runtime i18next layer with
+support for:
+
+- ``pt-BR``
+- ``en``
+- ``es``
+- ``fr``
+
+Current implementation files:
+
+- ``web/src/lib/i18n.ts``
+- ``web/src/lib/use-app-translation.ts``
+- ``web/src/components/AppI18nProvider.tsx``
+
+The effective language is resolved from saved user preferences when available,
+otherwise from the global app settings fallback for guests.
+
 For the full technical flow, model details, and route behavior, see
 ``preferences.rst``.

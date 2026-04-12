@@ -2,7 +2,7 @@
 
 const USER_PREFERENCE_UID = 'api::user-preference.user-preference';
 const ALLOWED_THEMES = new Set(['light', 'dark', 'system']);
-const ALLOWED_LANGUAGES = new Set(['pt-BR', 'en', 'es']);
+const ALLOWED_LANGUAGES = new Set(['pt-BR', 'en', 'es', 'fr']);
 const ALLOWED_MAP_STYLES = new Set(['outdoors', 'streets', 'satellite', 'dark']);
 const ALLOWED_ALERT_SEVERITIES = new Set(['info', 'warning', 'critical']);
 

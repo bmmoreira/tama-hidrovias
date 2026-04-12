@@ -5,8 +5,10 @@ import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import Link from 'next/link';
 import { Droplets, Loader2, AlertCircle } from 'lucide-react';
+import { useTranslation } from '@/lib/use-app-translation';
 
 export default function LoginPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -26,12 +28,12 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        setError('E-mail ou senha incorretos. Verifique suas credenciais.');
+        setError(t('login.invalidCredentials'));
       } else if (result?.ok) {
         router.push('/dashboard');
         router.refresh();
       } else {
-        setError('Ocorreu um erro inesperado. Tente novamente.');
+        setError(t('login.unexpectedError'));
       }
     } finally {
       setLoading(false);
@@ -45,13 +47,13 @@ export default function LoginPage() {
         <div className="mb-8 flex flex-col items-center gap-2 text-white">
           <Droplets className="h-12 w-12 text-cyan-300" strokeWidth={1.5} />
           <h1 className="text-2xl font-bold">Tama Hidrovias</h1>
-          <p className="text-sm text-blue-200">Acesse o painel de controle</p>
+          <p className="text-sm text-blue-200">{t('login.subtitle')}</p>
         </div>
 
         {/* Card */}
         <div className="rounded-2xl bg-white p-8 shadow-2xl">
           <h2 className="mb-6 text-center text-lg font-semibold text-gray-800">
-            Entrar na plataforma
+            {t('login.title')}
           </h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -67,7 +69,7 @@ export default function LoginPage() {
                 htmlFor="email"
                 className="mb-1.5 block text-xs font-medium text-gray-700"
               >
-                E-mail
+                {t('login.email')}
               </label>
               <input
                 id="email"
@@ -86,7 +88,7 @@ export default function LoginPage() {
                 htmlFor="password"
                 className="mb-1.5 block text-xs font-medium text-gray-700"
               >
-                Senha
+                {t('login.password')}
               </label>
               <input
                 id="password"
@@ -106,7 +108,7 @@ export default function LoginPage() {
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
             >
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-              {loading ? 'Entrando…' : 'Entrar'}
+              {loading ? t('login.submitting') : t('login.submit')}
             </button>
           </form>
 
@@ -115,7 +117,7 @@ export default function LoginPage() {
               href="/map"
               className="text-xs text-gray-400 transition hover:text-blue-600"
             >
-              Acessar mapa público sem login →
+              {t('login.publicMap')}
             </Link>
           </div>
         </div>
