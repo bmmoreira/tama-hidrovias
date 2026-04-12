@@ -19,6 +19,46 @@ Full stack with Docker
 
 Then open ``http://localhost:5050`` to manage PostgreSQL through pgAdmin.
 
+Docker Dev Mode
+~~~~~~~~~~~~~~~
+
+For live-reload development of the web app and Strapi inside Docker, use the
+base Compose file together with ``docker-compose.dev.yml``:
+
+.. code-block:: bash
+
+   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build \
+     postgres pgadmin tileserver strapi web
+
+This override switches:
+
+- ``strapi`` to ``npm run develop``
+- ``web`` to ``next dev --hostname 0.0.0.0``
+- bind mounts on ``cms/`` and ``web/`` for source changes
+
+Useful follow-up commands:
+
+.. code-block:: bash
+
+   docker compose -f docker-compose.yml -f docker-compose.dev.yml ps
+   docker compose -f docker-compose.yml -f docker-compose.dev.yml logs -f strapi web
+   docker compose -f docker-compose.yml -f docker-compose.dev.yml exec strapi npm run bootstrap:dev-users
+   docker compose -f docker-compose.yml -f docker-compose.dev.yml down
+
+Default development auth users:
+
+- ``dev.analyst@local.test`` / ``devpass123``
+   analyst access, including ``/dashboard/admin``
+- ``dev.viewer@local.test`` / ``devviewer123``
+   read-only dashboard access, redirected away from ``/dashboard/admin``
+
+If Compose reports an old orphan container from a previous setup, remove it
+with:
+
+.. code-block:: bash
+
+   docker compose -f docker-compose.yml -f docker-compose.dev.yml down --remove-orphans
+
 Frontend
 ~~~~~~~~
 

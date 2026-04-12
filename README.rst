@@ -188,6 +188,58 @@ O stack inclui um ``pgAdmin`` acessível pelo navegador em
 Configuração para Desenvolvimento
 -----------------------------------
 
+Docker Compose em modo dev
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Para rodar o frontend Next.js e o Strapi em modo de desenvolvimento dentro do
+Docker, use o arquivo base com o override ``docker-compose.dev.yml``:
+
+.. code-block:: bash
+
+  docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build \
+    postgres pgadmin tileserver strapi web
+
+Esse fluxo mantém:
+
+- ``strapi`` com ``npm run develop`` e recarga de arquivos por polling
+- ``web`` com ``next dev`` na porta ``3000``
+- volumes montados para ``cms/`` e ``web/``
+
+Para acompanhar logs do ambiente dev:
+
+.. code-block:: bash
+
+  docker compose -f docker-compose.yml -f docker-compose.dev.yml logs -f strapi web
+
+Para recriar as contas de desenvolvimento usadas em testes de login no ambiente dev:
+
+.. code-block:: bash
+
+  docker compose -f docker-compose.yml -f docker-compose.dev.yml exec strapi \
+    npm run bootstrap:dev-users
+
+Credenciais padrão do usuário de desenvolvimento:
+
+- analista: ``dev.analyst@local.test`` / ``devpass123``
+- viewer: ``dev.viewer@local.test`` / ``devviewer123``
+
+Comportamento esperado:
+
+- o usuário ``analista`` acessa ``/dashboard/admin`` e fluxos de escrita aprovados
+- o usuário ``viewer`` entra no dashboard em modo leitura e é redirecionado ao tentar acessar ``/dashboard/admin``
+
+Para encerrar o stack:
+
+.. code-block:: bash
+
+  docker compose -f docker-compose.yml -f docker-compose.dev.yml down
+
+Se o Docker avisar sobre containers órfãos antigos, limpe com:
+
+.. code-block:: bash
+
+  docker compose -f docker-compose.yml -f docker-compose.dev.yml down --remove-orphans
+
 Python
 ~~~~~~
 

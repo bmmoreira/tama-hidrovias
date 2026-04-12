@@ -68,6 +68,45 @@ Any new protected feature must be implemented in two places:
 1. Strapi permission configuration for the target role.
 2. Matching UI and API enforcement in the Next.js application.
 
+## Repeatable dev auth bootstrap
+
+For local and Docker-based development, the CMS now includes an idempotent
+bootstrap script for known analyst and viewer accounts.
+
+Run it locally inside `cms/`:
+
+```bash
+npm run bootstrap:dev-users
+```
+
+Run it against the Docker dev stack:
+
+```bash
+docker compose -f ../docker-compose.yml -f ../docker-compose.dev.yml exec strapi npm run bootstrap:dev-users
+```
+
+Default credentials in Docker dev mode:
+
+- analyst: `dev.analyst@local.test` / `devpass123` / `analyst`
+- viewer: `dev.viewer@local.test` / `devviewer123` / `viewer`
+
+Expected behavior of each development user:
+
+- `analyst`: can access `/dashboard/admin` and exercise approved write flows
+- `viewer`: can access the dashboard in read-only mode and is redirected away from `/dashboard/admin`
+
+The script updates the same users if they already exist, so it is safe to rerun.
+You can override the defaults with these environment variables:
+
+- `DEV_BOOTSTRAP_ANALYST_EMAIL`
+- `DEV_BOOTSTRAP_ANALYST_PASSWORD`
+- `DEV_BOOTSTRAP_ANALYST_USERNAME`
+- `DEV_BOOTSTRAP_ANALYST_ROLE`
+- `DEV_BOOTSTRAP_VIEWER_EMAIL`
+- `DEV_BOOTSTRAP_VIEWER_PASSWORD`
+- `DEV_BOOTSTRAP_VIEWER_USERNAME`
+- `DEV_BOOTSTRAP_VIEWER_ROLE`
+
 ## User preferences model
 
 User-scoped interface and map settings are stored outside the plugin user model

@@ -6,7 +6,9 @@
     "develop": "strapi develop",
     "start": "strapi start",
     "build": "strapi build",
-    "strapi": "strapi"
+    "strapi": "strapi",
+    "bootstrap:dev-user": "node scripts/bootstrap-dev-user.js",
+    "bootstrap:dev-users": "node scripts/bootstrap-dev-user.js"
   },
   "dependencies": {
     "@strapi/strapi": "^4.15.0",

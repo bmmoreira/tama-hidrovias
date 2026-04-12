@@ -1,0 +1,38 @@
+services:
+  strapi:
+    command: npm run develop
+    environment:
+      NODE_ENV: development
+      PORT: 1337
+      CHOKIDAR_USEPOLLING: "true"
+      DEV_BOOTSTRAP_ANALYST_EMAIL: dev.analyst@local.test
+      DEV_BOOTSTRAP_ANALYST_PASSWORD: devpass123
+      DEV_BOOTSTRAP_ANALYST_USERNAME: dev-analyst
+      DEV_BOOTSTRAP_ANALYST_ROLE: analyst
+      DEV_BOOTSTRAP_VIEWER_EMAIL: dev.viewer@local.test
+      DEV_BOOTSTRAP_VIEWER_PASSWORD: devviewer123
+      DEV_BOOTSTRAP_VIEWER_USERNAME: dev-viewer
+      DEV_BOOTSTRAP_VIEWER_ROLE: viewer
+    stdin_open: true
+    tty: true
+
+  web:
+    build:
+      context: ./web
+      target: deps
+    command: npm run dev -- --hostname 0.0.0.0
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      NEXTAUTH_URL: http://localhost:3000
+      NEXT_PUBLIC_STRAPI_URL: http://localhost:1337
+      NEXT_PUBLIC_TILESERVER_URL: http://localhost:8080
+      STRAPI_INTERNAL_URL: http://strapi:1337
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      - ./web:/app
+      - /app/node_modules
+      - /app/.next
+    stdin_open: true
+    tty: true
