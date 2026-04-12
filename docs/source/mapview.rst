@@ -7,7 +7,6 @@ Overview
 The ``/mapview`` route now renders a dedicated map implementation that combines:
 
 - guest or user map defaults for the initial viewport and base style
-- station markers from the existing stations API
 - a GeoJSON ``FeatureCollection`` loaded from Strapi and rendered as a Mapbox
   ``geojson`` source and circle layer
 
@@ -64,7 +63,7 @@ Current route list:
 
 The map page also still loads:
 
-- ``GET /api/stations`` for station markers
+- ``GET /api/stations`` for feature-to-station metadata matching
 - ``GET /api/app-settings`` for guest map defaults
 - ``GET /api/users/me/preferences`` for authenticated user map defaults
 
@@ -217,7 +216,6 @@ content:
 - the base Mapbox style from guest or user defaults
 - optional raster tiles when ``tileLayerUrl`` is provided
 - the Strapi-backed GeoJSON overlay as a ``Source`` + circle ``Layer``
-- station markers from ``/api/stations``
 
 GeoJSON overlay behavior:
 
@@ -228,6 +226,8 @@ GeoJSON overlay behavior:
 - circle radius, stroke, and opacity are loaded from global app settings
 - clicking a GeoJSON point opens a centered standalone detail card instead of
    relying on the native Mapbox popup chrome
+- the related Strapi ``Station`` records can now carry an ``externalId`` field
+   that matches the GeoJSON feature ``properties.id`` value
 
 Global Layer Style Settings
 ---------------------------
@@ -306,12 +306,47 @@ Current runtime behavior:
 
 - the feature click still starts from the GeoJSON layer in ``MapBase.tsx``
 - the clicked feature is normalized into a typed popup payload
+- station records are used only to enrich the feature popup and detail modal
+   with base metadata such as code, source, river, basin, and coordinates
 - ``StationPopup.tsx`` renders that payload as a standalone centered card
 - the overlay uses a translucent light backdrop in light theme
 - the overlay uses a darker slate backdrop in dark theme
 - all popup labels and button text are resolved through runtime i18n
 - the action row currently exposes mock buttons for future detail and favorite
    flows plus a working close action
+
+Station Matching And Bootstrap Seeding
+--------------------------------------
+
+The Strapi ``Station`` collection type now includes an optional ``externalId``
+field used to match a station record to a GeoJSON feature coming from the
+single-type ``Map Feature Collection`` entry.
+
+Current matching contract:
+
+- ``Station.externalId``
+- ``Map Feature Collection.featureCollection.features[*].properties.id``
+
+Bootstrap behavior now uses that contract to keep local development data in
+sync:
+
+1. Strapi ensures the single ``Map Feature Collection`` exists.
+2. If the default mock dataset is needed, it now generates 128 point features.
+3. Bootstrap derives one mock ``Station`` record per feature.
+4. Each generated station receives:
+
+    - ``externalId`` from the GeoJSON feature id
+    - ``code`` in ``MF-<externalId>`` format
+    - ``source = Virtual``
+    - latitude/longitude from feature geometry
+    - basin/river plus supporting metadata copied from the feature payload
+
+Operational note:
+
+- restart Strapi after changing the schema or bootstrap logic so the station
+   sync runs and the mock records are inserted or refreshed
+- the web client now requests up to 500 stations by default so the larger mock
+   station set is not truncated by Strapi pagination
 
 How To Extend The Feature Payload
 ---------------------------------

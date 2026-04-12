@@ -14,6 +14,8 @@ import {
 
 export interface StationPopupData {
   name: string;
+  code?: string;
+  source?: string;
   satellite?: string;
   river?: string;
   basin?: string;
@@ -90,6 +92,12 @@ export default function StationPopup({
               {data.name}
             </CardTitle>
             <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
+              {data.code || data.source ? (
+                <div className="truncate text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  {data.code ?? t('mapPopup.noCode')}
+                  {data.source ? ` · ${data.source}` : ''}
+                </div>
+              ) : null}
               {data.river || data.basin ? (
                 <div className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 flex-shrink-0 text-gray-500" />

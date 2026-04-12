@@ -186,13 +186,20 @@ Current route flow:
 
 Current rendering behavior:
 
-- station markers still come from `/api/stations`
-- the GeoJSON overlay is rendered separately from station markers
+- the GeoJSON overlay is the visible interactive layer on `/mapview`
 - clicking a GeoJSON point opens a standalone centered detail card rendered by `src/components/maps/StationPopup.tsx`
 - the current popup supports `name`, `sat`, `river`, `basin`, `value`, `change`, `anomalia`, `s_date`, and `e_date`
 - the layer radius, colors, stroke, and opacity can be configured from the admin page and are persisted in Strapi app settings
 - popup labels and action text are localized through runtime i18next
 - the popup overlay uses a theme-aware light/dark backdrop instead of native Mapbox popup styling
+- the web data layer now requests up to 500 stations by default so seeded feature-linked stations are not lost to Strapi default pagination
+
+Station and feature matching:
+
+- the Strapi `Station` model can now expose `externalId`
+- that field is intended to match `featureCollection.features[*].properties.id`
+- station records are used to enrich the custom popup and detail modal, not to render a separate marker layer on `mapview`
+- Strapi bootstrap can generate one mock station per map feature for local development and integration checks
 
 Admin customization:
 

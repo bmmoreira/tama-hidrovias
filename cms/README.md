@@ -206,10 +206,20 @@ Implementation files:
 Operational behavior:
 
 - bootstrap ensures one default mock record exists for local development
+- bootstrap also ensures mock ``Station`` entries exist for the feature set by
+	matching ``Station.externalId`` to GeoJSON ``properties.id``
 - admins can upload a `.geojson` or `.json` file into `geojsonFile`
 - on save, the lifecycle imports and validates the uploaded file into `featureCollection`
 - admins can also edit `featureCollection` directly as raw JSON
 - lifecycle validation rejects payloads that are not valid GeoJSON `FeatureCollection` objects with point features
+
+Station matching details:
+
+- `src/api/station/content-types/station/schema.json` now includes `externalId`
+- bootstrap derives mock stations from the single `Map Feature Collection`
+- the default mock dataset now generates 128 point features and 128 matching mock stations
+- generated station codes use the format `MF-<externalId>`
+- generated stations are published immediately so the public `/api/stations` feed can return them
 
 Recommended workflow:
 
@@ -221,6 +231,9 @@ Recommended workflow:
 
 If any file under `src/api/map-feature-collection/` changes, restart Strapi so
 the new schema, routes, or lifecycles are loaded.
+
+If the station schema or the bootstrap sync changes, restart Strapi as well so
+the station collection can be repopulated from the current feature payload.
 
 ## Related documentation
 

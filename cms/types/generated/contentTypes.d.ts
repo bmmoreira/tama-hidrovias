@@ -575,6 +575,7 @@ export interface ApiStationStation extends Schema.CollectionType {
       'admin::user'
     > &
       Attribute.Private;
+    externalId: Attribute.Integer & Attribute.Unique;
     forecasts: Attribute.Relation<
       'api::station.station',
       'oneToMany',

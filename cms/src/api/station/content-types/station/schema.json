@@ -10,6 +10,7 @@
   "attributes": {
     "name": { "type": "string", "required": true },
     "code": { "type": "string", "unique": true, "required": true },
+    "externalId": { "type": "integer", "unique": true },
     "source": {
       "type": "enumeration",
       "enum": ["ANA", "HydroWeb", "SNIRH", "Virtual"],

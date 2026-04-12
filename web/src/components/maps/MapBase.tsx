@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Map, {
   Layer,
-  Popup,
-  Marker,
   type MapLayerMouseEvent,
   NavigationControl,
   ScaleControl,
@@ -16,6 +14,7 @@ import {
   DEFAULT_FEATURE_COLLECTION_LAYER_SETTINGS,
   type FeatureCollectionLayerSettings,
 } from '@/lib/strapi';
+import StationDetailsModal from './StationDetailsModal';
 import StationPopup, { type StationPopupData } from './StationPopup';
 import type {
   MapStylePreference,
@@ -29,16 +28,6 @@ export interface ViewState {
   latitude: number;
   zoom: number;
 }
-
-type PopupStation = {
-  id: number;
-  name: string;
-  code: string;
-  source?: string;
-  basin?: string;
-  longitude: number;
-  latitude: number;
-};
 
 type PopupFeature = StationPopupData & {
   longitude: number;
@@ -93,23 +82,68 @@ function buildFeatureCollectionLayer(
   };
 }
 
-function getStationColor(source?: string) {
-  switch (source) {
-    case 'ANA':
-      return '#2563eb';
-    case 'HydroWeb':
-      return '#16a34a';
-    case 'SNIRH':
-      return '#d97706';
-    case 'Virtual':
-      return '#9333ea';
-    default:
-      return '#6b7280';
-  }
-}
-
 function parseFiniteNumber(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+function parseString(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value : undefined;
+}
+
+function parseFeatureExternalId(feature: MapGeoJSONFeature) {
+  return parseFiniteNumber(feature.properties?.id);
+}
+
+function getStationMetadata(station: Station) {
+  const metadata = station.attributes.metadata;
+
+  return metadata && typeof metadata === 'object' && !Array.isArray(metadata)
+    ? (metadata as Record<string, unknown>)
+    : {};
+}
+
+function buildPopupFeatureFromStation(
+  station: Station,
+  feature: MapGeoJSONFeature,
+): PopupFeature | null {
+  const featurePopup = toPopupFeature(feature);
+
+  if (!featurePopup) {
+    return null;
+  }
+
+  const metadata = getStationMetadata(station);
+
+  return {
+    name: featurePopup.name,
+    code: station.attributes.code,
+    source: station.attributes.source,
+    satellite: featurePopup.satellite ?? parseString(metadata.satellite) ?? parseString(metadata.sat),
+    river: station.attributes.river ?? featurePopup.river,
+    basin: station.attributes.basin ?? featurePopup.basin,
+    startDate: featurePopup.startDate ?? parseString(metadata.startDate),
+    endDate: featurePopup.endDate ?? parseString(metadata.endDate),
+    value: featurePopup.value ?? parseFiniteNumber(metadata.value),
+    change: featurePopup.change ?? parseFiniteNumber(metadata.change),
+    anomaly: featurePopup.anomaly ?? parseFiniteNumber(metadata.anomaly),
+    longitude: station.attributes.longitude,
+    latitude: station.attributes.latitude,
+  };
+}
+
+function findMatchingStation(
+  stations: Station[],
+  feature: MapGeoJSONFeature,
+) {
+  const externalId = parseFeatureExternalId(feature);
+
+  if (externalId === undefined) {
+    return null;
+  }
+
+  return (
+    stations.find((station) => station.attributes.externalId === externalId) ?? null
+  );
 }
 
 function toPopupFeature(feature: MapGeoJSONFeature): PopupFeature | null {
@@ -133,6 +167,8 @@ function toPopupFeature(feature: MapGeoJSONFeature): PopupFeature | null {
 
   return {
     name: typeof properties.name === 'string' ? properties.name : 'Feature',
+    code: undefined,
+    source: undefined,
     satellite:
       typeof properties.sat === 'string'
         ? properties.sat
@@ -157,12 +193,11 @@ export default function MainMap({
   stations = [],
   featureCollection,
   featureCollectionLayerStyle,
-  onStationDoubleClick,
   tileLayerUrl,
 }: MapboxMapProps) {
   const mapRef = useRef<MapRef | null>(null);
-  const [popupStation, setPopupStation] = useState<PopupStation | null>(null);
   const [popupFeature, setPopupFeature] = useState<PopupFeature | null>(null);
+  const [detailFeature, setDetailFeature] = useState<PopupFeature | null>(null);
 
   const mapStyleUrl = useMemo(
     () => MAPBOX_STYLE_URLS[mapStyle] ?? MAPBOX_STYLE_URLS.outdoors,
@@ -193,13 +228,16 @@ export default function MainMap({
       return;
     }
 
-    const nextPopupFeature = toPopupFeature(clickedFeature);
+    const matchedStation = findMatchingStation(stations, clickedFeature);
+    const nextPopupFeature = matchedStation
+      ? buildPopupFeatureFromStation(matchedStation, clickedFeature)
+      : toPopupFeature(clickedFeature);
 
     if (!nextPopupFeature) {
       return;
     }
 
-    setPopupStation(null);
+    setDetailFeature(null);
     setPopupFeature(nextPopupFeature);
   };
 
@@ -234,73 +272,31 @@ export default function MainMap({
           </Source>
         ) : null}
 
-        {stations.map((station) => {
-          const color = getStationColor(station.attributes.source);
-
-          return (
-            <Marker
-              key={station.id}
-              longitude={station.attributes.longitude}
-              latitude={station.attributes.latitude}
-              anchor="center"
-            >
-              <button
-                type="button"
-                aria-label={station.attributes.name}
-                className="h-4 w-4 rounded-full border-2 border-white shadow"
-                style={{ backgroundColor: color }}
-                onClick={() => {
-                  setPopupFeature(null);
-                  setPopupStation({
-                    id: station.id,
-                    name: station.attributes.name,
-                    code: station.attributes.code,
-                    source: station.attributes.source,
-                    basin: station.attributes.basin,
-                    longitude: station.attributes.longitude,
-                    latitude: station.attributes.latitude,
-                  });
-                }}
-                onDoubleClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  onStationDoubleClick?.(station);
-                }}
-              />
-            </Marker>
-          );
-        })}
-
-        {popupStation ? (
-          <Popup
-            anchor="top"
-            longitude={popupStation.longitude}
-            latitude={popupStation.latitude}
-            offset={12}
-            onClose={() => setPopupStation(null)}
-            closeOnClick={false}
-          >
-            <div className="p-1 text-sm">
-              <strong className="block text-gray-900">{popupStation.name}</strong>
-              <span className="text-gray-500">
-                {popupStation.code}
-                {popupStation.source ? ` · ${popupStation.source}` : ''}
-              </span>
-              {popupStation.basin ? (
-                <p className="text-gray-500">Bacia: {popupStation.basin}</p>
-              ) : null}
-            </div>
-          </Popup>
-        ) : null}
-
         {popupFeature ? (
           <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-white/40 p-4 backdrop-blur-sm dark:bg-slate-950/55 sm:p-6">
             <div className="pointer-events-auto">
-              <StationPopup data={popupFeature} onClose={() => setPopupFeature(null)} />
+              <StationPopup
+                data={popupFeature}
+                onClose={() => setPopupFeature(null)}
+                onViewDetails={() => {
+                  setDetailFeature(popupFeature);
+                  setPopupFeature(null);
+                }}
+              />
             </div>
           </div>
         ) : null}
       </Map>
+
+      <StationDetailsModal
+        open={detailFeature !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDetailFeature(null);
+          }
+        }}
+        data={detailFeature}
+      />
     </div>
   );
 }
