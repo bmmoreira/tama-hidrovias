@@ -226,7 +226,8 @@ GeoJSON overlay behavior:
 - non-negative anomaly uses the admin-configured positive color
 - negative anomaly uses the admin-configured negative color
 - circle radius, stroke, and opacity are loaded from global app settings
-- clicking a GeoJSON point opens a popup with feature metadata
+- clicking a GeoJSON point opens a centered standalone detail card instead of
+   relying on the native Mapbox popup chrome
 
 Global Layer Style Settings
 ---------------------------
@@ -290,6 +291,28 @@ Current popup fields are derived from feature properties:
 - ``s_date``
 - ``e_date``
 
+Popup Presentation And Theme Behavior
+-------------------------------------
+
+The feature detail UI is now rendered through a dedicated frontend component
+instead of inline JSX inside the map layer handler.
+
+Current frontend files:
+
+- ``web/src/components/maps/StationPopup.tsx``
+- ``web/src/components/maps/MapBase.tsx``
+
+Current runtime behavior:
+
+- the feature click still starts from the GeoJSON layer in ``MapBase.tsx``
+- the clicked feature is normalized into a typed popup payload
+- ``StationPopup.tsx`` renders that payload as a standalone centered card
+- the overlay uses a translucent light backdrop in light theme
+- the overlay uses a darker slate backdrop in dark theme
+- all popup labels and button text are resolved through runtime i18n
+- the action row currently exposes mock buttons for future detail and favorite
+   flows plus a working close action
+
 How To Extend The Feature Payload
 ---------------------------------
 
@@ -302,7 +325,9 @@ Safe extension path:
 2. Keep the payload valid GeoJSON.
 3. Update the popup extraction logic in ``MapBase.tsx`` if the UI should render
    the new field.
-4. Update layer paint rules if styling should depend on the new property.
+4. Update ``StationPopup.tsx`` if the standalone card should display that new
+   property or action.
+5. Update layer paint rules if styling should depend on the new property.
 
 How To Develop Further
 ----------------------

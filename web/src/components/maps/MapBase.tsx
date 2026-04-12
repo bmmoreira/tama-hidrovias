@@ -16,6 +16,7 @@ import {
   DEFAULT_FEATURE_COLLECTION_LAYER_SETTINGS,
   type FeatureCollectionLayerSettings,
 } from '@/lib/strapi';
+import StationPopup, { type StationPopupData } from './StationPopup';
 import type {
   MapStylePreference,
   MapFeatureCollection,
@@ -39,16 +40,7 @@ type PopupStation = {
   latitude: number;
 };
 
-type PopupFeature = {
-  name: string;
-  satellite?: string;
-  river?: string;
-  basin?: string;
-  startDate?: string;
-  endDate?: string;
-  value?: number;
-  change?: number;
-  anomaly?: number;
+type PopupFeature = StationPopupData & {
   longitude: number;
   latitude: number;
 };
@@ -302,43 +294,11 @@ export default function MainMap({
         ) : null}
 
         {popupFeature ? (
-          <Popup
-            anchor="top"
-            longitude={popupFeature.longitude}
-            latitude={popupFeature.latitude}
-            offset={12}
-            onClose={() => setPopupFeature(null)}
-            closeOnClick={false}
-          >
-            <div className="min-w-44 p-1 text-sm">
-              <strong className="block text-gray-900">{popupFeature.name}</strong>
-              {popupFeature.satellite ? (
-                <p className="text-gray-500">Sat: {popupFeature.satellite}</p>
-              ) : null}
-              {popupFeature.river ? (
-                <p className="text-gray-500">Rio: {popupFeature.river}</p>
-              ) : null}
-              {popupFeature.basin ? (
-                <p className="text-gray-500">Bacia: {popupFeature.basin}</p>
-              ) : null}
-              {popupFeature.value !== undefined ? (
-                <p className="text-gray-500">Valor: {popupFeature.value}</p>
-              ) : null}
-              {popupFeature.change !== undefined ? (
-                <p className="text-gray-500">Variação: {popupFeature.change}</p>
-              ) : null}
-              {popupFeature.anomaly !== undefined ? (
-                <p className="text-gray-500">Anomalia: {popupFeature.anomaly}</p>
-              ) : null}
-              {popupFeature.startDate || popupFeature.endDate ? (
-                <p className="text-gray-500">
-                  {popupFeature.startDate ?? '...'}
-                  {' -> '}
-                  {popupFeature.endDate ?? '...'}
-                </p>
-              ) : null}
+          <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-white/40 p-4 backdrop-blur-sm dark:bg-slate-950/55 sm:p-6">
+            <div className="pointer-events-auto">
+              <StationPopup data={popupFeature} onClose={() => setPopupFeature(null)} />
             </div>
-          </Popup>
+          </div>
         ) : null}
       </Map>
     </div>

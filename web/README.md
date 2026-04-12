@@ -188,9 +188,11 @@ Current rendering behavior:
 
 - station markers still come from `/api/stations`
 - the GeoJSON overlay is rendered separately from station markers
-- clicking a GeoJSON point opens a popup from feature properties
+- clicking a GeoJSON point opens a standalone centered detail card rendered by `src/components/maps/StationPopup.tsx`
 - the current popup supports `name`, `sat`, `river`, `basin`, `value`, `change`, `anomalia`, `s_date`, and `e_date`
 - the layer radius, colors, stroke, and opacity can be configured from the admin page and are persisted in Strapi app settings
+- popup labels and action text are localized through runtime i18next
+- the popup overlay uses a theme-aware light/dark backdrop instead of native Mapbox popup styling
 
 Admin customization:
 
