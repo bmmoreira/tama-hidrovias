@@ -1,0 +1,39 @@
+{
+  "collectionName": "components_app_feature_collection_layers",
+  "info": {
+    "displayName": "Feature Collection Layer"
+  },
+  "options": {},
+  "attributes": {
+    "circleRadius": {
+      "type": "decimal",
+      "default": 6,
+      "required": true
+    },
+    "positiveColor": {
+      "type": "string",
+      "default": "#0284c7",
+      "required": true
+    },
+    "negativeColor": {
+      "type": "string",
+      "default": "#ea580c",
+      "required": true
+    },
+    "strokeWidth": {
+      "type": "decimal",
+      "default": 1.5,
+      "required": true
+    },
+    "strokeColor": {
+      "type": "string",
+      "default": "#ffffff",
+      "required": true
+    },
+    "circleOpacity": {
+      "type": "decimal",
+      "default": 0.9,
+      "required": true
+    }
+  }
+}

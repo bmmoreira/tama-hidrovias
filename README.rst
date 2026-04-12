@@ -274,16 +274,32 @@ Fluxo atual:
 - o componente ``web/src/components/maps/MapBase.tsx`` renderiza esse payload
   como ``Source`` + ``Layer`` do Mapbox
 
-No backend Strapi existe o collection type ``Map Feature Collection`` com:
+No backend Strapi existe o single type ``Map Feature Collection`` com:
 
 - ``name``
 - ``geojsonFile`` para upload opcional do arquivo fonte
 - ``featureCollection`` com o GeoJSON efetivamente servido ao frontend
 
+O estilo visual dessa camada GeoJSON no ``/mapview`` agora pode ser ajustado
+na página administrativa do dashboard e é persistido no model global
+``App Setting`` do Strapi.
+
+Configurações disponíveis atualmente:
+
+- raio do círculo
+- opacidade
+- cor para anomalia positiva
+- cor para anomalia negativa
+- espessura da borda
+- cor da borda
+
+A tela administrativa também exibe uma pequena pré-visualização ao vivo antes
+de salvar.
+
 Como atualizar os dados:
 
 1. abra ``http://localhost:1337/admin``
-2. edite o registro de ``Map Feature Collection``
+2. abra o single type ``Map Feature Collection``
 3. envie um arquivo ``.geojson`` ou ``.json`` em ``geojsonFile`` ou edite o
    campo ``featureCollection`` manualmente
 4. salve o registro

@@ -383,6 +383,8 @@ export interface ApiAppSettingAppSetting extends Schema.CollectionType {
       'admin::user'
     > &
       Attribute.Private;
+    featureCollectionLayer: Attribute.Component<'app.feature-collection-layer'> &
+      Attribute.Required;
     map: Attribute.Component<'app.default-map'> & Attribute.Required;
     updatedAt: Attribute.DateTime;
     updatedBy: Attribute.Relation<
@@ -478,7 +480,7 @@ export interface ApiForecastForecast extends Schema.CollectionType {
 }
 
 export interface ApiMapFeatureCollectionMapFeatureCollection
-  extends Schema.CollectionType {
+  extends Schema.SingleType {
   collectionName: 'map_feature_collections';
   info: {
     description: 'GeoJSON feature collections used by the web map';

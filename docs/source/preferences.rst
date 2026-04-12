@@ -165,6 +165,7 @@ Related Strapi files:
 - ``cms/src/api/app-setting/routes/custom-app-setting.js``
 - ``cms/src/components/app/default-appearance.json``
 - ``cms/src/components/app/default-map.json``
+- ``cms/src/components/app/feature-collection-layer.json``
 
 Current app settings routes:
 
@@ -184,6 +185,18 @@ That page currently controls:
 - guest map base style
 - guest map default zoom
 - guest map default center latitude and longitude
+- global GeoJSON feature collection layer style for ``/mapview``
+
+Current feature collection layer fields:
+
+- ``circleRadius``
+- ``positiveColor``
+- ``negativeColor``
+- ``strokeWidth``
+- ``strokeColor``
+- ``circleOpacity``
+
+The admin form includes a live preview swatch for these values before save.
 
 Theme Persistence Hook Points
 -----------------------------
@@ -258,6 +271,21 @@ The shared translation runtime lives in:
 - ``web/src/lib/i18n.ts``
 - ``web/src/lib/use-app-translation.ts``
 - ``web/src/components/AppI18nProvider.tsx``
+
+Hydration Safety
+----------------
+
+The client i18n runtime now avoids language changes during render.
+
+Current implementation details:
+
+- ``web/src/components/AppI18nProvider.tsx`` normalizes the current language in
+  render and applies ``i18n.changeLanguage(...)`` only in ``useEffect``
+- ``web/src/lib/i18n.ts`` initializes the client runtime from the
+  server-rendered ``<html lang>`` attribute when available
+
+This reduces hydration mismatches between the server-rendered HTML and the
+first client render on translated pages such as the dashboard admin section.
 
 The initial request language is resolved on the server in:
 

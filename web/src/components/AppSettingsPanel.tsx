@@ -20,6 +20,12 @@ type FormState = {
   defaultZoom: string;
   centerLatitude: string;
   centerLongitude: string;
+  featureCircleRadius: string;
+  featurePositiveColor: string;
+  featureNegativeColor: string;
+  featureStrokeWidth: string;
+  featureStrokeColor: string;
+  featureCircleOpacity: string;
 };
 
 const DEFAULT_FORM: FormState = {
@@ -28,7 +34,17 @@ const DEFAULT_FORM: FormState = {
   defaultZoom: '4',
   centerLatitude: '-15',
   centerLongitude: '-52',
+  featureCircleRadius: '6',
+  featurePositiveColor: '#0284c7',
+  featureNegativeColor: '#ea580c',
+  featureStrokeWidth: '1.5',
+  featureStrokeColor: '#ffffff',
+  featureCircleOpacity: '0.9',
 };
+
+function clampNumber(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
 
 export default function AppSettingsPanel() {
   const { t } = useTranslation();
@@ -41,6 +57,23 @@ export default function AppSettingsPanel() {
   const [isSaving, setIsSaving] = useState(false);
   const { data, isLoading, mutate } = useSWR('app-settings', () => getAppSettings());
 
+  const previewCircleRadius = clampNumber(
+    Number(form.featureCircleRadius) || 0,
+    1,
+    24,
+  );
+  const previewStrokeWidth = clampNumber(
+    Number(form.featureStrokeWidth) || 0,
+    0,
+    8,
+  );
+  const previewCircleOpacity = clampNumber(
+    Number(form.featureCircleOpacity) || 0,
+    0,
+    1,
+  );
+  const previewCircleSize = previewCircleRadius * 2 + previewStrokeWidth * 2;
+
   useEffect(() => {
     if (!data?.data || hasInitialized) {
       return;
@@ -52,6 +85,12 @@ export default function AppSettingsPanel() {
       defaultZoom: String(data.data.map.defaultZoom),
       centerLatitude: String(data.data.map.centerLatitude),
       centerLongitude: String(data.data.map.centerLongitude),
+      featureCircleRadius: String(data.data.featureCollectionLayer.circleRadius),
+      featurePositiveColor: data.data.featureCollectionLayer.positiveColor,
+      featureNegativeColor: data.data.featureCollectionLayer.negativeColor,
+      featureStrokeWidth: String(data.data.featureCollectionLayer.strokeWidth),
+      featureStrokeColor: data.data.featureCollectionLayer.strokeColor,
+      featureCircleOpacity: String(data.data.featureCollectionLayer.circleOpacity),
     });
     setHasInitialized(true);
   }, [data, hasInitialized]);
@@ -70,6 +109,14 @@ export default function AppSettingsPanel() {
           defaultZoom: Number(form.defaultZoom),
           centerLatitude: Number(form.centerLatitude),
           centerLongitude: Number(form.centerLongitude),
+        },
+        featureCollectionLayer: {
+          circleRadius: Number(form.featureCircleRadius),
+          positiveColor: form.featurePositiveColor,
+          negativeColor: form.featureNegativeColor,
+          strokeWidth: Number(form.featureStrokeWidth),
+          strokeColor: form.featureStrokeColor,
+          circleOpacity: Number(form.featureCircleOpacity),
         },
       });
 
@@ -219,6 +266,164 @@ export default function AppSettingsPanel() {
                 setForm((current) => ({
                   ...current,
                   centerLongitude: event.target.value,
+                }))
+              }
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('admin.featureCollectionLayer')}</CardTitle>
+          <CardDescription>{t('admin.featureCollectionLayerDescription')}</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-3 md:col-span-2">
+            <div className="text-xs font-medium text-gray-700 dark:text-slate-300">
+              {t('admin.livePreview')}
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-[radial-gradient(circle_at_top,#f8fafc,#e2e8f0)] p-4 dark:border-slate-800 dark:bg-[radial-gradient(circle_at_top,#1e293b,#0f172a)]">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="inline-block rounded-full"
+                      style={{
+                        width: `${previewCircleSize}px`,
+                        height: `${previewCircleSize}px`,
+                        backgroundColor: form.featurePositiveColor,
+                        borderColor: form.featureStrokeColor,
+                        borderStyle: 'solid',
+                        borderWidth: `${previewStrokeWidth}px`,
+                        opacity: previewCircleOpacity,
+                      }}
+                    />
+                    <span className="text-xs text-gray-600 dark:text-slate-300">
+                      {t('admin.positiveColor')}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="inline-block rounded-full"
+                      style={{
+                        width: `${previewCircleSize}px`,
+                        height: `${previewCircleSize}px`,
+                        backgroundColor: form.featureNegativeColor,
+                        borderColor: form.featureStrokeColor,
+                        borderStyle: 'solid',
+                        borderWidth: `${previewStrokeWidth}px`,
+                        opacity: previewCircleOpacity,
+                      }}
+                    />
+                    <span className="text-xs text-gray-600 dark:text-slate-300">
+                      {t('admin.negativeColor')}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-right text-xs text-gray-500 dark:text-slate-400">
+                  <div>{t('admin.circleRadius')}: {previewCircleRadius}</div>
+                  <div>{t('admin.strokeWidth')}: {previewStrokeWidth}</div>
+                  <div>{t('admin.circleOpacity')}: {previewCircleOpacity.toFixed(2)}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-gray-700 dark:text-slate-300">
+              {t('admin.circleRadius')}
+            </label>
+            <Input
+              type="number"
+              step="0.1"
+              min="1"
+              max="24"
+              value={form.featureCircleRadius}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  featureCircleRadius: event.target.value,
+                }))
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-gray-700 dark:text-slate-300">
+              {t('admin.circleOpacity')}
+            </label>
+            <Input
+              type="number"
+              step="0.05"
+              min="0"
+              max="1"
+              value={form.featureCircleOpacity}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  featureCircleOpacity: event.target.value,
+                }))
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-gray-700 dark:text-slate-300">
+              {t('admin.positiveColor')}
+            </label>
+            <Input
+              type="color"
+              value={form.featurePositiveColor}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  featurePositiveColor: event.target.value,
+                }))
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-gray-700 dark:text-slate-300">
+              {t('admin.negativeColor')}
+            </label>
+            <Input
+              type="color"
+              value={form.featureNegativeColor}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  featureNegativeColor: event.target.value,
+                }))
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-gray-700 dark:text-slate-300">
+              {t('admin.strokeWidth')}
+            </label>
+            <Input
+              type="number"
+              step="0.1"
+              min="0"
+              max="8"
+              value={form.featureStrokeWidth}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  featureStrokeWidth: event.target.value,
+                }))
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-gray-700 dark:text-slate-300">
+              {t('admin.strokeColor')}
+            </label>
+            <Input
+              type="color"
+              value={form.featureStrokeColor}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  featureStrokeColor: event.target.value,
                 }))
               }
             />

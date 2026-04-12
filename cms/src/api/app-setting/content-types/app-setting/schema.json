@@ -22,6 +22,12 @@
       "repeatable": false,
       "component": "app.default-map",
       "required": true
+    },
+    "featureCollectionLayer": {
+      "type": "component",
+      "repeatable": false,
+      "component": "app.feature-collection-layer",
+      "required": true
     }
   }
 }

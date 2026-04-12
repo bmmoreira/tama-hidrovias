@@ -68,6 +68,9 @@ The map page also still loads:
 - ``GET /api/app-settings`` for guest map defaults
 - ``GET /api/users/me/preferences`` for authenticated user map defaults
 
+The app settings payload now also carries the persisted visual style used for
+the feature collection layer in ``/mapview``.
+
 Current Payload Shape
 ---------------------
 
@@ -119,6 +122,9 @@ The Strapi collection type is:
 
 - ``api::map-feature-collection.map-feature-collection``
 
+It is configured as a singleton in Strapi, so operators edit one shared entry
+instead of managing a list of records.
+
 Current attributes:
 
 - ``name``
@@ -134,8 +140,8 @@ Intent of each field:
 Bootstrap And Mock Data
 -----------------------
 
-On Strapi bootstrap, the system ensures at least one map feature collection
-record exists.
+On Strapi bootstrap, the system ensures the single map feature collection entry
+exists.
 
 Current bootstrap source:
 
@@ -181,8 +187,8 @@ How To Upload Or Update GeoJSON In Strapi
 Recommended admin workflow:
 
 1. Open the Strapi admin at ``http://localhost:1337/admin``.
-2. Open the ``Map Feature Collection`` collection type.
-3. Open the existing ``sv`` record or create a new one.
+2. Open the ``Map Feature Collection`` single type.
+3. Edit the singleton entry.
 4. Upload a ``.geojson`` or ``.json`` file into ``geojsonFile``.
 5. Save the record.
 6. Strapi imports the uploaded file into ``featureCollection`` during save.
@@ -217,9 +223,60 @@ GeoJSON overlay behavior:
 
 - rendered with a circle layer
 - point color is derived from the ``anomalia`` property
-- non-negative anomaly uses blue
-- negative anomaly uses orange
+- non-negative anomaly uses the admin-configured positive color
+- negative anomaly uses the admin-configured negative color
+- circle radius, stroke, and opacity are loaded from global app settings
 - clicking a GeoJSON point opens a popup with feature metadata
+
+Global Layer Style Settings
+---------------------------
+
+The feature collection layer style is now persisted in the global app settings
+model instead of being hardcoded only in the frontend.
+
+Current Strapi component file:
+
+- ``cms/src/components/app/feature-collection-layer.json``
+
+Current fields:
+
+- ``circleRadius``
+- ``positiveColor``
+- ``negativeColor``
+- ``strokeWidth``
+- ``strokeColor``
+- ``circleOpacity``
+
+Runtime flow:
+
+1. the admin page saves global settings through ``PUT /api/app-settings/current``
+2. the Next.js proxy exposes those settings through ``/api/app-settings``
+3. ``web/src/app/mapview/page.tsx`` loads the app settings payload
+4. ``web/src/components/maps/MapBase.tsx`` builds the GeoJSON ``Layer`` from
+   ``featureCollectionLayer`` instead of fixed paint values
+
+Admin Page Customization
+------------------------
+
+The dashboard admin page now exposes feature collection layer controls in the
+same panel used for other guest map defaults.
+
+Current admin files:
+
+- ``web/src/app/dashboard/admin/page.tsx``
+- ``web/src/components/AppSettingsPanel.tsx``
+
+Available controls:
+
+- circle radius
+- circle opacity
+- positive anomaly color
+- negative anomaly color
+- stroke width
+- stroke color
+
+The admin form includes a small live preview swatch so operators can review
+the current layer style before saving.
 
 Current popup fields are derived from feature properties:
 

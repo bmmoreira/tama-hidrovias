@@ -35,6 +35,33 @@ export interface AppDefaultMap extends Schema.Component {
   };
 }
 
+export interface AppFeatureCollectionLayer extends Schema.Component {
+  collectionName: 'components_app_feature_collection_layers';
+  info: {
+    displayName: 'Feature Collection Layer';
+  };
+  attributes: {
+    circleOpacity: Attribute.Decimal &
+      Attribute.Required &
+      Attribute.DefaultTo<0.9>;
+    circleRadius: Attribute.Decimal &
+      Attribute.Required &
+      Attribute.DefaultTo<6>;
+    negativeColor: Attribute.String &
+      Attribute.Required &
+      Attribute.DefaultTo<'#ea580c'>;
+    positiveColor: Attribute.String &
+      Attribute.Required &
+      Attribute.DefaultTo<'#0284c7'>;
+    strokeColor: Attribute.String &
+      Attribute.Required &
+      Attribute.DefaultTo<'#ffffff'>;
+    strokeWidth: Attribute.Decimal &
+      Attribute.Required &
+      Attribute.DefaultTo<1.5>;
+  };
+}
+
 export interface PreferencesAlertSettings extends Schema.Component {
   collectionName: 'components_preferences_alert_settings';
   info: {
@@ -103,6 +130,7 @@ declare module '@strapi/types' {
     export interface Components {
       'app.default-appearance': AppDefaultAppearance;
       'app.default-map': AppDefaultMap;
+      'app.feature-collection-layer': AppFeatureCollectionLayer;
       'preferences.alert-settings': PreferencesAlertSettings;
       'preferences.appearance-settings': PreferencesAppearanceSettings;
       'preferences.map-settings': PreferencesMapSettings;

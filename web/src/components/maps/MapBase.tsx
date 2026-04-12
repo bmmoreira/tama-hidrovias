@@ -12,9 +12,13 @@ import Map, {
   type MapRef,
 } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import {
+  DEFAULT_FEATURE_COLLECTION_LAYER_SETTINGS,
+  type FeatureCollectionLayerSettings,
+} from '@/lib/strapi';
 import type {
-  MapFeatureCollection,
   MapStylePreference,
+  MapFeatureCollection,
   Station,
 } from '@/lib/strapi';
 
@@ -54,6 +58,7 @@ interface MapboxMapProps {
   mapStyle?: MapStylePreference;
   stations?: Station[];
   featureCollection?: MapFeatureCollection;
+  featureCollectionLayerStyle?: FeatureCollectionLayerSettings;
   onStationDoubleClick?: (station: Station) => void;
   tileLayerUrl?: string;
 }
@@ -75,22 +80,26 @@ const TILE_LAYER_STYLE = {
 
 const FEATURE_COLLECTION_LAYER_ID = 'mapview-feature-collection-layer';
 
-const FEATURE_COLLECTION_LAYER: LayerProps = {
-  id: FEATURE_COLLECTION_LAYER_ID,
-  type: 'circle',
-  paint: {
-    'circle-radius': 6,
-    'circle-color': [
-      'case',
-      ['>=', ['coalesce', ['get', 'anomalia'], 0], 0],
-      '#0284c7',
-      '#ea580c',
-    ],
-    'circle-stroke-width': 1.5,
-    'circle-stroke-color': '#ffffff',
-    'circle-opacity': 0.9,
-  },
-};
+function buildFeatureCollectionLayer(
+  style: FeatureCollectionLayerSettings,
+): LayerProps {
+  return {
+    id: FEATURE_COLLECTION_LAYER_ID,
+    type: 'circle',
+    paint: {
+      'circle-radius': style.circleRadius,
+      'circle-color': [
+        'case',
+        ['>=', ['coalesce', ['get', 'anomalia'], 0], 0],
+        style.positiveColor,
+        style.negativeColor,
+      ],
+      'circle-stroke-width': style.strokeWidth,
+      'circle-stroke-color': style.strokeColor,
+      'circle-opacity': style.circleOpacity,
+    },
+  };
+}
 
 function getStationColor(source?: string) {
   switch (source) {
@@ -155,6 +164,7 @@ export default function MainMap({
   mapStyle = 'outdoors',
   stations = [],
   featureCollection,
+  featureCollectionLayerStyle,
   onStationDoubleClick,
   tileLayerUrl,
 }: MapboxMapProps) {
@@ -165,6 +175,13 @@ export default function MainMap({
   const mapStyleUrl = useMemo(
     () => MAPBOX_STYLE_URLS[mapStyle] ?? MAPBOX_STYLE_URLS.outdoors,
     [mapStyle],
+  );
+  const featureCollectionLayer = useMemo(
+    () =>
+      buildFeatureCollectionLayer(
+        featureCollectionLayerStyle ?? DEFAULT_FEATURE_COLLECTION_LAYER_SETTINGS,
+      ),
+    [featureCollectionLayerStyle],
   );
 
   useEffect(() => {
@@ -221,7 +238,7 @@ export default function MainMap({
             type="geojson"
             data={featureCollection}
           >
-            <Layer {...FEATURE_COLLECTION_LAYER} />
+            <Layer {...featureCollectionLayer} />
           </Source>
         ) : null}
 

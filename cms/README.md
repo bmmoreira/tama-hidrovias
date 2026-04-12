@@ -149,6 +149,7 @@ Supporting components:
 
 - `src/components/app/default-appearance.json`
 - `src/components/app/default-map.json`
+- `src/components/app/feature-collection-layer.json`
 
 Routes:
 
@@ -164,9 +165,21 @@ Implementation files:
 This model is used by the web dashboard admin page to define the guest default
 language and public map view while keeping per-user preferences independent.
 
+It now also stores the global `featureCollectionLayer` component used by the
+`/mapview` GeoJSON overlay.
+
+Current feature collection layer fields:
+
+- `circleRadius`
+- `positiveColor`
+- `negativeColor`
+- `strokeWidth`
+- `strokeColor`
+- `circleOpacity`
+
 ## Map Feature Collection model
 
-The CMS now includes a dedicated collection type for GeoJSON overlays used by
+The CMS now includes a dedicated single type for GeoJSON overlays used by
 the web `mapview` route.
 
 Content type:
@@ -201,7 +214,7 @@ Operational behavior:
 Recommended workflow:
 
 1. open Strapi admin
-2. edit the `Map Feature Collection` entry
+2. open the `Map Feature Collection` single type
 3. upload a new `geojsonFile` or paste JSON into `featureCollection`
 4. save the entry
 5. refresh `/mapview` in the web app

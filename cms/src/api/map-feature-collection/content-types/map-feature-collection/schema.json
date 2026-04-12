@@ -1,5 +1,5 @@
 {
-  "kind": "collectionType",
+  "kind": "singleType",
   "collectionName": "map_feature_collections",
   "info": {
     "singularName": "map-feature-collection",

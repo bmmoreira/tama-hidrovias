@@ -9,17 +9,11 @@ const MAP_FEATURE_COLLECTION_UID =
   'api::map-feature-collection.map-feature-collection';
 
 async function findMapFeatureCollection() {
-  const entries = await strapi.entityService.findMany(
-    MAP_FEATURE_COLLECTION_UID,
-    {
-      limit: 1,
-      populate: {
-        geojsonFile: true,
-      },
+  return strapi.entityService.findMany(MAP_FEATURE_COLLECTION_UID, {
+    populate: {
+      geojsonFile: true,
     },
-  );
-
-  return Array.isArray(entries) ? entries[0] ?? null : entries;
+  });
 }
 
 async function findOrCreateMapFeatureCollection() {

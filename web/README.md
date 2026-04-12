@@ -190,12 +190,24 @@ Current rendering behavior:
 - the GeoJSON overlay is rendered separately from station markers
 - clicking a GeoJSON point opens a popup from feature properties
 - the current popup supports `name`, `sat`, `river`, `basin`, `value`, `change`, `anomalia`, `s_date`, and `e_date`
+- the layer radius, colors, stroke, and opacity can be configured from the admin page and are persisted in Strapi app settings
+
+Admin customization:
+
+- `src/components/AppSettingsPanel.tsx` now exposes global controls for the mapview GeoJSON layer
+- the admin form includes a live preview swatch before save
+- `src/components/maps/MapBase.tsx` builds the Mapbox layer from persisted app settings instead of fixed paint values
 
 Development notes:
 
 - keep browser-side reads on the internal Next route instead of calling Strapi directly
 - if the GeoJSON contract changes, update both `src/lib/strapi.ts` types and `src/components/maps/MapBase.tsx`
 - if the popup or style rules depend on new properties, keep those transformations local to `MapBase.tsx`
+
+Hydration and i18n note:
+
+- `src/components/AppI18nProvider.tsx` now changes runtime language only in an effect, not during render
+- `src/lib/i18n.ts` initializes from the server-rendered `html[lang]` when available to reduce hydration mismatches
 
 For the full technical flow and Strapi upload process, see:
 

@@ -15,16 +15,37 @@ const DEFAULT_APP_SETTINGS = {
     centerLatitude: -15,
     centerLongitude: -52,
   },
+  featureCollectionLayer: {
+    circleRadius: 6,
+    positiveColor: '#0284c7',
+    negativeColor: '#ea580c',
+    strokeWidth: 1.5,
+    strokeColor: '#ffffff',
+    circleOpacity: 0.9,
+  },
 };
 
 const APP_SETTING_POPULATE = {
   appearance: true,
   map: true,
+  featureCollectionLayer: true,
 };
 
 function parseFiniteNumber(value, fallback) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function clampNumber(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function parseHexColor(value, fallback) {
+  const normalized = typeof value === 'string' ? value.trim() : '';
+
+  return /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(normalized)
+    ? normalized
+    : fallback;
 }
 
 function normalizeRole(value) {
@@ -76,6 +97,7 @@ async function getAuthenticatedUserFromRequest(ctx) {
 function normalizePayload(body = {}) {
   const appearance = body.appearance ?? {};
   const map = body.map ?? {};
+  const featureCollectionLayer = body.featureCollectionLayer ?? {};
 
   return {
     appearance: {
@@ -98,6 +120,44 @@ function normalizePayload(body = {}) {
       centerLongitude: parseFiniteNumber(
         map.centerLongitude,
         DEFAULT_APP_SETTINGS.map.centerLongitude,
+      ),
+    },
+    featureCollectionLayer: {
+      circleRadius: clampNumber(
+        parseFiniteNumber(
+          featureCollectionLayer.circleRadius,
+          DEFAULT_APP_SETTINGS.featureCollectionLayer.circleRadius,
+        ),
+        1,
+        24,
+      ),
+      positiveColor: parseHexColor(
+        featureCollectionLayer.positiveColor,
+        DEFAULT_APP_SETTINGS.featureCollectionLayer.positiveColor,
+      ),
+      negativeColor: parseHexColor(
+        featureCollectionLayer.negativeColor,
+        DEFAULT_APP_SETTINGS.featureCollectionLayer.negativeColor,
+      ),
+      strokeWidth: clampNumber(
+        parseFiniteNumber(
+          featureCollectionLayer.strokeWidth,
+          DEFAULT_APP_SETTINGS.featureCollectionLayer.strokeWidth,
+        ),
+        0,
+        8,
+      ),
+      strokeColor: parseHexColor(
+        featureCollectionLayer.strokeColor,
+        DEFAULT_APP_SETTINGS.featureCollectionLayer.strokeColor,
+      ),
+      circleOpacity: clampNumber(
+        parseFiniteNumber(
+          featureCollectionLayer.circleOpacity,
+          DEFAULT_APP_SETTINGS.featureCollectionLayer.circleOpacity,
+        ),
+        0,
+        1,
       ),
     },
   };
@@ -145,6 +205,29 @@ function serializeAppSetting(appSetting) {
       centerLongitude: Number(
         appSetting.map?.centerLongitude ??
           DEFAULT_APP_SETTINGS.map.centerLongitude,
+      ),
+    },
+    featureCollectionLayer: {
+      circleRadius: Number(
+        appSetting.featureCollectionLayer?.circleRadius ??
+          DEFAULT_APP_SETTINGS.featureCollectionLayer.circleRadius,
+      ),
+      positiveColor:
+        appSetting.featureCollectionLayer?.positiveColor ??
+        DEFAULT_APP_SETTINGS.featureCollectionLayer.positiveColor,
+      negativeColor:
+        appSetting.featureCollectionLayer?.negativeColor ??
+        DEFAULT_APP_SETTINGS.featureCollectionLayer.negativeColor,
+      strokeWidth: Number(
+        appSetting.featureCollectionLayer?.strokeWidth ??
+          DEFAULT_APP_SETTINGS.featureCollectionLayer.strokeWidth,
+      ),
+      strokeColor:
+        appSetting.featureCollectionLayer?.strokeColor ??
+        DEFAULT_APP_SETTINGS.featureCollectionLayer.strokeColor,
+      circleOpacity: Number(
+        appSetting.featureCollectionLayer?.circleOpacity ??
+          DEFAULT_APP_SETTINGS.featureCollectionLayer.circleOpacity,
       ),
     },
   };

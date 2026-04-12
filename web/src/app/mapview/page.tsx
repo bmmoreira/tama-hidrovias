@@ -72,6 +72,7 @@ export default function MapPage() {
   const stations = stationsData?.data ?? [];
   const appSettings = appSettingsData?.data;
   const featureCollection = featureCollectionData?.data?.featureCollection;
+  const featureCollectionLayer = appSettings?.featureCollectionLayer;
   const preferences = preferencesData?.data;
   const { from, to } = getPast30Days();
   const variableLabels: Record<StationVariable, string> = {
@@ -120,6 +121,7 @@ export default function MapPage() {
             mapStyle={mapStyle}
             stations={stations}
             featureCollection={featureCollection}
+            featureCollectionLayerStyle={featureCollectionLayer}
             onStationDoubleClick={handleStationDoubleClick}
           />
         ) : (
