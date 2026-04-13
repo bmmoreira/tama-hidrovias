@@ -173,6 +173,9 @@ out/
 # Docker
 .env
 
+# Local transfer archives
+backups/
+
 # Data files (keep structure, not data)
 data/geotiffs/*.tif
 data/geotiffs/*.tiff

@@ -329,6 +329,25 @@ Strapi
     npm install
     npm run develop    # http://localhost:1337/admin
 
+  Transferir dados atuais do Strapi
+  -------------------------------
+
+  Para levar usuários, papéis, conteúdo e uploads atuais para outra máquina,
+  use o script de backup e restauração na raiz do projeto:
+
+  .. code-block:: bash
+
+    ./strapi-data-transfer.sh export
+    ./strapi-data-transfer.sh import backups/strapi/strapi-data-YYYYMMDD-HHMMSS.tar.gz
+
+  O script exporta:
+
+  - dump PostgreSQL com os dados atuais do Strapi
+  - arquivos em ``cms/public/uploads``
+
+  Se você estiver usando a stack de desenvolvimento com ``docker-compose.dev.yml``,
+  adicione ``--dev`` ao comando.
+
 Autenticação
 ------------
 
