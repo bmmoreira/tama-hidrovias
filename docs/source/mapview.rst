@@ -1,6 +1,23 @@
 MapView GeoJSON Flow
 ====================
 
+Quick Summary
+-------------
+
+High-level data flow for the ``/mapview`` overlay:
+
+1. Strapi single type ``api::map-feature-collection.map-feature-collection``
+   stores a GeoJSON ``FeatureCollection`` in the ``featureCollection`` field.
+2. Strapi exposes it via the public route
+   ``GET /api/map-feature-collections/public``.
+3. Next.js proxies that through ``GET /api/map-feature-collections`` and the
+   shared helper ``getMapFeatureCollection()`` in ``web/src/lib/strapi.ts``.
+4. ``web/src/app/mapview/page.tsx`` loads the payload with SWR and passes
+   ``featureCollection`` plus style settings into ``MapBase``.
+5. ``web/src/components/maps/MapBase.tsx`` renders the data using a Mapbox
+   ``geojson`` source and a circle layer whose colors and sizes come from
+   global app settings.
+
 Overview
 --------
 
