@@ -14,7 +14,10 @@ import {
 } from '@/lib/i18n';
 import type { LanguagePreference, ThemePreference } from '@/lib/strapi';
 
-interface ProvidersProps {
+/**
+ * Top-level providers composing theme, NextAuth session and i18n.
+ */
+export interface ProvidersProps {
   children: React.ReactNode;
   session?: Session | null;
   initialLanguage: LanguagePreference;

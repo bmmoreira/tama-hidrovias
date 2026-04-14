@@ -11,7 +11,11 @@ export interface ViewState {
   zoom: number;
 }
 
-interface MapboxMapProps {
+/**
+ * Minimal, Mapbox-gl based map used in dashboard climate layer previews
+ * and other light-weight map contexts.
+ */
+export interface MapboxMapProps {
   initialViewState?: ViewState;
   mapStyle?: MapStylePreference;
   stations?: Station[];

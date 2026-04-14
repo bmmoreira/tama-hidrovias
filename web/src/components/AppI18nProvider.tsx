@@ -5,7 +5,8 @@ import { I18nextProvider } from 'react-i18next';
 import i18n, { normalizeLanguage } from '@/lib/i18n';
 import type { LanguagePreference } from '@/lib/strapi';
 
-interface AppI18nProviderProps {
+/** Props for the client-side i18n provider wrapping the app. */
+export interface AppI18nProviderProps {
   children: React.ReactNode;
   language: LanguagePreference;
 }

@@ -258,6 +258,38 @@ Next.js
 .. code-block:: bash
 
     cd web
+    npm install
+    npm run dev        # http://localhost:3000
+
+Documentação e TypeScript API docs
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+O projeto mantém dois conjuntos de documentação complementares:
+
+- **Sphinx** em ``docs/`` para arquitetura, autenticação, dashboard e fluxo de dados.
+- **TypeDoc** em ``web/src`` para a API TypeScript (tipos, hooks e componentes).
+
+Fluxos relevantes já configurados neste repositório:
+
+- ``.github/workflows/docs.yml``: valida em CI que tanto o Sphinx quanto o
+  TypeDoc geram HTML com sucesso em cada ``push`` para ``main`` e em cada PR.
+- ``.github/workflows/pages.yml``: constrói o site combinando
+  ``docs`` (Sphinx) em ``/docs`` e ``typedoc`` (TypeDoc) em ``/typedoc`` e
+  publica tudo via GitHub Pages.
+
+Para gerar localmente:
+
+.. code-block:: bash
+
+   # API TypeScript (TypeDoc)
+   cd web
+   npm install
+   npm run docs:typedoc   # saída em web/typedoc/
+
+   # Documentação Sphinx
+   cd ../docs
+   python -m pip install -r requirements.txt
+   python -m sphinx -b html source build
 
 Mapa ``/mapview`` e camadas GeoJSON
 -----------------------------------
@@ -317,8 +349,6 @@ expansão, consulte:
 - ``docs/source/mapview.rst``
 - ``cms/README.md``
 - ``web/README.md``
-    npm install
-    npm run dev        # http://localhost:3000
 
 Strapi
 ~~~~~~

@@ -21,6 +21,13 @@ const fakeSession = {
   },
 };
 
+/**
+ * Shared layout for all ``/dashboard`` routes.
+ *
+ * Handles authentication (real or fake for development), enforces
+ * redirects to the login page when unauthenticated and wraps child
+ * routes with the main navbar, sidebar and read-only banner.
+ */
 export default async function DashboardLayout({
   children,
 }: {

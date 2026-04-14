@@ -22,7 +22,12 @@ import type {
   Station,
 } from '@/lib/strapi';
 
-
+/**
+ * Camera state describing the visible region of the main public map.
+ *
+ * This is used for the initial viewport and for programmatic fly-to
+ * animations when callers want to move the map to a new location.
+ */
 export interface ViewState {
   longitude: number;
   latitude: number;
@@ -34,7 +39,14 @@ type PopupFeature = StationPopupData & {
   latitude: number;
 };
 
-interface MapboxMapProps {
+/**
+ * Props accepted by the {@link MainMap} component.
+ *
+ * Most callers only need to provide an initial view state and the
+ * feature collection GeoJSON; more advanced routes can also pass
+ * station metadata, style overrides, and custom overlay children.
+ */
+export interface MapboxMapProps {
   initialViewState?: ViewState;
   mapStyle?: MapStylePreference;
   stations?: Station[];
@@ -61,7 +73,11 @@ const TILE_LAYER_STYLE = {
 } as const;
 
 const FEATURE_COLLECTION_LAYER_ID = 'mapview-feature-collection-layer';
-
+/**
+ * Build the Mapbox circle layer used to render the Strapi-backed
+ * feature collection. Colors and sizes come from global app settings
+ * (or an optional override passed into {@link MainMap}).
+ */
 function buildFeatureCollectionLayer(
   style: FeatureCollectionLayerSettings,
 ): LayerProps {
@@ -83,18 +99,25 @@ function buildFeatureCollectionLayer(
   };
 }
 
+/** Safely coerce an arbitrary value into a finite number when possible. */
 function parseFiniteNumber(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 }
 
+/** Safely coerce an arbitrary value into a non-empty string when possible. */
 function parseString(value: unknown) {
   return typeof value === 'string' && value.trim() ? value : undefined;
 }
 
+/** Extract a numeric external id from a GeoJSON feature, if present. */
 function parseFeatureExternalId(feature: MapGeoJSONFeature) {
   return parseFiniteNumber(feature.properties?.id);
 }
 
+/**
+ * Normalise the free-form metadata blob attached to a station into a
+ * plain object so it can be queried without runtime type errors.
+ */
 function getStationMetadata(station: Station) {
   const metadata = station.attributes.metadata;
 
@@ -103,6 +126,10 @@ function getStationMetadata(station: Station) {
     : {};
 }
 
+/**
+ * Combine a matched station record and a raw GeoJSON feature into the
+ * richer popup model consumed by the UI components.
+ */
 function buildPopupFeatureFromStation(
   station: Station,
   feature: MapGeoJSONFeature,
@@ -132,6 +159,7 @@ function buildPopupFeatureFromStation(
   };
 }
 
+/** Find the first station whose external id matches the feature id. */
 function findMatchingStation(
   stations: Station[],
   feature: MapGeoJSONFeature,
@@ -147,6 +175,10 @@ function findMatchingStation(
   );
 }
 
+/**
+ * Convert a generic GeoJSON feature into a lightweight popup model
+ * when there is no matching station metadata available.
+ */
 function toPopupFeature(feature: MapGeoJSONFeature): PopupFeature | null {
   if (feature.geometry.type !== 'Point') {
     return null;
@@ -187,7 +219,15 @@ function toPopupFeature(feature: MapGeoJSONFeature): PopupFeature | null {
     latitude,
   };
 }
-
+/**
+ * Main public-facing map component used by the ``/map`` and
+ * ``/mapview`` routes.
+ *
+ * It wires Mapbox styles, optional raster overlays, the Strapi-backed
+ * feature collection and the station popup / details UI into a single
+ * reusable map container. Additional overlays can be rendered via
+ * {@link MapboxMapProps.children}.
+ */
 export default function MainMap({
   initialViewState = { longitude: -52, latitude: -15, zoom: 4 },
   mapStyle = 'outdoors',

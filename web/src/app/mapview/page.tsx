@@ -1,3 +1,10 @@
+/**
+ * Map view route for ``/mapview``.
+ *
+ * This client component wires together Strapi-backed data
+ * (stations, app settings, feature collection) with the
+ * {@link MainMap} component and the station explorer overlay.
+ */
 'use client';
 
 import dynamic from 'next/dynamic';
@@ -25,6 +32,11 @@ const MapboxMap = dynamic(() => import('@/components/maps/MapBase'), {
   ),
 });
 
+/**
+ * Main map view entrypoint which selects the initial camera state
+ * from user preferences or global app settings and renders the
+ * interactive public map for analysis of the feature collection.
+ */
 export default function MapPage() {
   const { status } = useSession();
 

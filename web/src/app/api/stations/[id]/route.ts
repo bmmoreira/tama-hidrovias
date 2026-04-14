@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { isAnalystRole } from '@/lib/roles';
 import { getSessionRole, proxyStrapiRequest } from '@/lib/strapi-server';
 
-type RouteContext = {
+/** Route context with dynamic station id params for the API handlers. */
+export type RouteContext = {
   params: Promise<{
     id: string;
   }>;

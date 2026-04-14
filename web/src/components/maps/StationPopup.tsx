@@ -28,7 +28,8 @@ export interface StationPopupData {
   latitude?: number;
 }
 
-interface StationPopupProps {
+/** Props for the primary map popup shown on marker click. */
+export interface StationPopupProps {
   data: StationPopupData;
   onClose?: () => void;
   onViewDetails?: (data: StationPopupData) => void;

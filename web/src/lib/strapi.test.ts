@@ -17,8 +17,9 @@ describe('station mutation helpers', () => {
     globalThis.fetch = originalFetch;
 
     if (typeof originalWindow === 'undefined') {
-      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-      delete (globalThis as typeof globalThis & { window?: Window }).window;
+      // When the original global did not expose window, clean up the
+      // test-assigned property so subsequent tests see the same shape.
+      Reflect.deleteProperty(globalThis as { window?: Window }, 'window');
     } else {
       globalThis.window = originalWindow;
     }

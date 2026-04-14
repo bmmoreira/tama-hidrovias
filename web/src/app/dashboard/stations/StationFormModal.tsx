@@ -21,7 +21,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-interface StationFormModalProps {
+/**
+ * Props for the station create/edit modal used in the dashboard.
+ */
+export interface StationFormModalProps {
   isOpen: boolean;
   station?: Station | null;
   onClose: () => void;

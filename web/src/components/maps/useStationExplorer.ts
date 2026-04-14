@@ -3,7 +3,8 @@
 import { useCallback, useState } from 'react';
 import type { Station, StationVariable } from '@/lib/strapi';
 
-interface UseStationExplorerOptions {
+/** Options for configuring the station explorer controller hook. */
+export interface UseStationExplorerOptions {
   onStationFocus?: (station: Station) => void;
   defaultVariable?: StationVariable;
 }

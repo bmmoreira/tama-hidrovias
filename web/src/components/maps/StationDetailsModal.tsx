@@ -23,7 +23,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTranslation } from '@/lib/use-app-translation';
 import type { StationPopupData } from './StationPopup';
 
-interface StationDetailsModalProps {
+/** Props for the map details modal showing synthetic history and forecast. */
+export interface StationDetailsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   data: StationPopupData | null;

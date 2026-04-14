@@ -3,8 +3,11 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 
-type ButtonVariant = 'default' | 'outline' | 'destructive' | 'ghost';
-type ButtonSize = 'default' | 'sm' | 'icon';
+/** Visual variants supported by the shared button component. */
+export type ButtonVariant = 'default' | 'outline' | 'destructive' | 'ghost';
+
+/** Density / sizing presets for the shared button component. */
+export type ButtonSize = 'default' | 'sm' | 'icon';
 
 const variantClasses: Record<ButtonVariant, string> = {
   default:

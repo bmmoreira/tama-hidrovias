@@ -1,3 +1,10 @@
+/**
+ * Climate layers dashboard route (``/dashboard/climate-layers``).
+ *
+ * Lets analysts browse available climate GeoTIFF layers from
+ * Strapi, inspect metadata and preview them on top of the base map
+ * using the tileserver-backed raster overlay.
+ */
 'use client';
 
 import { useState } from 'react';
@@ -21,6 +28,7 @@ const MapboxMap = dynamic(() => import('@/components/MapboxMap'), {
 const TILESERVER_URL =
   process.env.NEXT_PUBLIC_TILESERVER_URL ?? 'http://localhost:8080';
 
+/** Build a TileServer URL for the given climate layer GeoTIFF. */
 function layerTileUrl(layer: ClimateLayer): string | undefined {
   // Derive a TileServer URL from the uploaded geotiff's file name
   const fileName = layer.attributes.geotiff?.data?.attributes.name;
@@ -29,11 +37,15 @@ function layerTileUrl(layer: ClimateLayer): string | undefined {
   return `${TILESERVER_URL}/data/${slug}/{z}/{x}/{y}.png`;
 }
 
+/** Format ISO date strings into a short, localized label. */
 function formatDate(dateStr?: string): string {
   if (!dateStr) return '—';
   return new Date(dateStr).toLocaleDateString('pt-BR');
 }
 
+/**
+ * Interactive list and preview map for climate layers.
+ */
 export default function ClimateLayersPage() {
   const { t } = useTranslation();
   const [selectedLayer, setSelectedLayer] = useState<ClimateLayer | null>(null);

@@ -26,7 +26,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+/** Station variables that currently support forecast visualisation. */
 const VARIABLES: StationVariable[] = ['level_m', 'flow_m3s', 'precipitation_mm'];
+/** Human-readable units for each variable. */
 const VARIABLE_UNITS: Record<StationVariable, string> = {
   level_m: 'm',
   flow_m3s: 'm³/s',
@@ -34,6 +36,7 @@ const VARIABLE_UNITS: Record<StationVariable, string> = {
   water_surface_elevation_m: 'm',
 };
 
+/** Format timestamps into a compact DD/MM HHh representation. */
 function formatDate(ts: string): string {
   const d = new Date(ts);
   return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1)
@@ -41,6 +44,12 @@ function formatDate(ts: string): string {
     .padStart(2, '0')} ${d.getHours().toString().padStart(2, '0')}h`;
 }
 
+/**
+ * Forecast exploration dashboard route (``/dashboard/forecasts``).
+ *
+ * Provides variable and station selectors plus a time series chart
+ * and table to inspect the latest forecast runs.
+ */
 export default function ForecastsPage() {
   const { t } = useTranslation();
   const [stationId, setStationId] = useState<number | null>(null);

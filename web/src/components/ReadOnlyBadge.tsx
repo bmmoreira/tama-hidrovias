@@ -5,7 +5,8 @@ import clsx from 'clsx';
 import { Eye } from 'lucide-react';
 import { useTranslation } from '@/lib/use-app-translation';
 
-type ReadOnlyBadgeProps = {
+/** Props for the small "read-only" pill rendered next to titles. */
+export type ReadOnlyBadgeProps = {
   className?: string;
   label?: string;
   title?: string;

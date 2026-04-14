@@ -25,7 +25,8 @@ function getPast30Days() {
   };
 }
 
-interface StationExplorerOverlayProps {
+/** Props for the overlay that ties together station search and charts. */
+export interface StationExplorerOverlayProps {
   controller: StationExplorerController;
   showLegend?: boolean;
 }

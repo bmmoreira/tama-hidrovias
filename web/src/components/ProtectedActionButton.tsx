@@ -6,7 +6,11 @@ import clsx from 'clsx';
 import { Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-type ProtectedActionButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+/**
+ * Props for {@link ProtectedActionButton}, combining native button attributes
+ * with role-based access control flags.
+ */
+export type ProtectedActionButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   allowed: boolean;
   helperText?: string;
   deniedReason?: string;

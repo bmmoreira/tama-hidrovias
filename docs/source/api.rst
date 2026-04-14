@@ -11,6 +11,34 @@ The platform is composed of five primary services:
 - ``pgadmin`` provides a browser-based PostgreSQL administration interface.
 - ``tileserver`` serves generated GeoTIFF assets as map tiles.
 
+TypeScript frontend API docs
+----------------------------
+
+The Next.js frontend in ``web/`` exposes a set of typed utilities, hooks and
+components for working with stations, forecasts, climate layers and map
+visualisation.
+
+These are documented using `TypeDoc <https://typedoc.org/>`_ and generated
+from the TSDoc comments in ``web/src``. To regenerate the HTML API
+documentation locally, run from the ``web/`` folder::
+
+    npm install
+    npm run docs:typedoc
+
+The generated files are written to::
+
+    web/typedoc/
+
+and can be opened directly in a browser (for example, by opening
+``web/typedoc/index.html``). The Sphinx documentation intentionally does not
+duplicate that low-level API reference; instead it links to the TypeDoc output
+and focuses on higher-level flows and behaviour.
+
+When the documentation site is published via GitHub Pages, the same TypeDoc
+output is served under ``/typedoc/``. You can use a relative link such as
+``/typedoc/index.html`` from the rendered HTML pages to open the TypeScript
+API reference alongside the Sphinx content.
+
 Current Authenticated Preference Endpoint
 -----------------------------------------
 

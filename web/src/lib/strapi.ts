@@ -1,3 +1,15 @@
+/**
+ * Core Strapi data access layer used by both server components and
+ * client-side hooks.
+ *
+ * This module centralizes type definitions for Strapi entities
+ * (stations, measurements, forecasts, app settings, user
+ * preferences) and exposes small helper functions to talk to either
+ * Strapi directly (on the server) or the internal Next.js API
+ * routes (in the browser).
+ */
+
+/** Basic hydrometric station as exposed by Strapi. */
 export type Station = {
   id: number;
   attributes: {
@@ -14,6 +26,10 @@ export type Station = {
   };
 };
 
+/**
+ * A climate layer record carrying information about a particular
+ * geospatial GeoTIFF used for raster overlays on the map.
+ */
 export type ClimateLayer = {
   id: number;
   attributes: {
@@ -27,28 +43,41 @@ export type ClimateLayer = {
   };
 };
 
+/** Generic forecast payload returned from Strapi forecast endpoints. */
 export type Forecast = {
   id: number;
   attributes: Record<string, any>;
 };
 
+/** Generic time series measurement record from Strapi. */
 export type Measurement = {
   id: number;
   attributes: Record<string, any>;
 };
 
+/** Supported measurement variables for stations (levels, flows, etc.). */
 export type StationVariable =
   | 'level_m'
   | 'flow_m3s'
   | 'precipitation_mm'
   | 'water_surface_elevation_m';
 
+/** Allowed theme modes for the application shell. */
 export type ThemePreference = 'light' | 'dark' | 'system';
 
+/** Supported UI languages.
+ *
+ * Values follow BCP 47 language tags where applicable.
+ */
 export type LanguagePreference = 'pt-BR' | 'en' | 'es' | 'fr';
 
+/** Available Mapbox base map styles. */
 export type MapStylePreference = 'outdoors' | 'streets' | 'satellite' | 'dark';
 
+/**
+ * Visual configuration for the GeoJSON feature collection layer
+ * rendered on the public map (circle radius, colors, etc.).
+ */
 export type FeatureCollectionLayerSettings = {
   circleRadius: number;
   positiveColor: string;
@@ -58,6 +87,7 @@ export type FeatureCollectionLayerSettings = {
   circleOpacity: number;
 };
 
+/** Default visual settings for the feature collection layer. */
 export const DEFAULT_FEATURE_COLLECTION_LAYER_SETTINGS: FeatureCollectionLayerSettings = {
   circleRadius: 6,
   positiveColor: '#0284c7',
@@ -67,8 +97,13 @@ export const DEFAULT_FEATURE_COLLECTION_LAYER_SETTINGS: FeatureCollectionLayerSe
   circleOpacity: 0.9,
 };
 
+/** Severity threshold for alert notifications.
+ *
+ * Controls which alerts should be surfaced to the user in the UI.
+ */
 export type AlertSeverityPreference = 'info' | 'warning' | 'critical';
 
+/** Snapshot of a station that has been marked as a favorite. */
 export type FavoriteStationPreference = {
   id: number;
   name: string;
@@ -77,6 +112,10 @@ export type FavoriteStationPreference = {
   source?: string;
 };
 
+/**
+ * Full user preferences document as stored in Strapi for the
+ * authenticated user.
+ */
 export type UserPreferences = {
   id: number;
   appearance: {
@@ -104,6 +143,10 @@ export type UserPreferences = {
   favoriteStations: FavoriteStationPreference[];
 };
 
+/**
+ * Input payload for updating user preferences through the internal
+ * Next.js route.
+ */
 export type UserPreferencesUpdateInput = {
   appearance: {
     theme: ThemePreference;
@@ -130,6 +173,10 @@ export type UserPreferencesUpdateInput = {
   };
 };
 
+/**
+ * Global, admin-managed application settings that control defaults
+ * for unauthenticated visitors and overall map behavior.
+ */
 export type AppSettings = {
   id: number;
   appearance: {
@@ -144,6 +191,7 @@ export type AppSettings = {
   featureCollectionLayer: FeatureCollectionLayerSettings;
 };
 
+/** Input payload for updating global AppSettings. */
 export type AppSettingsUpdateInput = {
   appearance: {
     language: LanguagePreference;
@@ -157,17 +205,20 @@ export type AppSettingsUpdateInput = {
   featureCollectionLayer: FeatureCollectionLayerSettings;
 };
 
+/** Minimal GeoJSON geometry representation used for feature collections. */
 export type MapFeatureCollectionGeometry = {
   type: string;
   coordinates: unknown;
 };
 
+/** Single GeoJSON feature inside a feature collection. */
 export type MapFeatureCollectionFeature = {
   type: 'Feature';
   properties: Record<string, unknown>;
   geometry: MapFeatureCollectionGeometry;
 };
 
+/** GeoJSON FeatureCollection used to render the public map overlay. */
 export type MapFeatureCollection = {
   type: 'FeatureCollection';
   name?: string;
@@ -180,12 +231,17 @@ export type MapFeatureCollection = {
   features: MapFeatureCollectionFeature[];
 };
 
+/**
+ * Strapi record for the single map feature collection entry used by
+ * the public map and dashboard.
+ */
 export type MapFeatureCollectionRecord = {
   id: number;
   name: string;
   featureCollection: MapFeatureCollection;
 };
 
+/** Input payload for creating or updating a station from the UI. */
 export type StationMutationInput = {
   name: string;
   code: string;

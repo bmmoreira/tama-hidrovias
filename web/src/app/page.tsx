@@ -2,6 +2,12 @@ import Link from 'next/link';
 import { Droplets, Map, LayoutDashboard, ArrowRight, SatelliteIcon } from 'lucide-react';
 import { getRequestTranslationMessages } from '@/lib/server-language';
 
+/**
+ * Public landing page for the TaMa Hidrovias application.
+ *
+ * This server component renders the hero section, feature cards and
+ * navigation links into the authenticated dashboard and public map.
+ */
 export default async function HomePage() {
   const { messages } = await getRequestTranslationMessages();
 

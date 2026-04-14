@@ -26,6 +26,13 @@ import {
 import { Button } from '@/components/ui/button';
 import StationFormModal from './StationFormModal';
 
+/**
+ * Station management dashboard route (``/dashboard/stations``).
+ *
+ * Provides search, filtering, pagination and protected create /
+ * update / delete actions for hydrological stations managed in
+ * Strapi.
+ */
 const SOURCES = ['all', 'ANA', 'HydroWeb', 'SNIRH', 'Virtual'] as const;
 const ALL_BASINS = '__all_basins__';
 
@@ -63,6 +70,9 @@ export default function StationsPage() {
     new Set(stations.map((s: Station) => s.attributes.basin).filter(Boolean)),
   ).sort() as string[];
 
+/**
+ * Number of rows to render per page in the stations table.
+ */
   const filtered = stations.filter((s: Station) => {
     const matchQuery =
       !query ||
@@ -368,6 +378,10 @@ function StationRow({
     ANA: 'bg-blue-100 text-blue-700',
     HydroWeb: 'bg-green-100 text-green-700',
     SNIRH: 'bg-amber-100 text-amber-700',
+/**
+ * Single row of the stations table with inline actions for
+ * viewing, editing and deleting a station.
+ */
     Virtual: 'bg-purple-100 text-purple-700',
   };
 

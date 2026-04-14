@@ -10,7 +10,8 @@ import { useTranslation } from '@/lib/use-app-translation';
 
 const SOURCES = ['all', 'ANA', 'HydroWeb', 'SNIRH', 'Virtual'] as const;
 
-interface StationSearchPanelProps {
+/** Props for the slide-in search panel used to find stations on the map. */
+export interface StationSearchPanelProps {
   onStationSelect: (station: Station) => void;
   isOpen: boolean;
   onClose: () => void;

@@ -15,7 +15,8 @@ import { getMeasurements } from '@/lib/strapi';
 import type { Measurement, StationVariable } from '@/lib/strapi';
 import { useTranslation } from '@/lib/use-app-translation';
 
-interface StationChartProps {
+/** Props for the time-series chart of station measurements. */
+export interface StationChartProps {
   stationId: number;
   variable: StationVariable;
   from: string;

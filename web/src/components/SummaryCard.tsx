@@ -1,7 +1,8 @@
 import type { LucideIcon } from 'lucide-react';
 import clsx from 'clsx';
 
-interface SummaryCardProps {
+/** Small metric card used on the dashboard overview. */
+export interface SummaryCardProps {
   title: string;
   value: string | number;
   Icon: LucideIcon;

@@ -3,6 +3,10 @@
 import ThemeSettingsPanel from '@/components/ThemeSettingsPanel';
 import { useTranslation } from '@/lib/use-app-translation';
 
+/**
+ * User appearance and theme settings route under
+ * ``/dashboard/settings``.
+ */
 export default function DashboardSettingsPage() {
   const { t } = useTranslation();
 

@@ -14,7 +14,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
-type ConfirmationModalProps = {
+/**
+ * Props for the generic confirmation modal used before destructive actions.
+ */
+export type ConfirmationModalProps = {
   isOpen: boolean;
   title: string;
   description?: string;

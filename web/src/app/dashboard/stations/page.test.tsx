@@ -123,7 +123,7 @@ beforeEach(() => {
     },
     status: 'authenticated',
     update: vi.fn(),
-  } as ReturnType<typeof useSession>);
+  } as unknown as ReturnType<typeof useSession>);
 
   vi.mocked(useSWR).mockReturnValue({
     data: {
