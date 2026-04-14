@@ -45,6 +45,7 @@ Related files:
 - ``cms/src/components/preferences/appearance-settings.json``
 - ``cms/src/components/preferences/map-settings.json``
 - ``cms/src/components/preferences/alert-settings.json``
+ - ``cms/src/components/preferences/profile-settings.json``
 
 Data Model
 ----------
@@ -60,12 +61,21 @@ It also stores:
 - ``map`` component
 - ``alerts`` component
 - ``favoriteStations`` relation to ``api::station.station``
+ - ``profile`` component with basic personal details
 
 Current appearance fields:
 
 - ``theme``
 - ``language``
 - ``timeZone``
+
+Current profile fields:
+
+- ``firstName``
+- ``lastName``
+- ``institution``
+- ``profession``
+- ``birthdate``
 
 Current map fields:
 
@@ -149,6 +159,12 @@ That component currently:
 - applies the saved language through the shared i18next runtime
 - emits an in-app update event so the current session reflects the saved theme
   without requiring logout or a fresh login
+
+The panel also exposes a "Personal details" card that writes into the
+``profile`` component on the ``user-preference`` model. This section lets
+users keep optional attributes such as first name, last name, institution,
+profession, and birthdate close to their dashboard settings without extending
+the authentication user schema directly.
 
 Global Defaults And Admin Page
 ------------------------------

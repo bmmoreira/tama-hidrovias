@@ -1,0 +1,24 @@
+{
+  "collectionName": "components_preferences_profile_settings",
+  "info": {
+    "displayName": "Profile Settings"
+  },
+  "options": {},
+  "attributes": {
+    "firstName": {
+      "type": "string"
+    },
+    "lastName": {
+      "type": "string"
+    },
+    "institution": {
+      "type": "string"
+    },
+    "profession": {
+      "type": "string"
+    },
+    "birthdate": {
+      "type": "date"
+    }
+  }
+}

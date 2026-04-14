@@ -630,6 +630,7 @@ export interface ApiUserPreferenceUserPreference extends Schema.CollectionType {
       'api::station.station'
     >;
     map: Attribute.Component<'preferences.map-settings'>;
+    profile: Attribute.Component<'preferences.profile-settings'>;
     updatedAt: Attribute.DateTime;
     updatedBy: Attribute.Relation<
       'api::user-preference.user-preference',

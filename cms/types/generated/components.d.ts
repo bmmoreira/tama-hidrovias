@@ -125,6 +125,20 @@ export interface PreferencesMapSettings extends Schema.Component {
   };
 }
 
+export interface PreferencesProfileSettings extends Schema.Component {
+  collectionName: 'components_preferences_profile_settings';
+  info: {
+    displayName: 'Profile Settings';
+  };
+  attributes: {
+    birthdate: Attribute.Date;
+    firstName: Attribute.String;
+    institution: Attribute.String;
+    lastName: Attribute.String;
+    profession: Attribute.String;
+  };
+}
+
 declare module '@strapi/types' {
   export module Shared {
     export interface Components {
@@ -134,6 +148,7 @@ declare module '@strapi/types' {
       'preferences.alert-settings': PreferencesAlertSettings;
       'preferences.appearance-settings': PreferencesAppearanceSettings;
       'preferences.map-settings': PreferencesMapSettings;
+      'preferences.profile-settings': PreferencesProfileSettings;
     }
   }
 }

@@ -5,15 +5,44 @@ import { useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ChevronDown, Droplets, LogOut, Menu, Settings, User, X } from 'lucide-react';
+import useSWR from 'swr';
 import { useTranslation } from '@/lib/use-app-translation';
 import ReadOnlyBadge from '@/components/ReadOnlyBadge';
 import ThemeToggle from '@/components/ThemeToggle';
 import { getRoleLabel, isViewerRole } from '@/lib/roles';
+import { getUserPreferences, type UserPreferences } from '@/lib/strapi';
 
+function getLastName(fullName?: string | null) {
+  if (!fullName) {
+    return '';
+  }
+
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+
+  if (parts.length === 0) {
+    return '';
+  }
+
+  return parts[parts.length - 1];
+}
+
+/** Top-level application navbar shown on all dashboard pages. */
 export default function Navbar() {
   const { t } = useTranslation();
   const { data: session } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { data: preferencesData } = useSWR<{ data: UserPreferences }>(
+    session ? 'navbar-user-preferences' : null,
+    () => getUserPreferences(),
+    { revalidateOnFocus: false },
+  );
+  const profileFirstName = preferencesData?.data.profile.firstName ?? '';
+  const profileLastName = preferencesData?.data.profile.lastName ?? '';
+  const profileFullName = `${profileFirstName} ${profileLastName}`.trim();
+  const fullName = profileFullName || session?.user?.name || '';
+  const lastName = getLastName(fullName);
+  const displayName = lastName || fullName || t('nav.account');
+  const institution = preferencesData?.data.profile.institution ?? null;
   const roleLabel = getRoleLabel(session?.user?.role);
   const isViewer = isViewerRole(session?.user?.role);
 
@@ -52,7 +81,7 @@ export default function Navbar() {
                   <button className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white/80 px-3 py-2 text-sm text-gray-700 transition hover:border-blue-200 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-sky-700 dark:hover:text-sky-300">
                     <User className="h-4 w-4 text-gray-400 dark:text-slate-400" />
                     <span>
-                      {session.user?.name} ({roleLabel})
+                      {displayName} ({roleLabel})
                     </span>
                     <ChevronDown className="h-4 w-4" />
                   </button>
@@ -63,6 +92,33 @@ export default function Navbar() {
                     sideOffset={8}
                     className="z-50 min-w-56 rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl outline-none dark:border-slate-700 dark:bg-slate-950"
                   >
+                    {session ? (
+                      <div className="px-3 pb-2 pt-1 text-sm text-gray-800 dark:text-slate-100">
+                        <div className="font-medium">
+                          {fullName || session.user?.name}
+                        </div>
+                        {institution ? (
+                          <div className="text-xs text-gray-500 dark:text-slate-400">
+                            {institution}
+                          </div>
+                        ) : null}
+                        {(roleLabel || session.user?.email) ? (
+                          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-slate-400">
+                            {roleLabel ? (
+                              <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700 dark:bg-slate-800 dark:text-slate-200">
+                                {roleLabel}
+                              </span>
+                            ) : null}
+                            {session.user?.email ? (
+                              <span className="truncate">
+                                {session.user.email}
+                              </span>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    <DropdownMenu.Separator className="my-1 h-px bg-gray-100 dark:bg-slate-800" />
                     <div className="px-3 py-2 text-xs uppercase tracking-[0.18em] text-gray-400 dark:text-slate-500">
                       {t('nav.account')}
                     </div>
@@ -139,8 +195,13 @@ export default function Navbar() {
                 </Link>
                 <div className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 dark:text-slate-400">
                   <User className="h-4 w-4" />
-                  {session.user?.name} ({roleLabel})
+                  {displayName} ({roleLabel})
                 </div>
+                {institution ? (
+                  <div className="px-3 pb-1 text-xs text-gray-500 dark:text-slate-400">
+                    {institution}
+                  </div>
+                ) : null}
                 {isViewer ? (
                   <div className="px-3 py-1">
                     <ReadOnlyBadge />

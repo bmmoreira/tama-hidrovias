@@ -113,11 +113,38 @@ export type FavoriteStationPreference = {
 };
 
 /**
+ * Optional personal profile information stored alongside user
+ * preferences. This keeps basic contact and attribution details
+ * close to the dashboard configuration without overloading the
+ * authentication user model.
+ */
+export type UserProfilePreferences = {
+  /** Given name used for dashboard personalization. */
+  firstName: string | null;
+  /** Family name or surname for the current user. */
+  lastName: string | null;
+  /** Institution or organization the user is associated with. */
+  institution: string | null;
+  /** Professional role or title for attribution. */
+  profession: string | null;
+  /**
+   * Birthdate captured as an ISO ``YYYY-MM-DD`` string.
+   *
+   * Kept optional and string-typed so the UI can bind
+   * directly to HTML ``<input type="date">`` controls
+   * without additional parsing.
+   */
+  birthdate: string | null;
+};
+
+/**
  * Full user preferences document as stored in Strapi for the
  * authenticated user.
  */
 export type UserPreferences = {
   id: number;
+  /** Optional personal details kept near preferences. */
+  profile: UserProfilePreferences;
   appearance: {
     theme: ThemePreference;
     language: LanguagePreference;
@@ -148,6 +175,8 @@ export type UserPreferences = {
  * Next.js route.
  */
 export type UserPreferencesUpdateInput = {
+  /** Optional personal details to persist with preferences. */
+  profile?: UserProfilePreferences;
   appearance: {
     theme: ThemePreference;
     language: LanguagePreference;

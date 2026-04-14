@@ -61,6 +61,11 @@ const ALERT_SEVERITY_OPTIONS: Array<{
 ];
 
 type FormState = {
+  firstName: string;
+  lastName: string;
+  institution: string;
+  profession: string;
+  birthdate: string;
   theme: ThemePreference;
   language: LanguagePreference;
   timeZone: string;
@@ -81,6 +86,11 @@ type FormState = {
 };
 
 const DEFAULT_FORM_STATE: FormState = {
+  firstName: '',
+  lastName: '',
+  institution: '',
+  profession: '',
+  birthdate: '',
   theme: 'system',
   language: 'pt-BR',
   timeZone: 'America/Sao_Paulo',
@@ -167,6 +177,11 @@ export default function ThemeSettingsPanel() {
     }
 
     setForm({
+      firstName: preferences.profile.firstName ?? '',
+      lastName: preferences.profile.lastName ?? '',
+      institution: preferences.profile.institution ?? '',
+      profession: preferences.profile.profession ?? '',
+      birthdate: preferences.profile.birthdate ?? '',
       theme: preferences.appearance.theme,
       language: preferences.appearance.language,
       timeZone: preferences.appearance.timeZone,
@@ -225,6 +240,13 @@ export default function ThemeSettingsPanel() {
 
     try {
       const updatedPreferences = await updateUserPreferences({
+        profile: {
+          firstName: form.firstName || null,
+          lastName: form.lastName || null,
+          institution: form.institution || null,
+          profession: form.profession || null,
+          birthdate: form.birthdate || null,
+        },
         appearance: {
           theme: form.theme,
           language: form.language,
@@ -251,6 +273,11 @@ export default function ThemeSettingsPanel() {
       });
       await mutate(updatedPreferences, false);
       setForm({
+        firstName: updatedPreferences.data.profile.firstName ?? '',
+        lastName: updatedPreferences.data.profile.lastName ?? '',
+        institution: updatedPreferences.data.profile.institution ?? '',
+        profession: updatedPreferences.data.profile.profession ?? '',
+        birthdate: updatedPreferences.data.profile.birthdate ?? '',
         theme: updatedPreferences.data.appearance.theme,
         language: updatedPreferences.data.appearance.language,
         timeZone: updatedPreferences.data.appearance.timeZone,
@@ -301,6 +328,92 @@ export default function ThemeSettingsPanel() {
 
   return (
     <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('settings.profile')}</CardTitle>
+          <CardDescription>
+            {t('settings.profileDescription')}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-gray-700 dark:text-slate-300">
+              {t('settings.firstName')}
+            </label>
+            <Input
+              type="text"
+              value={form.firstName}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  firstName: event.target.value,
+                }))
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-gray-700 dark:text-slate-300">
+              {t('settings.lastName')}
+            </label>
+            <Input
+              type="text"
+              value={form.lastName}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  lastName: event.target.value,
+                }))
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-gray-700 dark:text-slate-300">
+              {t('settings.institution')}
+            </label>
+            <Input
+              type="text"
+              value={form.institution}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  institution: event.target.value,
+                }))
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-gray-700 dark:text-slate-300">
+              {t('settings.profession')}
+            </label>
+            <Input
+              type="text"
+              value={form.profession}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  profession: event.target.value,
+                }))
+              }
+            />
+          </div>
+          <div className="space-y-2 md:col-span-2">
+            <label className="text-xs font-medium text-gray-700 dark:text-slate-300">
+              {t('settings.birthdate')}
+            </label>
+            <Input
+              type="date"
+              value={form.birthdate}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  birthdate: event.target.value,
+                }))
+              }
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>{t('settings.appearance')}</CardTitle>

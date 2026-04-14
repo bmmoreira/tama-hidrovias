@@ -7,6 +7,13 @@ const ALLOWED_MAP_STYLES = new Set(['outdoors', 'streets', 'satellite', 'dark'])
 const ALLOWED_ALERT_SEVERITIES = new Set(['info', 'warning', 'critical']);
 
 const DEFAULT_PREFERENCES = {
+  profile: {
+    firstName: null,
+    lastName: null,
+    institution: null,
+    profession: null,
+    birthdate: null,
+  },
   appearance: {
     theme: 'system',
     language: 'pt-BR',
@@ -32,6 +39,7 @@ const DEFAULT_PREFERENCES = {
 };
 
 const PREFERENCE_POPULATE = {
+  profile: true,
   appearance: true,
   map: true,
   alerts: true,
@@ -81,6 +89,7 @@ function normalizePayload(body = {}) {
   const appearance = body.appearance ?? {};
   const map = body.map ?? {};
   const alerts = body.alerts ?? {};
+   const profile = body.profile ?? {};
   const favoriteStationIds = Array.isArray(body.favoriteStationIds)
     ? body.favoriteStationIds
         .map((value) => Number(value))
@@ -88,6 +97,28 @@ function normalizePayload(body = {}) {
     : null;
 
   const normalized = {
+    profile: {
+      firstName:
+        typeof profile.firstName === 'string' && profile.firstName.trim()
+          ? profile.firstName.trim()
+          : null,
+      lastName:
+        typeof profile.lastName === 'string' && profile.lastName.trim()
+          ? profile.lastName.trim()
+          : null,
+      institution:
+        typeof profile.institution === 'string' && profile.institution.trim()
+          ? profile.institution.trim()
+          : null,
+      profession:
+        typeof profile.profession === 'string' && profile.profession.trim()
+          ? profile.profession.trim()
+          : null,
+      birthdate:
+        typeof profile.birthdate === 'string' && profile.birthdate.trim()
+          ? profile.birthdate.trim()
+          : null,
+    },
     appearance: {
       theme: ALLOWED_THEMES.has(appearance.theme)
         ? appearance.theme
@@ -196,6 +227,15 @@ async function findOrCreateUserPreference(userId) {
 function serializePreference(preference) {
   return {
     id: preference.id,
+    profile: {
+      firstName: preference.profile?.firstName ?? DEFAULT_PREFERENCES.profile.firstName,
+      lastName: preference.profile?.lastName ?? DEFAULT_PREFERENCES.profile.lastName,
+      institution:
+        preference.profile?.institution ?? DEFAULT_PREFERENCES.profile.institution,
+      profession:
+        preference.profile?.profession ?? DEFAULT_PREFERENCES.profile.profession,
+      birthdate: preference.profile?.birthdate ?? DEFAULT_PREFERENCES.profile.birthdate,
+    },
     appearance: {
       theme:
         preference.appearance?.theme ?? DEFAULT_PREFERENCES.appearance.theme,

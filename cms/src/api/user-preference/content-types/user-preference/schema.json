@@ -17,6 +17,11 @@
       "required": true,
       "unique": true
     },
+    "profile": {
+      "type": "component",
+      "repeatable": false,
+      "component": "preferences.profile-settings"
+    },
     "appearance": {
       "type": "component",
       "repeatable": false,
