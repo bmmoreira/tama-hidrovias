@@ -258,6 +258,161 @@ Current fields:
 - ``strokeColor``
 - ``circleOpacity``
 
+MainMap Component (``MapBase.tsx``)
+-----------------------------------
+
+The main map view for both the public ``/map`` route and the ``/mapview``
+route is implemented in ``web/src/components/maps/MapBase.tsx``.
+
+This component (exported as ``MainMap``) is responsible for:
+
+- creating and configuring the underlying Mapbox map via ``react-map-gl``
+- applying the selected Mapbox style (streets, outdoors, satellite, dark)
+- optionally rendering a raster tile overlay (e.g. climate layers)
+- rendering the Strapi-backed GeoJSON feature collection as a circle layer
+- translating GeoJSON features into rich station popup and details views
+- hosting any additional UI overlays passed as React children
+
+Component props
+^^^^^^^^^^^^^^^
+
+Public props for ``MainMap``:
+
+- ``initialViewState?: { longitude: number; latitude: number; zoom: number; }``
+
+   - starting camera position for the map
+   - defaults to a broad Brazil view (``{ longitude: -52, latitude: -15, zoom: 4 }``)
+   - when this value changes, the map animates with ``flyTo`` to the new center
+
+- ``mapStyle?: MapStylePreference``
+
+   - logical base style key coming from user / app preferences
+   - mapped internally to Mapbox style URLs via ``MAPBOX_STYLE_URLS``:
+
+      - ``outdoors`` → ``mapbox://styles/mapbox/outdoors-v12``
+      - ``streets`` → ``mapbox://styles/mapbox/streets-v12``
+      - ``satellite`` → ``mapbox://styles/mapbox/satellite-streets-v12``
+      - ``dark`` → ``mapbox://styles/mapbox/dark-v11``
+
+- ``stations?: Station[]``
+
+   - list of Strapi ``Station`` entities fetched via the standard station API
+   - used to enrich GeoJSON points with authoritative metadata when possible
+   - matching uses ``station.attributes.externalId === feature.properties.id``
+
+- ``featureCollection?: MapFeatureCollection``
+
+   - raw GeoJSON payload coming from Strapi (see section above)
+   - rendered as a ``<Source type="geojson" />`` plus a circle ``<Layer />``
+   - if omitted, no feature collection overlay is drawn and map is still usable
+
+- ``featureCollectionLayerStyle?: FeatureCollectionLayerSettings``
+
+   - optional override for the global layer style from app settings
+   - if not provided, ``DEFAULT_FEATURE_COLLECTION_LAYER_SETTINGS`` is used
+   - passed into ``buildFeatureCollectionLayer()`` to create the circle layer
+
+- ``tileLayerUrl?: string``
+
+   - optional URL template for an additional raster tile overlay
+   - when present, ``MainMap`` creates a raster ``Source`` + ``Layer`` with
+      partial transparency (``raster-opacity: 0.7``) on top of the base style
+
+- ``onStationDoubleClick?: (station: Station) => void``
+
+   - reserved handler for higher-level interactions when stations are
+      double‑clicked (currently unused in the default behavior)
+
+- ``children?: ReactNode``
+
+   - any React elements to render above the map (e.g. ``StationExplorerOverlay``)
+   - positioned using absolute layout so they appear as floating UI panels
+
+Mapbox configuration
+^^^^^^^^^^^^^^^^^^^^^
+
+``MainMap`` is built on ``react-map-gl``'s ``<Map />`` component:
+
+- reads the Mapbox access token from ``process.env.NEXT_PUBLIC_MAPBOX_TOKEN``
+   (must be set in ``web/.env`` and is wired into the Docker config)
+- sets ``attributionControl`` to show Mapbox / data attributions
+- wires ``interactiveLayerIds`` so clicks only target the feature collection
+   layer when GeoJSON is present (``FEATURE_COLLECTION_LAYER_ID``)
+- uses ``NavigationControl`` and ``ScaleControl`` for standard map controls
+
+The component enables map reuse with ``reuseMaps`` to improve performance
+across page transitions in the Next.js app.
+
+Feature and station matching
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Several helper functions inside ``MapBase.tsx`` control how a clicked map
+feature turns into UI state:
+
+- ``parseFiniteNumber(value)`` and ``parseString(value)``
+
+   - small type guards used to safely coerce arbitrary JSON values from
+      ``feature.properties`` or station metadata into ``number`` / ``string``
+
+- ``parseFeatureExternalId(feature)``
+
+   - extracts a numeric ``id`` from ``feature.properties.id`` when present
+   - returns ``undefined`` if the property is missing or not a finite number
+
+- ``findMatchingStation(stations, feature)``
+
+   - looks for a ``Station`` whose ``attributes.externalId`` matches the
+      feature's external id
+   - returns ``null`` when there is no match
+
+- ``getStationMetadata(station)``
+
+   - normalizes ``station.attributes.metadata`` into a plain object for safe
+      lookups (ignores non-object or array values)
+
+- ``toPopupFeature(feature)``
+
+   - converts a raw GeoJSON ``Feature`` into a lightweight ``PopupFeature``
+      structure containing:
+
+      - coordinates (``longitude``, ``latitude``)
+      - basic labels (``name``, ``river``, ``basin``)
+      - temporal fields (``startDate``, ``endDate``)
+      - numeric indicators (``value``, ``change``, ``anomaly``)
+
+   - validates that geometry is a point with finite coordinates
+   - falls back to default values such as ``"Feature"`` when names are missing
+
+- ``buildPopupFeatureFromStation(station, feature)``
+
+   - merges the GeoJSON properties and station metadata into a single
+      ``PopupFeature`` used by the UI
+   - station attributes take precedence for canonical fields like ``code``,
+      ``source``, ``river``, and ``basin``
+   - fills gaps using station metadata (e.g. ``metadata.satellite``) when the
+      raw GeoJSON data is incomplete
+
+Click handling and UI overlays
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+When a user clicks the map:
+
+1. ``handleFeatureClick`` receives a ``MapLayerMouseEvent``.
+2. The handler filters ``event.features`` to only consider those from
+    ``FEATURE_COLLECTION_LAYER_ID``.
+3. If a feature is found, ``findMatchingStation`` is used to locate a
+    corresponding station; if one exists, ``buildPopupFeatureFromStation`` is
+    used, otherwise ``toPopupFeature`` is used directly.
+4. The resulting ``PopupFeature`` is stored in ``popupFeature`` state and
+    rendered as a centered ``StationPopup`` overlay, dimming the map behind it.
+5. When the user chooses to view details, ``detailFeature`` is set and a
+    ``StationDetailsModal`` is opened while the popup is cleared.
+
+This design keeps the map interactions focused on a single, consistent overlay
+experience for the general public, while still allowing route-level components
+to inject additional tools (filters, legends, station explorer, etc.) via
+``children``.
+
 Runtime flow:
 
 1. the admin page saves global settings through ``PUT /api/app-settings/current``
