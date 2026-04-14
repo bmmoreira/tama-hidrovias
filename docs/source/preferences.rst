@@ -45,7 +45,7 @@ Related files:
 - ``cms/src/components/preferences/appearance-settings.json``
 - ``cms/src/components/preferences/map-settings.json``
 - ``cms/src/components/preferences/alert-settings.json``
- - ``cms/src/components/preferences/profile-settings.json``
+- ``cms/src/components/preferences/profile-settings.json``
 
 Data Model
 ----------
@@ -61,7 +61,7 @@ It also stores:
 - ``map`` component
 - ``alerts`` component
 - ``favoriteStations`` relation to ``api::station.station``
- - ``profile`` component with basic personal details
+- ``profile`` component with basic personal details
 
 Current appearance fields:
 
