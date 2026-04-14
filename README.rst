@@ -291,6 +291,16 @@ Para gerar localmente:
    python -m pip install -r requirements.txt
    python -m sphinx -b html source build
 
+Quando o GitHub Pages estiver habilitado com a opção "GitHub Actions" como
+fonte, o workflow ``pages.yml`` publica automaticamente o site combinado em::
+
+  https://bmmoreira.github.io/tama-hidrovias/
+
+URLs relevantes no site publicado:
+
+- Documentação Sphinx: ``https://bmmoreira.github.io/tama-hidrovias/docs/``
+- API TypeScript (TypeDoc): ``https://bmmoreira.github.io/tama-hidrovias/typedoc/``
+
 Mapa ``/mapview`` e camadas GeoJSON
 -----------------------------------
 
