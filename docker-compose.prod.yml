@@ -1,0 +1,40 @@
+version: "3.9"
+
+# Example production-oriented override file.
+#
+# This file is intentionally minimal and is meant as a starting point. It
+# assumes that the base docker-compose.yml defines the core services
+# (postgres, strapi, web, tileserver, nginx). You can extend or override those
+# definitions here for a production deployment.
+
+services:
+  web:
+    environment:
+      # Public URL of the app in production (used by NextAuth, links, etc.)
+      NEXTAUTH_URL: https://app.example.com
+      # Browser-facing URLs for Strapi and the TileServer, matching the
+      # gateway hostnames.
+      NEXT_PUBLIC_STRAPI_URL: https://db.example.com
+      NEXT_PUBLIC_TILESERVER_URL: https://tiles.example.com
+
+  nginx:
+    # In production you will typically want to expose only HTTPS here, either
+    # by terminating TLS in Nginx directly or by putting it behind a
+    # cloud/load-balancer that handles TLS and forwards to this container.
+    #
+    # Example (if terminating TLS directly in Nginx):
+    #
+    # ports:
+    #   - "443:443"
+    # volumes:
+    #   - ./nginx/ssl/fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro
+    #   - ./nginx/ssl/privkey.pem:/etc/nginx/ssl/privkey.pem:ro
+    #
+    # and update nginx/nginx.conf to listen on 443 with ssl directives.
+    environment:
+      # Optionally surface the effective public hosts as env vars for
+      # templated configs or monitoring.
+      APP_PUBLIC_URL: https://app.example.com
+      STRAPI_PUBLIC_URL: https://db.example.com
+      ASSETS_PUBLIC_URL: https://assets.example.com
+      TILES_PUBLIC_URL: https://tiles.example.com

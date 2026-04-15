@@ -24,9 +24,9 @@ services:
     environment:
       NODE_ENV: development
       PORT: 3000
-      NEXTAUTH_URL: http://localhost:3000
-      NEXT_PUBLIC_STRAPI_URL: http://localhost:1337
-      NEXT_PUBLIC_TILESERVER_URL: http://localhost:8080
+      NEXTAUTH_URL: http://app.local
+      NEXT_PUBLIC_STRAPI_URL: http://db.local
+      NEXT_PUBLIC_TILESERVER_URL: http://tiles.local
       STRAPI_INTERNAL_URL: http://strapi:1337
       WATCHPACK_POLLING: "true"
       CHOKIDAR_USEPOLLING: "true"

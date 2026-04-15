@@ -65,6 +65,7 @@ Contents
 
    usage
    authentication
+   gateway
    dashboard
    preferences
    mapview

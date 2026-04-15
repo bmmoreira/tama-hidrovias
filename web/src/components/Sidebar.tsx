@@ -10,6 +10,7 @@ import {
   Layers,
   SlidersHorizontal,
   Settings,
+  Map,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useTranslation } from '@/lib/use-app-translation';
@@ -31,6 +32,11 @@ export default function Sidebar() {
       href: '/dashboard/climate-layers',
       label: t('sidebar.climateLayers'),
       Icon: Layers,
+    },
+    {
+      href: '/dashboard/mapview',
+      label: t('sidebar.mapview'),
+      Icon: Map,
     },
     {
       href: '/dashboard/settings',

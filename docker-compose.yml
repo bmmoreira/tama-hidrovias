@@ -36,8 +36,6 @@ services:
 
   strapi:
     build: ./cms
-    ports:
-      - "1337:1337"
     env_file:
       - .env
     environment:
@@ -64,6 +62,7 @@ services:
     env_file:
       - .env
     environment:
+      # Internal-only Strapi URL used by server-side helpers
       STRAPI_INTERNAL_URL: http://strapi:1337
     depends_on:
       - strapi
@@ -76,6 +75,23 @@ services:
       - "8080:8080"
     volumes:
       - ./data/geotiffs:/data/geotiffs:ro
+    networks:
+      - tama-network
+
+  nginx:
+    image: nginx:1.27-alpine
+    depends_on:
+      - web
+      - strapi
+      - tileserver
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      # Shared static assets
+      - ./assets:/srv/assets:ro
+      # Strapi uploads directory (served at `/uploads/` by Nginx)
+      - ./cms/public/uploads:/srv/strapi-uploads:ro
     networks:
       - tama-network
 
