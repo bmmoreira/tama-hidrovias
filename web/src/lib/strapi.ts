@@ -148,6 +148,19 @@ export type UserProfilePreferences = {
 };
 
 /**
+ * Input shape for updating profile preferences. Avatar is optional here so
+ * that most updates (for example, changing names or institution) do not need
+ * to include it; the backend controller preserves the existing avatar when
+ * the field is omitted.
+ */
+export type UserProfilePreferencesUpdateInput = Omit<
+  UserProfilePreferences,
+  'avatar'
+> & {
+  avatar?: UserProfilePreferences['avatar'];
+};
+
+/**
  * Full user preferences document as stored in Strapi for the
  * authenticated user.
  */
@@ -186,7 +199,7 @@ export type UserPreferences = {
  */
 export type UserPreferencesUpdateInput = {
   /** Optional personal details to persist with preferences. */
-  profile?: UserProfilePreferences;
+  profile?: UserProfilePreferencesUpdateInput;
   appearance: {
     theme: ThemePreference;
     language: LanguagePreference;

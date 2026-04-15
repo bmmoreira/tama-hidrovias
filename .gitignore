@@ -196,3 +196,10 @@ cms/.tmp/
 cms/build/
 cms/dist/
 cms/exports/
+
+# macOS cruft
+.DS_Store
+
+# Local assets and uploads (not for version control)
+assets/tiff/
+cms/public/uploads/
