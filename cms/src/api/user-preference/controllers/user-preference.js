@@ -8,6 +8,7 @@ const ALLOWED_ALERT_SEVERITIES = new Set(['info', 'warning', 'critical']);
 
 const DEFAULT_PREFERENCES = {
   profile: {
+    avatar: null,
     firstName: null,
     lastName: null,
     institution: null,
@@ -39,7 +40,11 @@ const DEFAULT_PREFERENCES = {
 };
 
 const PREFERENCE_POPULATE = {
-  profile: true,
+  profile: {
+    populate: {
+      avatar: true,
+    },
+  },
   appearance: true,
   map: true,
   alerts: true,
@@ -89,7 +94,7 @@ function normalizePayload(body = {}) {
   const appearance = body.appearance ?? {};
   const map = body.map ?? {};
   const alerts = body.alerts ?? {};
-   const profile = body.profile ?? {};
+  const profile = body.profile ?? {};
   const favoriteStationIds = Array.isArray(body.favoriteStationIds)
     ? body.favoriteStationIds
         .map((value) => Number(value))
@@ -98,6 +103,10 @@ function normalizePayload(body = {}) {
 
   const normalized = {
     profile: {
+      avatar:
+        typeof profile.avatar === 'number' && Number.isInteger(profile.avatar)
+          ? profile.avatar
+          : null,
       firstName:
         typeof profile.firstName === 'string' && profile.firstName.trim()
           ? profile.firstName.trim()
@@ -228,6 +237,17 @@ function serializePreference(preference) {
   return {
     id: preference.id,
     profile: {
+      avatar: preference.profile?.avatar
+        ? {
+            id: preference.profile.avatar.id,
+            url: preference.profile.avatar.url,
+            alternativeText: preference.profile.avatar.alternativeText,
+            width: preference.profile.avatar.width,
+            height: preference.profile.avatar.height,
+            mime: preference.profile.avatar.mime,
+            size: preference.profile.avatar.size,
+          }
+        : null,
       firstName: preference.profile?.firstName ?? DEFAULT_PREFERENCES.profile.firstName,
       lastName: preference.profile?.lastName ?? DEFAULT_PREFERENCES.profile.lastName,
       institution:
@@ -324,7 +344,27 @@ module.exports = {
 
     const body = ctx.request.body?.data ?? ctx.request.body ?? {};
     const existingPreference = await findOrCreateUserPreference(authUser.id);
+    const existingAvatarId = existingPreference.profile?.avatar?.id ?? null;
     const normalized = normalizePayload(body);
+
+    // Preserve the existing avatar relation unless the client explicitly
+    // includes an `avatar` field in the profile payload. This ensures that
+    // updates which only touch textual profile fields or other preferences
+    // do not accidentally clear the avatar.
+    const hasAvatarField = Object.prototype.hasOwnProperty.call(
+      body.profile ?? {},
+      'avatar',
+    );
+
+    if (!hasAvatarField) {
+      normalized.profile.avatar = existingAvatarId;
+    }
+
+    const isAvatarChanging =
+      hasAvatarField &&
+      existingAvatarId &&
+      typeof normalized.profile.avatar === 'number' &&
+      normalized.profile.avatar !== existingAvatarId;
 
     await strapi.entityService.update(USER_PREFERENCE_UID, existingPreference.id, {
       data: normalized,
@@ -341,5 +381,31 @@ module.exports = {
     ctx.body = {
       data: serializePreference(updatedPreference),
     };
+
+    // If the avatar was changed, attempt to clean up the previous upload
+    // file, but only when it is not referenced by any other relations. This
+    // keeps the uploads folder tidy without risking deletion of shared
+    // media.
+    if (isAvatarChanging && existingAvatarId) {
+      try {
+        const file = await strapi.entityService.findOne(
+          'plugin::upload.file',
+          existingAvatarId,
+          {
+            populate: { related: true },
+          },
+        );
+
+        const related = Array.isArray(file?.related) ? file.related : [];
+
+        if (related.length <= 1) {
+          await strapi.plugin('upload').service('upload').remove(file);
+        }
+      } catch (error) {
+        strapi.log.warn(
+          `Failed to clean up previous avatar file (id=${existingAvatarId}): ${error.message}`,
+        );
+      }
+    }
   },
 };

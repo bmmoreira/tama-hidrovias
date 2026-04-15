@@ -110,6 +110,41 @@ const DEFAULT_FORM_STATE: FormState = {
   forecastThresholdAlerts: true,
 };
 
+const MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+const ALLOWED_AVATAR_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+function buildAvatarUrl(path?: string | null): string | null {
+  if (!path) {
+    return null;
+  }
+
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+
+  // Prefer the dedicated assets host when using the gateway topology.
+  if (typeof window !== 'undefined') {
+    try {
+      const current = new URL(window.location.origin);
+
+      if (current.hostname === 'app.local') {
+        current.hostname = 'assets.local';
+        return `${current.origin}${path}`;
+      }
+
+      if (current.hostname.startsWith('app.')) {
+        current.hostname = current.hostname.replace(/^app\./, 'assets.');
+        return `${current.origin}${path}`;
+      }
+    } catch {
+      // Ignore URL parsing errors and fall back to default asset host.
+    }
+  }
+
+  // Sensible fallback for local development.
+  return `http://assets.local${path}`;
+}
+
 export default function ThemeSettingsPanel() {
   const { t } = useTranslation();
   const { setTheme } = useTheme();
@@ -117,6 +152,9 @@ export default function ThemeSettingsPanel() {
   const [hasInitialized, setHasInitialized] = useState(false);
   const [stationQuery, setStationQuery] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{
     type: 'success' | 'error';
     message: string;
@@ -200,6 +238,7 @@ export default function ThemeSettingsPanel() {
       stationOfflineAlerts: preferences.alerts.stationOfflineAlerts,
       forecastThresholdAlerts: preferences.alerts.forecastThresholdAlerts,
     });
+    setAvatarPreviewUrl(buildAvatarUrl(preferences.profile.avatar?.url ?? null));
     setHasInitialized(true);
     setTheme(preferences.appearance.theme);
   }, [hasInitialized, preferences, setTheme]);
@@ -232,6 +271,68 @@ export default function ThemeSettingsPanel() {
           : [...current.favoriteStationIds, stationId],
       };
     });
+  }
+
+  async function handleAvatarChange(event: React.ChangeEvent<HTMLInputElement>) {
+    setAvatarError(null);
+
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (!ALLOWED_AVATAR_MIME_TYPES.includes(file.type)) {
+      setAvatarError(t('settings.avatarUnsupportedType'));
+      event.target.value = '';
+      return;
+    }
+
+    if (file.size > MAX_AVATAR_SIZE_BYTES) {
+      setAvatarError(t('settings.avatarTooLarge'));
+      event.target.value = '';
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/users/me/avatar', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        setAvatarError(
+          payload?.error ?? payload?.message ?? t('settings.avatarUploadError'),
+        );
+        return;
+      }
+
+      // Update the local preferences cache and preview from the server response.
+      await mutate(payload, false);
+
+      if (payload?.data?.profile?.avatar?.url) {
+        setAvatarPreviewUrl(buildAvatarUrl(payload.data.profile.avatar.url));
+      }
+
+      setFeedback({
+        type: 'success',
+        message: t('settings.avatarUpdated'),
+      });
+    } catch (error) {
+      setAvatarError(
+        error instanceof Error ? error.message : t('settings.avatarUploadError'),
+      );
+    } finally {
+      setIsUploadingAvatar(false);
+      event.target.value = '';
+    }
   }
 
   async function handleSave() {
@@ -336,6 +437,56 @@ export default function ThemeSettingsPanel() {
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
+          <div className="md:col-span-2 flex items-center gap-4">
+            <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border border-gray-200 bg-gray-100 text-lg font-semibold text-gray-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+              {avatarPreviewUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={avatarPreviewUrl}
+                  alt={t('settings.avatarAlt')}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span>
+                  {(form.firstName?.[0] ?? '').toUpperCase() ||
+                    (form.lastName?.[0] ?? '').toUpperCase() ||
+                    '·'}
+                </span>
+              )}
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-gray-900 dark:text-slate-100">
+                {t('settings.avatarTitle')}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-slate-400">
+                {t('settings.avatarDescription')}
+              </p>
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
+                <label className="inline-flex cursor-pointer items-center justify-center rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800">
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={handleAvatarChange}
+                    disabled={isUploadingAvatar || isLoading || !hasInitialized}
+                  />
+                  {isUploadingAvatar ? (
+                    <>
+                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                      {t('settings.avatarUploading')}
+                    </>
+                  ) : (
+                    t('settings.changeAvatar')
+                  )}
+                </label>
+                {avatarError ? (
+                  <p className="text-xs text-red-500 dark:text-red-400">
+                    {avatarError}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          </div>
           <div className="space-y-2">
             <label className="text-xs font-medium text-gray-700 dark:text-slate-300">
               {t('settings.firstName')}

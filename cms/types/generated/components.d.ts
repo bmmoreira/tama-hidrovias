@@ -131,6 +131,7 @@ export interface PreferencesProfileSettings extends Schema.Component {
     displayName: 'Profile Settings';
   };
   attributes: {
+    avatar: Attribute.Media<'images'>;
     birthdate: Attribute.Date;
     firstName: Attribute.String;
     institution: Attribute.String;

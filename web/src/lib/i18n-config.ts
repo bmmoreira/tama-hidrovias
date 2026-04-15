@@ -267,6 +267,15 @@ export const resources = {
         satelliteDescription: 'Imagem de satélite com rótulos de referência.',
         darkMap: 'Dark',
         darkMapDescription: 'Base escura com contraste forte para ambientes de operação.',
+        avatarTitle: 'Foto de perfil',
+        avatarDescription:
+          'Envie uma imagem quadrada (recomendada) nos formatos JPEG, PNG ou WebP, até 5 MB.',
+        avatarAlt: 'Avatar do usuário',
+        avatarUnsupportedType: 'Tipo de arquivo não suportado. Use JPEG, PNG ou WebP.',
+        avatarTooLarge: 'Arquivo muito grande. O limite é de 5 MB.',
+        avatarUploading: 'Enviando avatar…',
+        avatarUploadError: 'Não foi possível enviar o avatar. Tente novamente.',
+        avatarUpdated: 'Avatar atualizado com sucesso.',
       },
       admin: {
         title: 'Configurações Globais',
@@ -599,6 +608,15 @@ export const resources = {
         satelliteDescription: 'Satellite imagery with reference labels.',
         darkMap: 'Dark',
         darkMapDescription: 'Dark basemap with strong contrast for operational environments.',
+        avatarTitle: 'Profile photo',
+        avatarDescription:
+          'Upload a square image (recommended) in JPEG, PNG, or WebP format, up to 5 MB.',
+        avatarAlt: 'User avatar',
+        avatarUnsupportedType: 'Unsupported file type. Please use JPEG, PNG, or WebP.',
+        avatarTooLarge: 'File too large. Maximum size is 5 MB.',
+        avatarUploading: 'Uploading avatar…',
+        avatarUploadError: 'Could not upload avatar. Please try again.',
+        avatarUpdated: 'Avatar updated successfully.',
       },
       admin: {
         title: 'Global Settings',

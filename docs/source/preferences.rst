@@ -76,6 +76,7 @@ Current profile fields:
 - ``institution``
 - ``profession``
 - ``birthdate``
+ - ``avatar`` (single media field for profile photo)
 
 Current map fields:
 
@@ -165,6 +166,51 @@ The panel also exposes a "Personal details" card that writes into the
 users keep optional attributes such as first name, last name, institution,
 profession, and birthdate close to their dashboard settings without extending
 the authentication user schema directly.
+
+Avatar Upload Behavior
+----------------------
+
+The "Personal details" card also includes an optional avatar upload. This is
+implemented as a single media field on the ``profile-settings`` component and
+is exposed via the preferences API rather than the core Strapi user model.
+
+Key properties:
+
+- stored as ``profile.avatar`` on ``api::user-preference.user-preference``
+- accepted types: JPEG, PNG, WebP
+- maximum size: 5 MB
+- served to the browser through the ``assets.*`` host (for example
+  ``http://assets.local/uploads/...``)
+
+Frontend flow:
+
+1. The settings panel posts a ``multipart/form-data`` payload with a
+   single ``file`` field to the internal Next.js route
+   ``POST /api/users/me/avatar``.
+2. That route validates MIME type and size, uploads the file to Strapi's
+   ``/api/upload`` endpoint, and then updates ``profile.avatar`` via
+   ``PUT /api/users/me/preferences``.
+3. The updated preferences payload is returned to the browser and used to
+   refresh both the settings preview and the global navbar avatar.
+
+The avatar URL returned by Strapi is relative to the Strapi public path
+(``/uploads/...``). The frontend maps this to the dedicated assets host using
+the same gateway topology as other static files so that avatars are always
+served from ``assets.*`` instead of directly from ``db.*``.
+
+Cleanup semantics:
+
+- when a user uploads a new avatar, the preferences controller updates
+  ``profile.avatar`` to point at the new upload
+- after a successful update, Strapi inspects the previous avatar upload
+  record; if it is not referenced by any other entities, it is deleted via
+  the upload plugin
+- if an upload is shared with other content, it is left in place
+
+This keeps the uploads folder tidy for user avatars without risking
+accidental deletion of shared media. Subsequent saves of other preference
+fields (such as map or alert settings) do not clear the avatar unless the
+client explicitly sends an ``avatar`` field in the profile payload.
 
 Global Defaults And Admin Page
 ------------------------------

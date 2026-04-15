@@ -12,6 +12,36 @@ import ThemeToggle from '@/components/ThemeToggle';
 import { getRoleLabel, isViewerRole } from '@/lib/roles';
 import { getUserPreferences, type UserPreferences } from '@/lib/strapi';
 
+function buildAvatarUrl(path?: string | null): string | null {
+  if (!path) {
+    return null;
+  }
+
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+
+  if (typeof window !== 'undefined') {
+    try {
+      const current = new URL(window.location.origin);
+
+      if (current.hostname === 'app.local') {
+        current.hostname = 'assets.local';
+        return `${current.origin}${path}`;
+      }
+
+      if (current.hostname.startsWith('app.')) {
+        current.hostname = current.hostname.replace(/^app\./, 'assets.');
+        return `${current.origin}${path}`;
+      }
+    } catch {
+      // Ignore URL parsing issues and fall back to a sensible default below.
+    }
+  }
+
+  return `http://assets.local${path}`;
+}
+
 function getLastName(fullName?: string | null) {
   if (!fullName) {
     return '';
@@ -43,6 +73,13 @@ export default function Navbar() {
   const lastName = getLastName(fullName);
   const displayName = lastName || fullName || t('nav.account');
   const institution = preferencesData?.data.profile.institution ?? null;
+  const avatar = preferencesData?.data.profile.avatar ?? null;
+  const avatarUrl = avatar ? buildAvatarUrl(avatar.url) : null;
+  const avatarInitial =
+    (profileFirstName?.[0] ?? '').toUpperCase() ||
+    (profileLastName?.[0] ?? '').toUpperCase() ||
+    (displayName?.[0] ?? '').toUpperCase() ||
+    '·';
   const roleLabel = getRoleLabel(session?.user?.role);
   const isViewer = isViewerRole(session?.user?.role);
 
@@ -79,11 +116,31 @@ export default function Navbar() {
               <DropdownMenu.Root>
                 <DropdownMenu.Trigger asChild>
                   <button className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white/80 px-3 py-2 text-sm text-gray-700 transition hover:border-blue-200 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-sky-700 dark:hover:text-sky-300">
-                    <User className="h-4 w-4 text-gray-400 dark:text-slate-400" />
-                    <span>
-                      {displayName} ({roleLabel})
-                    </span>
-                    <ChevronDown className="h-4 w-4" />
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-gray-200 bg-gray-100 text-xs font-semibold text-gray-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                        {avatarUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={avatarUrl}
+                            alt={displayName || 'User avatar'}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <span>{avatarInitial}</span>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-start">
+                        <span className="text-xs font-medium leading-tight text-gray-800 dark:text-slate-100">
+                          {displayName}
+                        </span>
+                        {roleLabel ? (
+                          <span className="text-[11px] leading-tight text-gray-400 dark:text-slate-400">
+                            {roleLabel}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                    <ChevronDown className="ml-1 h-4 w-4" />
                   </button>
                 </DropdownMenu.Trigger>
                 <DropdownMenu.Portal>
@@ -179,6 +236,30 @@ export default function Navbar() {
             </Link>
             {session ? (
               <>
+                <div className="flex items-center gap-2 px-3 py-2">
+                  <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-gray-200 bg-gray-100 text-xs font-semibold text-gray-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                    {avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={avatarUrl}
+                        alt={displayName || 'User avatar'}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <span>{avatarInitial}</span>
+                    )}
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-gray-800 dark:text-slate-100">
+                      {displayName}
+                    </span>
+                    {roleLabel ? (
+                      <span className="text-[11px] text-gray-400 dark:text-slate-400">
+                        {roleLabel}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
                 <Link
                   href="/dashboard"
                   className="rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-slate-200 dark:hover:bg-slate-800"
@@ -193,10 +274,6 @@ export default function Navbar() {
                 >
                   {t('nav.settings')}
                 </Link>
-                <div className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 dark:text-slate-400">
-                  <User className="h-4 w-4" />
-                  {displayName} ({roleLabel})
-                </div>
                 {institution ? (
                   <div className="px-3 pb-1 text-xs text-gray-500 dark:text-slate-400">
                     {institution}

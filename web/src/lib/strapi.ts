@@ -119,6 +119,16 @@ export type FavoriteStationPreference = {
  * authentication user model.
  */
 export type UserProfilePreferences = {
+  /** Optional avatar image associated with the profile. */
+  avatar: {
+    id: number;
+    url: string;
+    alternativeText?: string | null;
+    width?: number | null;
+    height?: number | null;
+    mime?: string | null;
+    size?: number | null;
+  } | null;
   /** Given name used for dashboard personalization. */
   firstName: string | null;
   /** Family name or surname for the current user. */

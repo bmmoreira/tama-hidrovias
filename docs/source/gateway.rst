@@ -167,6 +167,34 @@ After that you should be able to access:
 - ``http://assets.local`` for static assets and uploads
 - ``http://tiles.local`` for tile diagnostics or direct testing
 
+Upload Size Limits
+------------------
+
+By default Nginx enforces a relatively small maximum request body size, which
+can cause ``413 Request Entity Too Large`` responses for avatar uploads and
+other media operations.
+
+The gateway configuration raises this limit for all hosts by setting
+``client_max_body_size`` inside the top-level ``http`` block:
+
+.. code-block:: nginx
+
+       http {
+             include       /etc/nginx/mime.types;
+             default_type  application/octet-stream;
+
+             sendfile        on;
+             keepalive_timeout  65;
+
+             # Allow larger request bodies (e.g. file uploads) for app and Strapi.
+             client_max_body_size 10M;
+
+             # ...remaining configuration...
+       }
+
+Adjust this value if the application needs to support larger files. For small
+profile avatars and similar uploads, 10 MB is typically sufficient.
+
 Production Notes
 ----------------
 
