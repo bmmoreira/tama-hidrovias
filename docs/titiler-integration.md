@@ -113,6 +113,14 @@ docker compose -f docker-compose.yml up -d --build web
 - Replace any temporary `any` typings in server pages (some were relaxed to unblock builds) once the Next.js version is finalized.
 - Add unit tests around `web/src/lib/titiler.ts` helpers. They are small and pure enough to test formatting logic.
 
+### Example component
+
+There's a small server-side example component included in the repository to demonstrate best practices:
+
+- `web/src/components/examples/TiffExampleCard.tsx` — a server component that calls `fetchCogInfo(filename)`, computes `center`/`fitBounds`, builds a proxied `tileUrl` template (`/api/titiler/map/cog/tiles/WebMercatorQuad/{z}/{x}/{y}?url=...`) and renders the client `MapViewer` component with `minZoom`/`maxZoom` hints.
+
+Use this component as a template when building new dashboard pages that need to surface COG metadata and embed a live map preview.
+
 ## Recent code changes that affect TiTiler integration
 
 - Proxy header whitelist tightened and `content-length` removed from forwarded request headers.
