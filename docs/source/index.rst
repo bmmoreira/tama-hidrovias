@@ -69,5 +69,6 @@ Contents
    dashboard
    preferences
    mapview
+   titiler_integration
    changelog
    api
