@@ -1,0 +1,62 @@
+{
+    "type": "Feature",
+    "stac_version": "1.0.0",
+    "id": "S2A_34SGA_20200318_0_L2A",
+    "properties": {
+        "datetime": "2020-03-18T09:11:33Z"
+    },
+    "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+            [
+                [
+                    24.2612208840549,
+                    31.505183020453355
+                ],
+                [
+                    23.293255090449595,
+                    31.52621106544645
+                ],
+                [
+                    23.55058193691424,
+                    32.51147809805106
+                ],
+                [
+                    24.296453548295318,
+                    32.494132999285085
+                ],
+                [
+                    24.2612208840549,
+                    31.505183020453355
+                ]
+            ]
+        ]
+    },
+    "links": [
+        {
+            "rel": "self",
+            "href": "https://myurl.com/item.json",
+            "type": "application/json"
+        }
+    ],
+    "assets": {
+        "B01": {
+            "href": "https://myurl.com/B01.tif",
+            "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+            "title": "Band 1 (coastal)"
+        },
+        "B09": {
+            "href": "https://myurl.com/B09.tif",
+            "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+            "title": "Band 9"
+        }
+    },
+    "bbox": [
+        23.293255090449595,
+        31.505183020453355,
+        24.296453548295318,
+        32.51147809805106
+    ],
+    "stac_extensions": [],
+    "collection": "sentinel-s2-l2a-cogs"
+}
