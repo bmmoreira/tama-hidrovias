@@ -33,6 +33,7 @@ export const resources = {
       },
       sidebar: {
         overview: 'Visão Geral',
+        tiffs: 'GeoTIFFs',
         stations: 'Estações',
         forecasts: 'Previsões',
         climateLayers: 'Camadas Climáticas',
@@ -76,6 +77,14 @@ export const resources = {
         quickForecastsDescription: 'Visualizar previsões por estação',
         quickClimate: 'Camadas Climáticas',
         quickClimateDescription: 'GeoTIFFs e camadas de clima',
+        tiffs: {
+          title: 'GeoTIFFs',
+          loadBestTile: 'Carregar melhor tile',
+          computing: 'Calculando…',
+          found: 'Encontrado (z={{z}})',
+          notFound: 'Não encontrado',
+          missingInfo: 'Informação insuficiente',
+        },
         quickMap: 'Mapa Público',
         quickMapDescription: 'Ver mapa interativo de estações',
         recentMeasurementsChart: 'Medições Recentes',
@@ -379,6 +388,7 @@ export const resources = {
       },
       sidebar: {
         overview: 'Overview',
+        tiffs: 'GeoTIFFs',
         stations: 'Stations',
         forecasts: 'Forecasts',
         climateLayers: 'Climate Layers',
@@ -420,6 +430,14 @@ export const resources = {
         quickForecastsDescription: 'View forecasts by station',
         quickClimate: 'Climate Layers',
         quickClimateDescription: 'GeoTIFFs and climate layers',
+        tiffs: {
+          title: 'GeoTIFFs',
+          loadBestTile: 'Load best tile',
+          computing: 'Computing…',
+          found: 'Found (z={{z}})',
+          notFound: 'Not found',
+          missingInfo: 'Missing info',
+        },
         quickMap: 'Public Map',
         quickMapDescription: 'View the interactive station map',
         recentMeasurementsChart: 'Recent Measurements',
@@ -710,7 +728,7 @@ export const resources = {
   es: {
     translation: {
       nav: { map: 'Mapa', dashboard: 'Panel', settings: 'Preferencias', login: 'Entrar', logout: 'Salir', account: 'Cuenta', menu: 'Menú' },
-      sidebar: { overview: 'Resumen', stations: 'Estaciones', forecasts: 'Pronósticos', climateLayers: 'Capas Climáticas', mapview: 'Mapa (panel)', preferences: 'Preferencias', admin: 'Admin' },
+    sidebar: { overview: 'Resumen', tiffs: 'GeoTIFFs', stations: 'Estaciones', forecasts: 'Pronósticos', climateLayers: 'Capas Climáticas', mapview: 'Mapa (panel)', preferences: 'Preferencias', admin: 'Admin' },
       readOnly: {
         badgeLabel: 'Solo lectura',
         badgeTitle: 'Su perfil puede ver datos, pero no ejecutar acciones de escritura.',
@@ -729,7 +747,15 @@ export const resources = {
         publicMap: 'Abrir mapa público sin iniciar sesión →',
       },
       dashboard: {
-        title: 'Resumen', subtitle: 'Bienvenido al panel de control de Tama Hidrovias', totalStations: 'Total de Estaciones', allSources: 'Todas las fuentes', recentMeasurements: 'Mediciones Recientes', last24Hours: 'Últimas 24 horas', activeForecasts: 'Pronósticos Activos', next15Days: 'Próximos 15 días', climateLayers: 'Capas Climáticas', available: 'Disponibles', quickStations: 'Estaciones', quickStationsDescription: 'Gestionar estaciones e criar virtuais', quickForecasts: 'Pronósticos', quickForecastsDescription: 'Ver pronósticos por estação', quickClimate: 'Capas Climáticas', quickClimateDescription: 'GeoTIFF e camadas climáticas', quickMap: 'Mapa Público', quickMapDescription: 'Ver mapa interativo de estações', recentMeasurementsChart: 'Mediciones Recientes', selectStation: 'Selecione uma estação', noStation: 'No hay estaciones disponibles'
+        title: 'Resumen', subtitle: 'Bienvenido al panel de control de Tama Hidrovias', totalStations: 'Total de Estaciones', allSources: 'Todas las fuentes', recentMeasurements: 'Mediciones Recientes', last24Hours: 'Últimas 24 horas', activeForecasts: 'Pronósticos Activos', next15Days: 'Próximos 15 días', climateLayers: 'Capas Climáticas', available: 'Disponibles', quickStations: 'Estaciones', quickStationsDescription: 'Gestionar estaciones e criar virtuais', quickForecasts: 'Pronósticos', quickForecastsDescription: 'Ver pronósticos por estação', quickClimate: 'Capas Climáticas', quickClimateDescription: 'GeoTIFF e camadas climáticas', quickMap: 'Mapa Público', quickMapDescription: 'Ver mapa interativo de estações', recentMeasurementsChart: 'Mediciones Recientes', selectStation: 'Selecione uma estação', noStation: 'No hay estaciones disponibles',
+        tiffs: {
+          title: 'GeoTIFFs',
+          loadBestTile: 'Cargar mejor tile',
+          computing: 'Calculando…',
+          found: 'Encontrado (z={{z}})',
+          notFound: 'No encontrado',
+          missingInfo: 'Información insuficiente',
+        },
       },
       forecasts: {
         title: 'Pronósticos', subtitle: 'Pronósticos hidrológicos para los próximos 15 días', level: 'Nivel (m)', flow: 'Caudal (m³/s)', precipitation: 'Lluvia (mm)', elevation: 'Altimetría (m)', selectStation: 'Seleccione uma estação', forecastLabel: 'Pronóstico', issuedAt: 'Emisión', noForecasts: 'No hay pronósticos disponibles para esta estación o variable.', recentRuns: 'Ejecuciones Recientes', model: 'Modelo', issuance: 'Emisión', horizons: 'Horizontes (días)', leadTimes: 'plazos'
@@ -750,8 +776,7 @@ export const resources = {
   },
   fr: {
     translation: {
-      nav: { map: 'Carte', dashboard: 'Tableau de bord', settings: 'Préférences', login: 'Connexion', logout: 'Déconnexion', account: 'Compte', menu: 'Menu' },
-      sidebar: { overview: 'Vue d’ensemble', stations: 'Stations', forecasts: 'Prévisions', climateLayers: 'Couches climatiques', mapview: 'Carte (tableau de bord)', preferences: 'Préférences', admin: 'Admin' },
+  nav: { map: 'Carte', dashboard: 'Tableau de bord', settings: 'Préférences', login: 'Connexion', logout: 'Déconnexion', account: 'Compte', menu: 'Menu' },
       readOnly: {
         badgeLabel: 'Lecture seule',
         badgeTitle: 'Votre profil peut consulter les données, mais pas effectuer des actions d’écriture.',
@@ -769,7 +794,8 @@ export const resources = {
         unexpectedError: 'Une erreur inattendue s’est produite. Réessayez.',
         publicMap: 'Ouvrir la carte publique sans connexion →',
       },
-      dashboard: { title: 'Vue d’ensemble', subtitle: 'Bienvenue dans le tableau de bord Tama Hidrovias', totalStations: 'Total des stations', allSources: 'Toutes les sources', recentMeasurements: 'Mesures récentes', last24Hours: 'Dernières 24 heures', activeForecasts: 'Prévisions actives', next15Days: '15 prochains jours', climateLayers: 'Couches climatiques', available: 'Disponibles', quickStations: 'Stations', quickStationsDescription: 'Gérer les stations et créer des virtuelles', quickForecasts: 'Prévisions', quickForecastsDescription: 'Voir les prévisions par station', quickClimate: 'Couches climatiques', quickClimateDescription: 'GeoTIFF et couches climatiques', quickMap: 'Carte publique', quickMapDescription: 'Voir la carte interactive des stations', recentMeasurementsChart: 'Mesures récentes', selectStation: 'Sélectionnez une station', noStation: 'Aucune station disponible' },
+  sidebar: { overview: 'Vue d’ensemble', tiffs: 'GeoTIFFs', stations: 'Stations', forecasts: 'Prévisions', climateLayers: 'Couches climatiques', mapview: 'Carte (tableau de bord)', preferences: 'Préférences', admin: 'Admin' },
+  dashboard: { title: 'Vue d’ensemble', subtitle: 'Bienvenue dans le tableau de bord Tama Hidrovias', totalStations: 'Total des stations', allSources: 'Toutes les sources', recentMeasurements: 'Mesures récentes', last24Hours: 'Dernières 24 heures', activeForecasts: 'Prévisions actives', next15Days: '15 prochains jours', climateLayers: 'Couches climatiques', available: 'Disponibles', quickStations: 'Stations', quickStationsDescription: 'Gérer les stations et créer des virtuelles', quickForecasts: 'Prévisions', quickForecastsDescription: 'Voir les prévisions par station', quickClimate: 'Couches climatiques', quickClimateDescription: 'GeoTIFF et couches climatiques', quickMap: 'Carte publique', quickMapDescription: 'Voir la carte interactive des stations', recentMeasurementsChart: 'Mesures récentes', selectStation: 'Sélectionnez une station', noStation: 'Aucune station disponible', tiffs: { title: 'GeoTIFFs', loadBestTile: 'Charger le meilleur tuile', computing: 'Calcul…', found: 'Trouvé (z={{z}})', notFound: 'Non trouvé', missingInfo: 'Informations insuffisantes' } },
       forecasts: { title: 'Prévisions', subtitle: 'Prévisions hydrologiques pour les 15 prochains jours', level: 'Niveau (m)', flow: 'Débit (m³/s)', precipitation: 'Pluie (mm)', elevation: 'Altimétrie (m)', selectStation: 'Sélectionnez une station', forecastLabel: 'Prévision', issuedAt: 'Émission', noForecasts: 'Aucune prévision disponible pour cette station ou variable.', recentRuns: 'Exécutions récentes', model: 'Modèle', issuance: 'Émission', horizons: 'Horizons (jours)', leadTimes: 'échéances' },
       climate: { title: 'Couches climatiques', subtitle: 'GeoTIFF et couches raster disponibles pour consultation', model: 'Modèle', noLayers: 'Aucune couche climatique enregistrée.', selectLayer: 'Sélectionnez une couche à afficher' },
       map: { searchStations: 'Rechercher des stations', openStationSearch: 'Ouvrir la recherche de stations', closePanel: 'Fermer le panneau', last30Days: '30 derniers jours', source: 'Source' },

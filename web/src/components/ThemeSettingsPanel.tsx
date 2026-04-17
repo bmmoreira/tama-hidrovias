@@ -347,6 +347,9 @@ export default function ThemeSettingsPanel() {
           institution: form.institution || null,
           profession: form.profession || null,
           birthdate: form.birthdate || null,
+          // Preserve avatar when updating profile fields – some API typings
+          // require the avatar property to be present.
+          avatar: preferences?.profile?.avatar ?? null,
         },
         appearance: {
           theme: form.theme,

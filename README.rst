@@ -197,7 +197,7 @@ Docker, use o arquivo base com o override ``docker-compose.dev.yml``:
 .. code-block:: bash
 
   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build \
-    postgres pgadmin tileserver strapi web
+    postgres pgadmin tileserver strapi web hfs-titiler
 
 Esse fluxo mantém:
 
@@ -397,6 +397,44 @@ O frontend usa **NextAuth** e o CMS usa **Strapi Users & Permissions**.
 - As credenciais são validadas no Strapi por ``/api/auth/local``.
 - O JWT do Strapi fica apenas no servidor do Next.js.
 - O navegador usa rotas internas do Next.js para operações autenticadas.
+
+TiTiler (serviço de tiles interno) e token de acesso
+---------------------------------------------------
+
+O projeto inclui um serviço TiTiler (`hfs-titiler`) para servir informações
+de GeoTIFFs (COG). Por segurança o TiTiler pode ser protegido por um token
+global. Aqui estão as recomendações de configuração para desenvolvimento:
+
+- Defina `TITILER_INTERNAL_TOKEN` no seu arquivo `.env` (não o exponha como `NEXT_PUBLIC_*`).
+- No `docker-compose.yml` o TiTiler lê `TITILER_API_GLOBAL_ACCESS_TOKEN=${TITILER_INTERNAL_TOKEN}`
+  e o serviço `web` lê `TITILER_INTERNAL_TOKEN` para que o proxy server-side injete o token.
+- Use a rota proxy do Next em `/api/titiler/...` no frontend — o proxy adiciona o
+  parâmetro `access_token=<token>` quando repassa a requisição ao TiTiler, evitando
+  vazamento do token para o navegador.
+- Após alterar `.env` reinicie os serviços relevantes:
+
+  .. code-block:: bash
+
+     docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d web hfs-titiler
+
+  Isso garante que tanto o `web` quanto o `hfs-titiler` leiam o mesmo token.
+
+Se preferir, para ambientes de produção guarde o token em um cofre de segredos
+e injete-o via variáveis de ambiente do orquestrador em vez de commitar em `.env`.
+
+TiTiler root-path and proxy normalization
+----------------------------------------
+
+When TiTiler is started with a `--root-path /map` (our Dockerfile runs uvicorn
+with `--root-path /map`), the API lives under the `/map` prefix (for example
+`/map/cog/info`). The Next.js proxy at `/api/titiler/...` normalizes requests
+by stripping a duplicated leading `map` segment so that forwarded paths do
+not become `/map/map/...` which would return 404. Keep this behavior in mind
+when calling TiTiler directly vs through the Next proxy.
+
+If you start Titiler without `--root-path` (or change the `root-path`), update
+the proxy normalization logic in `web/src/app/api/titiler/[...path]/route.ts`
+accordingly.
 
 Para a documentação completa do sistema de autenticação, consulte
 ``docs/source/authentication.rst``.

@@ -54,6 +54,9 @@ export interface MapboxMapProps {
   featureCollectionLayerStyle?: FeatureCollectionLayerSettings;
   onStationDoubleClick?: (station: Station) => void;
   tileLayerUrl?: string;
+  fitBounds?: [number, number, number, number];
+  minZoom?: number;
+  maxZoom?: number;
   children?: ReactNode;
 }
 
@@ -235,6 +238,9 @@ export default function MainMap({
   featureCollection,
   featureCollectionLayerStyle,
   tileLayerUrl,
+  fitBounds,
+  minZoom,
+  maxZoom,
   children,
 }: MapboxMapProps) {
   const mapRef = useRef<MapRef | null>(null);
@@ -254,12 +260,28 @@ export default function MainMap({
   );
 
   useEffect(() => {
-    mapRef.current?.flyTo({
-      center: [initialViewState.longitude, initialViewState.latitude],
-      zoom: initialViewState.zoom,
-      duration: 1200,
-    });
-  }, [initialViewState]);
+    if (fitBounds && fitBounds.length === 4) {
+      const [[minLon, minLat, maxLon, maxLat]] = [fitBounds];
+      try {
+        // fitBounds expects [[west, south], [east, north]]
+        // @ts-ignore - MapRef types may not include fitBounds
+        mapRef.current?.fitBounds([ [minLon, minLat], [maxLon, maxLat] ], { padding: 40, duration: 800 });
+      } catch (e) {
+        // fallback to flyTo center
+        mapRef.current?.flyTo({
+          center: [initialViewState.longitude, initialViewState.latitude],
+          zoom: initialViewState.zoom,
+          duration: 1200,
+        });
+      }
+    } else {
+      mapRef.current?.flyTo({
+        center: [initialViewState.longitude, initialViewState.latitude],
+        zoom: initialViewState.zoom,
+        duration: 1200,
+      });
+    }
+  }, [initialViewState, fitBounds]);
 
   const handleFeatureClick = (event: MapLayerMouseEvent) => {
     const clickedFeature = event.features?.find(
@@ -299,7 +321,19 @@ export default function MainMap({
         <ScaleControl position="bottom-right" unit="metric" />
 
         {tileLayerUrl ? (
-          <Source id="mapview-raster-source" type="raster" tiles={[tileLayerUrl]} tileSize={256}>
+          // If fitBounds is provided by the caller it represents the raster
+          // bounds as [west, south, east, north] in lon/lat. Pass it to the
+          // raster Source `bounds` prop so Mapbox only requests tiles within
+          // the dataset extent and avoids many 404 tile requests.
+          <Source
+            id="mapview-raster-source"
+            type="raster"
+            tiles={[tileLayerUrl]}
+            tileSize={256}
+            {...(fitBounds ? { bounds: fitBounds } : {})}
+            {...(typeof minZoom === 'number' ? { minzoom: minZoom } : {})}
+            {...(typeof maxZoom === 'number' ? { maxzoom: maxZoom } : {})}
+          >
             <Layer {...TILE_LAYER_STYLE} />
           </Source>
         ) : null}

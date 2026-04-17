@@ -64,10 +64,20 @@ services:
     environment:
       # Internal-only Strapi URL used by server-side helpers
       STRAPI_INTERNAL_URL: http://strapi:1337
+      # TiTiler internal endpoint reachable from inside the docker network
+      TITILER_INTERNAL_URL: http://hfs-titiler:8000
+      # Token to use when proxying requests to the internal TiTiler (do NOT expose as NEXT_PUBLIC_*)
+      TITILER_INTERNAL_TOKEN: ${TITILER_INTERNAL_TOKEN:-}
+      # Structured logger level for pino (set to debug for verbose dev logs)
+      LOG_LEVEL: ${LOG_LEVEL:-debug}
+      # If you want the browser to access TiTiler directly (not recommended), set this to a public URL
+      # NEXT_PUBLIC_TITILER_URL: http://localhost:8000
     depends_on:
       - strapi
     networks:
       - tama-network
+    volumes:
+      - ./assets/tiff:/app/assets/tiff:ro
 
   tileserver:
     build: ./tileserver
@@ -75,6 +85,22 @@ services:
       - "8080:8080"
     volumes:
       - ./data/geotiffs:/data/geotiffs:ro
+    networks:
+      - tama-network
+  hfs-titiler:
+    build: ./titiler
+    container_name: hfs-titiler
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./titiler/source:/app  # Mount your local repo for live editing
+      - ./assets/tiff:/app/images
+    restart: unless-stopped
+    environment:
+      # Optional: set a global access token to secure the TiTiler endpoints
+      # Example: export TITILER_INTERNAL_TOKEN=my-secret && docker compose up -d
+      - TITILER_API_GLOBAL_ACCESS_TOKEN=${TITILER_INTERNAL_TOKEN:-}
+      - TITILER_API_TELEMETRY_ENABLED=False
     networks:
       - tama-network
 

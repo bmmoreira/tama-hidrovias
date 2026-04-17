@@ -26,6 +26,7 @@ export default function Sidebar() {
 
   const links = [
     { href: '/dashboard', label: t('sidebar.overview'), Icon: LayoutDashboard },
+  { href: '/dashboard/tiffs', label: t('sidebar.tiffs'), Icon: Layers },
     { href: '/dashboard/stations', label: t('sidebar.stations'), Icon: Radio },
     { href: '/dashboard/forecasts', label: t('sidebar.forecasts'), Icon: BarChart2 },
     {

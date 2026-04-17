@@ -30,17 +30,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Missing avatar file.' }, { status: 400 });
   }
 
-  if (!ALLOWED_MIME_TYPES.has(file.type)) {
+  const fileLike: any = file;
+  const mimeType = typeof fileLike.type === 'string' ? fileLike.type : undefined;
+  if (!mimeType || !ALLOWED_MIME_TYPES.has(mimeType)) {
     return NextResponse.json({ error: 'Unsupported image type.' }, { status: 400 });
   }
 
-  if (file.size > MAX_AVATAR_SIZE_BYTES) {
+  const fileSize = typeof fileLike.size === 'number' ? fileLike.size : undefined;
+  if (!fileSize || fileSize > MAX_AVATAR_SIZE_BYTES) {
     return NextResponse.json({ error: 'Avatar is too large (max 5MB).' }, { status: 400 });
   }
 
   // Upload the file to Strapi using the Upload plugin
   const uploadForm = new FormData();
-  uploadForm.append('files', file);
+  uploadForm.append('files', file as any);
 
   const uploadResponse = await fetch(`${STRAPI_INTERNAL_URL}/api/upload`, {
     method: 'POST',
