@@ -1,1 +1,0 @@
-"""titiler.xarray test configuration."""

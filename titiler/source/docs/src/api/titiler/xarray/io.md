@@ -1,1 +1,0 @@
-::: titiler.xarray.io

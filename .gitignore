@@ -195,6 +195,9 @@ assets/tiff/
 *.TIF
 *.TIFF
 
+# Ignore bundled titiler source (we only track the top-level titiler folder and Dockerfile)
+/titiler/source/
+
 # CMS
 cms/.cache/
 cms/.strapi/

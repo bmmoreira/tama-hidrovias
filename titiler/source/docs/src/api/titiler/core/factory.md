@@ -1,2 +1,0 @@
-
-::: titiler.core.factory

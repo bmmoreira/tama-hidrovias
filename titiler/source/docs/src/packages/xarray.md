@@ -1,1 +1,0 @@
-../../../src/titiler/xarray/README.md

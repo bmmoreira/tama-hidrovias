@@ -1,1 +1,0 @@
-../../../src/titiler/mosaic/README.md
