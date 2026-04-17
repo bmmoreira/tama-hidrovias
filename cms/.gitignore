@@ -6,3 +6,6 @@ build/
 node_modules/
 dist/
 export/
+
+# Don't track user uploaded files from the CMS
+public/uploads/

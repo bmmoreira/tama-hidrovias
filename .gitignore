@@ -207,5 +207,4 @@ cms/build/
 cms/dist/
 cms/exports/
 
-# Uploaded files from the CMS; do not track user uploads
-cms/public/uploads/
+ 
