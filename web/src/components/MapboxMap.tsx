@@ -72,6 +72,7 @@ export default function MapboxMap({
       attributionControl: true,
     });
 
+    // Add NavigationControl with extra padding to avoid overlaying custom buttons
     map.addControl(new mapboxgl.NavigationControl(), 'top-right');
     map.addControl(
       new mapboxgl.ScaleControl({ unit: 'metric' }),
@@ -236,6 +237,13 @@ export default function MapboxMap({
   return (
     <div className="relative h-full w-full">
       <div ref={containerRef} className="map-container h-full w-full" />
+      {/* Add a style block to pad the mapboxgl-ctrl-top-right container */}
+      <style>{`
+        .mapboxgl-ctrl-top-right {
+          top: 88px !important;
+          right: 8px !important;
+        }
+      `}</style>
       {children}
     </div>
   );

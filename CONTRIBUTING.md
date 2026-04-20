@@ -16,11 +16,13 @@ docs/        Sphinx documentation
 
 ## Common Workflows
 
-### Full stack with Docker
+### Full Stack with Docker (Development)
+
+This mode uses `docker-compose.dev.yml` to mount your local source code into the containers for live-reloading.
 
 ```bash
 cp .env.example .env
-docker compose up --build
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 
 Then open `http://localhost:5050` to manage PostgreSQL in pgAdmin.

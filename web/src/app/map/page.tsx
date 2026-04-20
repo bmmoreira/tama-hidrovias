@@ -7,6 +7,8 @@ import useSWR from 'swr';
 import { getAppSettings, getStations, getUserPreferences } from '@/lib/strapi';
 import type { MapStylePreference } from '@/lib/strapi';
 import StationExplorerOverlay from '@/components/maps/StationExplorerOverlay';
+import HomeButton from '@/components/ui/HomeButton';
+import DashboardButton from '@/components/ui/DashboardButton';
 import { useStationExplorer } from '@/components/maps/useStationExplorer';
 
 // Dynamic import to avoid SSR issues with mapbox-gl
@@ -84,6 +86,7 @@ export default function MapPage() {
             onStationDoubleClick={stationExplorer.focusStation}
           >
             <StationExplorerOverlay controller={stationExplorer} />
+            {status === 'authenticated' ? <DashboardButton /> : <HomeButton />}
           </MapboxMap>
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gray-100 dark:bg-slate-950">
