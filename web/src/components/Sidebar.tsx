@@ -34,6 +34,11 @@ export default function Sidebar() {
       Icon: Layers,
     },
     {
+      href: '/dashboard/map-features',
+      label: t('sidebar.mapFeatures'),
+      Icon: Map,
+    },
+    {
       href: '/dashboard/mapview',
       label: t('sidebar.mapview'),
       Icon: Map,

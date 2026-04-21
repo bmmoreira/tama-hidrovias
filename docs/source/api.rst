@@ -72,17 +72,26 @@ Current Map Feature Collection Endpoints
 ----------------------------------------
 
 The ``/mapview`` route now consumes a Strapi-backed GeoJSON overlay through a
-dedicated public endpoint and a matching Next.js proxy.
+dedicated public endpoint and a matching Next.js proxy. The dashboard now also
+exposes a protected editor flow for that same single collection.
 
 Runtime shape:
 
 - Strapi public route: ``/api/map-feature-collections/public``
+- Strapi protected current routes: ``/api/map-feature-collections/current``
 - Next.js proxy route: ``web/src/app/api/map-feature-collections/route.ts``
 - Web page route: ``/mapview``
+- Dashboard editor route: ``/dashboard/map-features``
 
 This route family is used to deliver a GeoJSON ``FeatureCollection`` stored in
 Strapi and rendered by ``web/src/components/maps/MapBase.tsx``. It is
-documented in more detail in ``mapview.rst``.
+documented in more detail in ``mapview.rst`` and ``dashboard.rst``.
+
+The protected editor flow persists the entire single-type payload instead of
+issuing per-feature mutations. The dashboard reads the current
+``featureCollection``, lets the user add, edit, or remove GeoJSON Point
+features in memory, and then sends the updated collection back through the
+internal ``PUT /api/map-feature-collections`` route.
 
 Python package layout
 ---------------------

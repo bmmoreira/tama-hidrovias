@@ -91,11 +91,12 @@ Current Protected Flows
 -----------------------
 
 The current write-protected dashboard flows are station creation, station
-editing, and station deletion.
+editing, station deletion, and map feature collection editing.
 
 UI implementation:
 
 - ``web/src/app/dashboard/stations/page.tsx``
+- ``web/src/app/dashboard/map-features/page.tsx``
 
 Current behavior:
 
@@ -107,6 +108,10 @@ Current behavior:
 - the station form modal is reused for create and edit flows
 - the delete flow uses the shared confirmation modal instead of the browser confirm dialog
 - the row being mutated shows a loading label and disables both row actions until completion
+- the map feature collection editor lists each GeoJSON feature as a dashboard row
+- analysts and admin-capable roles can add a new feature, edit an existing feature, or remove one
+- the feature editor modal validates Point coordinates and JSON properties before save
+- each save writes the full updated ``featureCollection`` back through the protected internal Next.js route
 
 At the moment, station deletion is the only destructive dashboard flow. Any
 future destructive action should reuse ``web/src/components/ConfirmationModal.tsx``
@@ -121,11 +126,13 @@ The routes:
 
 - ``web/src/app/api/stations/route.ts``
 - ``web/src/app/api/stations/[id]/route.ts``
+- ``web/src/app/api/map-feature-collections/route.ts``
 
 enforce the same rule on the server side:
 
 - reads the session role from the NextAuth token
 - returns ``403`` for non-analyst ``POST``, ``PATCH``, and ``DELETE`` requests
+- returns ``403`` for map feature collection ``PUT`` requests when the caller lacks write access
 - forwards authorized requests to Strapi only after that role check passes
 
 This prevents direct browser calls from bypassing the UI restriction.

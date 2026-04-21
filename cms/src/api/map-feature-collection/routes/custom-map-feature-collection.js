@@ -10,5 +10,21 @@ module.exports = {
         auth: false,
       },
     },
+    {
+      method: 'GET',
+      path: '/map-feature-collections/current',
+      handler: 'map-feature-collection.current',
+      config: {
+        auth: false,
+      },
+    },
+    {
+      method: 'PUT',
+      path: '/map-feature-collections/current',
+      handler: 'map-feature-collection.updateCurrent',
+      config: {
+        auth: false,
+      },
+    },
   ],
 };

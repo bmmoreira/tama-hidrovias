@@ -258,16 +258,16 @@ export type AppSettingsUpdateInput = {
 };
 
 /** Minimal GeoJSON geometry representation used for feature collections. */
-export type MapFeatureCollectionGeometry = {
-  type: string;
-  coordinates: unknown;
+export type MapFeatureCollectionPointGeometry = {
+  type: 'Point';
+  coordinates: [number, number];
 };
 
 /** Single GeoJSON feature inside a feature collection. */
 export type MapFeatureCollectionFeature = {
   type: 'Feature';
   properties: Record<string, unknown>;
-  geometry: MapFeatureCollectionGeometry;
+  geometry: MapFeatureCollectionPointGeometry;
 };
 
 /** GeoJSON FeatureCollection used to render the public map overlay. */
@@ -290,6 +290,12 @@ export type MapFeatureCollection = {
 export type MapFeatureCollectionRecord = {
   id: number;
   name: string;
+  featureCollection: MapFeatureCollection;
+};
+
+/** Input payload for updating the single map feature collection entry. */
+export type MapFeatureCollectionUpdateInput = {
+  name?: string;
   featureCollection: MapFeatureCollection;
 };
 
@@ -528,6 +534,22 @@ export async function getMapFeatureCollection(): Promise<{
   }
 
   return fetchJson(path);
+}
+
+/**
+ * Persist the current single map feature collection through the internal
+ * Next.js route so browser code never talks to Strapi directly.
+ */
+export async function updateMapFeatureCollection(
+  body: MapFeatureCollectionUpdateInput,
+) {
+  return fetchJson(buildMapFeatureCollectionPath(), {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
 }
 
 export async function updateAppSettings(body: AppSettingsUpdateInput) {
