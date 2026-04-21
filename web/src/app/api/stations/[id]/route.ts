@@ -33,7 +33,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   const body = await request.json();
 
   return proxyStrapiRequest(request, `/api/stations/${id}`, {
-    method: 'PATCH',
+    // Strapi core collection updates use PUT on /api/:collection/:id.
+    method: 'PUT',
     requireAuth: true,
     body: JSON.stringify({ data: body }),
   });

@@ -36,6 +36,35 @@ describe('station id route guards', () => {
     expect(proxyStrapiRequest).not.toHaveBeenCalled();
   });
 
+  it('forwards patch requests as put updates for analyst users', async () => {
+    const { PATCH } = await import('./route');
+    getSessionRole.mockResolvedValueOnce('analyst');
+    isAnalystRole.mockReturnValueOnce(true);
+    proxyStrapiRequest.mockResolvedValueOnce(
+      NextResponse.json({ data: { id: 7 } }, { status: 200 }),
+    );
+
+    const request = new NextRequest('http://localhost:3000/api/stations/7', {
+      method: 'PATCH',
+      body: JSON.stringify({ name: 'Updated station' }),
+    });
+
+    const response = await PATCH(request, {
+      params: Promise.resolve({ id: '7' }),
+    });
+
+    expect(proxyStrapiRequest).toHaveBeenCalledWith(
+      request,
+      '/api/stations/7',
+      {
+        method: 'PUT',
+        requireAuth: true,
+        body: JSON.stringify({ data: { name: 'Updated station' } }),
+      },
+    );
+    expect(response.status).toBe(200);
+  });
+
   it('forwards delete requests for analyst users', async () => {
     const { DELETE } = await import('./route');
     getSessionRole.mockResolvedValueOnce('analyst');

@@ -617,6 +617,7 @@ export const resources = {
         avatarUploading: 'Uploading avatar…',
         avatarUploadError: 'Could not upload avatar. Please try again.',
         avatarUpdated: 'Avatar updated successfully.',
+        changeAvatar: 'Change avatar',
       },
       admin: {
         title: 'Global Settings',

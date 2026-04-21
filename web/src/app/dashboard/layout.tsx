@@ -7,38 +7,19 @@ import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 import { isViewerRole } from '@/lib/roles';
 
-// Fake auth logic for development
-function isFakeAuthEnabled() {
-  return process.env.FAKE_AUTH === 'true';
-}
-
-const fakeSession = {
-  user: {
-    id: 'dev-user',
-    name: 'Dev User',
-    email: 'dev@example.com',
-    role: 'analyst',
-  },
-};
-
 /**
  * Shared layout for all ``/dashboard`` routes.
  *
- * Handles authentication (real or fake for development), enforces
- * redirects to the login page when unauthenticated and wraps child
- * routes with the main navbar, sidebar and read-only banner.
+ * Handles authentication, enforces redirects to the login page when
+ * unauthenticated and wraps child routes with the main navbar, sidebar
+ * and read-only banner.
  */
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  let session = null;
-  if (isFakeAuthEnabled()) {
-    session = fakeSession;
-  } else {
-    session = await getServerSession(authOptions);
-  }
+  const session = await getServerSession(authOptions);
 
   if (!session) {
     redirect('/login');

@@ -3,7 +3,7 @@
 import React from 'react';
 import type { Station } from '@/lib/strapi';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import useSWR from 'swr';
 import { useSession } from 'next-auth/react';
 import { Pencil, Plus, Search, Trash2, TriangleAlert } from 'lucide-react';
@@ -85,6 +85,46 @@ export default function StationsPage() {
   });
 
   const canManageStations = isAnalystRole(session?.user?.role);
+
+  const handleCreateModalClose = useCallback(() => {
+    setModalOpen(false);
+  }, []);
+
+  const handleEditModalClose = useCallback(() => {
+    setEditingStation(null);
+    setRowMutation(null);
+  }, []);
+
+  const handleEditSubmittingChange = useCallback(
+    (isSubmitting: boolean) => {
+      if (!editingStation) {
+        return;
+      }
+
+      setRowMutation((current) => {
+        if (isSubmitting) {
+          if (
+            current?.stationId === editingStation.id &&
+            current.action === 'edit'
+          ) {
+            return current;
+          }
+
+          return { stationId: editingStation.id, action: 'edit' };
+        }
+
+        if (
+          current?.stationId === editingStation.id &&
+          current.action === 'edit'
+        ) {
+          return null;
+        }
+
+        return current;
+      });
+    },
+    [editingStation],
+  );
 
   function showToast(message: string, variant: ToastState['variant']) {
     setToast({ message, variant });
@@ -264,7 +304,7 @@ export default function StationsPage() {
       {canManageStations ? (
         <StationFormModal
           isOpen={modalOpen}
-          onClose={() => setModalOpen(false)}
+          onClose={handleCreateModalClose}
           onSaved={(message) => {
             setModalOpen(false);
             showToast(message, 'success');
@@ -278,10 +318,7 @@ export default function StationsPage() {
         <StationFormModal
           isOpen={Boolean(editingStation)}
           station={editingStation}
-          onClose={() => {
-            setEditingStation(null);
-            setRowMutation(null);
-          }}
+          onClose={handleEditModalClose}
           onSaved={(message) => {
             setEditingStation(null);
             setRowMutation(null);
@@ -289,26 +326,7 @@ export default function StationsPage() {
             mutate();
           }}
           onError={(message) => showToast(message, 'error')}
-          onSubmittingChange={(isSubmitting) => {
-            if (!editingStation) {
-              return;
-            }
-
-            setRowMutation((current) => {
-              if (isSubmitting) {
-                return { stationId: editingStation.id, action: 'edit' };
-              }
-
-              if (
-                current?.stationId === editingStation.id &&
-                current.action === 'edit'
-              ) {
-                return null;
-              }
-
-              return current;
-            });
-          }}
+          onSubmittingChange={handleEditSubmittingChange}
         />
       ) : null}
 

@@ -231,14 +231,6 @@ For the full technical flow and Strapi upload process, see:
 
 - `../docs/source/mapview.rst`
 
-## Fake auth for UI work
-
-When `FAKE_AUTH=true`, the dashboard layout injects a development session for
-local UI work. The fake session uses role `analyst` by default.
-
-Use this mode only for isolated UI development. Keep it disabled for normal
-integration testing.
-
 ## Testing
 
 The frontend includes a unit test around role resolution:
