@@ -127,7 +127,7 @@ Este fluxo corresponde ao ``Quick Start`` descrito na documentação técnica.
     # Edite .env com seus tokens e chaves
 
     # 2. Suba todos os serviços
-    docker compose up --build -d
+  HOST_UID=$(id -u) HOST_GID=$(id -g) docker compose up --build -d
 
     # 3. Acesse a plataforma
     # Frontend:    http://localhost:3000
@@ -196,8 +196,12 @@ Docker, use o arquivo base com o override ``docker-compose.dev.yml``:
 
 .. code-block:: bash
 
+  HOST_UID=$(id -u) HOST_GID=$(id -g) \
   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build \
     postgres pgadmin tileserver strapi web
+
+Em Linux e WSL, defina ``HOST_UID`` e ``HOST_GID`` como acima para evitar que
+arquivos gerados pelos containers fiquem com proprietário ``root`` no host.
 
 Esse fluxo mantém:
 

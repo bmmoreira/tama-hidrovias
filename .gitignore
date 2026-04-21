@@ -203,3 +203,4 @@ cms/exports/
 # Local assets and uploads (not for version control)
 assets/tiff/
 cms/public/uploads/
+web/.env.example

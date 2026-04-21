@@ -76,7 +76,7 @@ Current profile fields:
 - ``institution``
 - ``profession``
 - ``birthdate``
- - ``avatar`` (single media field for profile photo)
+- ``avatar`` (single media field for profile photo)
 
 Current map fields:
 

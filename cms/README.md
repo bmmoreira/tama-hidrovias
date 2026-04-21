@@ -82,8 +82,12 @@ npm run bootstrap:dev-users
 Run it against the Docker dev stack:
 
 ```bash
-docker compose -f ../docker-compose.yml -f ../docker-compose.dev.yml exec strapi npm run bootstrap:dev-users
+HOST_UID=$(id -u) HOST_GID=$(id -g) docker compose -f ../docker-compose.yml -f ../docker-compose.dev.yml exec strapi npm run bootstrap:dev-users
 ```
+
+When running the Docker-based CMS on Linux or WSL, keep using `HOST_UID` and
+`HOST_GID` with compose commands so generated files in `cms/` stay owned by
+your host user instead of `root`.
 
 Default credentials in Docker dev mode:
 
