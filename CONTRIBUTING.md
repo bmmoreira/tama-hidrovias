@@ -9,7 +9,6 @@ web/         Frontend application
 cms/         CMS and API
 pipeline/    Data pipeline and tests
 pgadmin/     pgAdmin bootstrap configuration
-tileserver/  Raster tile service
 data/        Local raw and processed data
 docs/        Sphinx documentation
 ```

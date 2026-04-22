@@ -204,3 +204,6 @@ cms/exports/
 assets/tiff/
 cms/public/uploads/
 web/.env.example
+
+# TiTiler artifacts
+assets/tiles/

@@ -9,7 +9,7 @@ The platform is composed of five primary services:
 - ``pipeline`` contains collectors, processing steps, evaluation code,
   and automation for the hydrology pipeline.
 - ``pgadmin`` provides a browser-based PostgreSQL administration interface.
-- ``tileserver`` serves generated GeoTIFF assets as map tiles.
+- ``titiler`` serves generated GeoTIFF assets as dynamic map tiles.
 
 TypeScript frontend API docs
 ----------------------------
@@ -92,6 +92,39 @@ issuing per-feature mutations. The dashboard reads the current
 ``featureCollection``, lets the user add, edit, or remove GeoJSON Point
 features in memory, and then sends the updated collection back through the
 internal ``PUT /api/map-feature-collections`` route.
+
+Current Forecast Overlay Endpoints
+----------------------------------
+
+The public ``/map`` route now exposes forecast GeoTIFF overlays through a
+small internal Next.js API surface backed by TiTiler.
+
+Runtime shape:
+
+- Next.js list route: ``GET /api/forecast-tiles``
+- Next.js metadata route: ``GET /api/forecast-tiles/:slug/metadata``
+- Next.js tile route: ``GET /api/forecast-tiles/:slug/:z/:x/:y.png``
+- TiTiler upstream routes: ``/cog/info``, ``/cog/statistics`` and
+    ``/cog/tiles/WebMercatorQuad/...``
+- Web page route: ``/map``
+
+This route family reads forecast GeoTIFF files from the shared
+``assets/tiles`` volume, groups them by forecast area, and returns frame
+metadata used by the public forecast drawer. The tile endpoint keeps the
+browser on same-origin ``/api`` URLs while TiTiler performs the raster
+rendering and color scaling.
+
+The current payload contract is split into three concerns:
+
+- ``/api/forecast-tiles`` lists available forecast groups and frame URL
+    templates for the drawer UI
+- ``/api/forecast-tiles/:slug/metadata`` exposes bounds and value statistics
+    so the UI can propose a useful render range
+- ``/api/forecast-tiles/:slug/:z/:x/:y.png`` proxies the rendered PNG tile and
+    returns ``204`` for out-of-bounds requests instead of surfacing noisy tile
+    errors in the browser console
+
+This flow is documented in more detail in ``public-map.rst``.
 
 Python package layout
 ---------------------

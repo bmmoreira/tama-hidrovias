@@ -38,7 +38,10 @@ export type ClimateLayer = {
     model?: string;
     period_start?: string;
     period_end?: string;
-    geotiff?: { data?: { attributes: { name: string } } };
+    colormap?: string;
+    min_value?: number;
+    max_value?: number;
+    geotiff?: { data?: { attributes: { name: string; url?: string } } };
     [key: string]: unknown;
   };
 };
@@ -427,6 +430,7 @@ function buildClimateLayersPath() {
   // populate clause is intentionally narrow to keep responses smaller.
   const query = new URLSearchParams();
   query.set('populate[geotiff][fields][0]', 'name');
+  query.set('populate[geotiff][fields][1]', 'url');
   query.set('sort[0]', 'period_start:desc');
   query.set('pagination[pageSize]', '200');
   return `/api/climate-layers?${query.toString()}`;

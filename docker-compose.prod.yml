@@ -4,7 +4,7 @@ version: "3.9"
 #
 # This file is intentionally minimal and is meant as a starting point. It
 # assumes that the base docker-compose.yml defines the core services
-# (postgres, strapi, web, tileserver, nginx). You can extend or override those
+# (postgres, strapi, web, titiler, nginx). You can extend or override those
 # definitions here for a production deployment.
 
 services:
@@ -12,10 +12,8 @@ services:
     environment:
       # Public URL of the app in production (used by NextAuth, links, etc.)
       NEXTAUTH_URL: https://app.example.com
-      # Browser-facing URLs for Strapi and the TileServer, matching the
-      # gateway hostnames.
+      # Browser-facing URL for Strapi, matching the gateway hostname.
       NEXT_PUBLIC_STRAPI_URL: https://db.example.com
-      NEXT_PUBLIC_TILESERVER_URL: https://tiles.example.com
 
   nginx:
     # In production you will typically want to expose only HTTPS here, either
@@ -37,4 +35,4 @@ services:
       APP_PUBLIC_URL: https://app.example.com
       STRAPI_PUBLIC_URL: https://db.example.com
       ASSETS_PUBLIC_URL: https://assets.example.com
-      TILES_PUBLIC_URL: https://tiles.example.com
+      TITILER_PUBLIC_URL: https://tiles.example.com

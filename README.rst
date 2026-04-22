@@ -11,7 +11,7 @@ regiões hidrográficas específicas e serve camadas raster interativas para
 visualização em mapas hidrográficos brasileiros. A plataforma combina dados de
 reanálise climática, processamento geoespacial em Python, uma API headless
 Strapi, visualização interativa com Next.js e serviço de camadas raster via
-TileServer-GL.
+TiTiler.
 
 .. image:: assets/logo5.png
    :alt: Logo da plataforma Tama Hidrovias
@@ -82,7 +82,7 @@ Arquitetura
                 │                   │
                 ▼                   ▼
     ┌───────────────────┐  ┌────────────────────┐
-    │   Strapi (API)    │  │  TileServer-GL     │
+    │   Strapi (API)    │  │      TiTiler       │
     │   porta 1337      │  │  porta 8080        │
     │   PostgreSQL 15   │  │  GeoTIFF → XYZ/PNG │
     └─────────┬─────────┘  └────────┬───────────┘
@@ -108,7 +108,6 @@ executáveis vivem nos diretórios de serviço:
     ├── cms/           # CMS e API
     ├── pipeline/      # pipeline de dados e testes
     ├── pgadmin/       # bootstrap config do pgAdmin
-    ├── tileserver/    # serviço de tiles raster
     ├── data/          # dados locais brutos e processados
     ├── docs/          # documentação Sphinx
     ├── assets/        # branding compartilhada (fonte canônica)
@@ -133,7 +132,7 @@ Este fluxo corresponde ao ``Quick Start`` descrito na documentação técnica.
     # Frontend:    http://localhost:3000
     # API Strapi:  http://localhost:1337/admin
     # pgAdmin:     http://localhost:5050
-    # TileServer:  http://localhost:8080
+    # TiTiler:     http://localhost:8080
 
 Serviços
 --------
@@ -147,7 +146,7 @@ Serviços
 +----------------+-------+---------------------------------------------------+
 | ``pgadmin``    | 5050  | Interface web gráfica para administrar o PostgreSQL|
 +----------------+-------+---------------------------------------------------+
-| ``tileserver`` | 8080  | Servição de camadas raster GeoTIFF via TileJSON   |
+| ``titiler``    | 8080  | Serviço dinâmico de camadas raster GeoTIFF        |
 +----------------+-------+---------------------------------------------------+
 | ``postgres``   | 5432  | Banco de dados PostgreSQL 15                      |
 +----------------+-------+---------------------------------------------------+
@@ -164,7 +163,7 @@ O worker Python executa as seguintes etapas automaticamente:
    ``BASIN_SHAPEFILE``
 3. **Conversão** NetCDF → GeoTIFF com reprojeção para EPSG:4326
 4. **Publicação** dos metadados e caminhos de arquivo na API Strapi
-5. Os GeoTIFFs ficam disponíveis em ``./data/geotiffs/`` para o TileServer-GL
+5. Os GeoTIFFs ficam disponíveis para renderização dinâmica via TiTiler
 
 Para rodar o pipeline manualmente:
 
@@ -198,7 +197,7 @@ Docker, use o arquivo base com o override ``docker-compose.dev.yml``:
 
   HOST_UID=$(id -u) HOST_GID=$(id -g) \
   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build \
-    postgres pgadmin tileserver strapi web
+    postgres pgadmin titiler strapi web
 
 Em Linux e WSL, defina ``HOST_UID`` e ``HOST_GID`` como acima para evitar que
 arquivos gerados pelos containers fiquem com proprietário ``root`` no host.
@@ -458,7 +457,7 @@ Estrutura de Dados
 .. code-block:: text
 
     data/
-    ├── geotiffs/          # Rasters processados (montados no TileServer)
+    ├── geotiffs/          # Rasters processados para renderização dinâmica
     ├── shapefiles/        # Shapefile da bacia hidrográfica
     │   └── basin.shp
     ├── raw/               # NetCDF brutos baixados do ERA5
@@ -501,8 +500,8 @@ Copie o arquivo apropriado para ``.env`` e preencha os valores:
      - URL pública do Strapi acessível pelo navegador
    * - ``STRAPI_INTERNAL_URL``
      - URL interna usada pelo servidor Next.js para falar com o Strapi sem expor o JWT ao navegador
-   * - ``NEXT_PUBLIC_TILESERVER_URL``
-     - URL pública do TileServer acessível pelo navegador
+   * - ``TITILER_PUBLIC_URL``
+     - URL pública do TiTiler acessível para diagnóstico e operação
    * - ``FAKE_AUTH``
      - Define ``true`` para liberar o dashboard com sessão falsa em desenvolvimento
    * - ``CDS_API_KEY``

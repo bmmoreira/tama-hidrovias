@@ -28,7 +28,7 @@ base Compose file together with ``docker-compose.dev.yml``:
 .. code-block:: bash
 
    docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build \
-     postgres pgadmin tileserver strapi web
+   postgres pgadmin titiler strapi web
 
 This override switches:
 

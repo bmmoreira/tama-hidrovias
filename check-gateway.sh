@@ -30,7 +30,7 @@ check "Strapi CMS" "http://db.local/admin/"
 # Static assets (repo assets/ mounted into Nginx)
 check "Assets (logo5.png)" "http://assets.local/logo5.png"
 
-# TileServer root UI
-check "TileServer" "http://tiles.local/"
+# TiTiler API root
+check "TiTiler" "http://tiles.local/"
 
 echo "All gateway checks passed."

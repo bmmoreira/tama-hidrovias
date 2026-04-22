@@ -14,13 +14,24 @@ export interface ViewState {
 /**
  * Minimal, Mapbox-gl based map used in dashboard climate layer previews
  * and other light-weight map contexts.
+ *
+ * The optional raster-related props are used by the public forecast drawer and
+ * dashboard climate previews to place a TiTiler-backed overlay above the base
+ * style without introducing a second map abstraction.
  */
 export interface MapboxMapProps {
   initialViewState?: ViewState;
   mapStyle?: MapStylePreference;
   stations?: Station[];
   onStationDoubleClick?: (station: Station) => void;
+  /** URL template for the raster tile source rendered above the basemap. */
   tileLayerUrl?: string;
+  /** Opacity applied to the raster overlay layer. */
+  tileLayerOpacity?: number;
+  /** Optional geographic bounds used when registering the raster source. */
+  tileLayerBounds?: [number, number, number, number];
+  /** Whether the map should fit to the raster bounds when the overlay changes. */
+  fitToTileLayerBounds?: boolean;
   children?: ReactNode;
 }
 
@@ -42,6 +53,9 @@ export default function MapboxMap({
   stations = [],
   onStationDoubleClick,
   tileLayerUrl,
+  tileLayerOpacity = 0.7,
+  tileLayerBounds,
+  fitToTileLayerBounds = false,
   children,
 }: MapboxMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -214,17 +228,38 @@ export default function MapboxMap({
       type: 'raster',
       tiles: [tileLayerUrl],
       tileSize: 256,
+      ...(tileLayerBounds ? { bounds: tileLayerBounds } : {}),
     });
     map.addLayer(
       {
         id: TILE_LAYER_ID,
         type: 'raster',
         source: TILE_SOURCE_ID,
-        paint: { 'raster-opacity': 0.7 },
+        paint: { 'raster-opacity': tileLayerOpacity },
       },
       LAYER_ID, // insert below station circles
     );
-  }, [tileLayerUrl]);
+  }, [tileLayerBounds, tileLayerOpacity, tileLayerUrl]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+
+    if (!map || !tileLayerBounds || !fitToTileLayerBounds) {
+      return;
+    }
+
+    map.fitBounds(
+      [
+        [tileLayerBounds[0], tileLayerBounds[1]],
+        [tileLayerBounds[2], tileLayerBounds[3]],
+      ],
+      {
+        padding: 64,
+        duration: 700,
+        maxZoom: 10,
+      },
+    );
+  }, [fitToTileLayerBounds, tileLayerBounds, tileLayerUrl]);
 
   useEffect(() => {
     if (!mapRef.current) {

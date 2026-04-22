@@ -3,14 +3,14 @@
  *
  * Lets analysts browse available climate GeoTIFF layers from
  * Strapi, inspect metadata and preview them on top of the base map
- * using the tileserver-backed raster overlay.
+ * using the TiTiler-backed raster overlay.
  */
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import useSWR from 'swr';
-import { Layers, Calendar, Database, Map } from 'lucide-react';
+import { Layers, Calendar, Database, Map, Droplets, Palette, SlidersHorizontal } from 'lucide-react';
 import { getClimateLayers } from '@/lib/strapi';
 import type { ClimateLayer } from '@/lib/strapi';
 import { Card } from '@/components/ui/card';
@@ -25,16 +25,60 @@ const MapboxMap = dynamic(() => import('@/components/MapboxMap'), {
   ),
 });
 
-const TILESERVER_URL =
-  process.env.NEXT_PUBLIC_TILESERVER_URL ?? 'http://localhost:8080';
+const COLOR_MAP_OPTIONS = [
+  'viridis',
+  'plasma',
+  'inferno',
+  'magma',
+  'cividis',
+  'turbo',
+  'rainbow',
+  'blues',
+] as const;
 
-/** Build a TileServer URL for the given climate layer GeoTIFF. */
-function layerTileUrl(layer: ClimateLayer): string | undefined {
-  // Derive a TileServer URL from the uploaded geotiff's file name
-  const fileName = layer.attributes.geotiff?.data?.attributes.name;
-  if (!fileName) return undefined;
-  const slug = encodeURIComponent(fileName.replace(/\.tiff?$/i, ''));
-  return `${TILESERVER_URL}/data/${slug}/{z}/{x}/{y}.png`;
+function normalizeColorMap(value?: string) {
+  const normalized = value?.trim().toLowerCase();
+
+  if (!normalized) {
+    return 'viridis';
+  }
+
+  return normalized === 'blues' ? 'blues' : normalized;
+}
+
+function getLayerSource(layer: ClimateLayer): string | undefined {
+  return layer.attributes.geotiff?.data?.attributes.url;
+}
+
+/** Build an internal TiTiler-backed tile URL for the given climate layer. */
+function layerTileUrl(
+  layer: ClimateLayer,
+  options: {
+    colorMap: string;
+    min?: number;
+    max?: number;
+  },
+): string | undefined {
+  const source = getLayerSource(layer);
+  if (!source) return undefined;
+
+  const params = new URLSearchParams({
+    source,
+    colormap: options.colorMap,
+  });
+
+  if (
+    Number.isFinite(options.min) &&
+    Number.isFinite(options.max) &&
+    typeof options.min === 'number' &&
+    typeof options.max === 'number' &&
+    options.max > options.min
+  ) {
+    params.set('min', String(options.min));
+    params.set('max', String(options.max));
+  }
+
+  return `/api/climate-layers/tiles/{z}/{x}/{y}.png?${params.toString()}`;
 }
 
 /** Format ISO date strings into a short, localized label. */
@@ -49,12 +93,51 @@ function formatDate(dateStr?: string): string {
 export default function ClimateLayersPage() {
   const { t } = useTranslation();
   const [selectedLayer, setSelectedLayer] = useState<ClimateLayer | null>(null);
+  const [selectedColorMap, setSelectedColorMap] = useState('viridis');
+  const [opacity, setOpacity] = useState(0.82);
+  const [rangeMin, setRangeMin] = useState<string>('');
+  const [rangeMax, setRangeMax] = useState<string>('');
 
   const { data, isLoading } = useSWR('climate-layers', () =>
     getClimateLayers(),
   );
 
   const layers: ClimateLayer[] = data?.data ?? [];
+  const selectedMinValue = selectedLayer?.attributes.min_value;
+  const selectedMaxValue = selectedLayer?.attributes.max_value;
+
+  useEffect(() => {
+    if (!selectedLayer) {
+      return;
+    }
+
+    setSelectedColorMap(normalizeColorMap(selectedLayer.attributes.colormap));
+    setRangeMin(
+      typeof selectedLayer.attributes.min_value === 'number'
+        ? String(selectedLayer.attributes.min_value)
+        : '',
+    );
+    setRangeMax(
+      typeof selectedLayer.attributes.max_value === 'number'
+        ? String(selectedLayer.attributes.max_value)
+        : '',
+    );
+  }, [selectedLayer]);
+
+  const tileUrl = useMemo(() => {
+    if (!selectedLayer) {
+      return undefined;
+    }
+
+    const parsedMin = rangeMin === '' ? undefined : Number(rangeMin);
+    const parsedMax = rangeMax === '' ? undefined : Number(rangeMax);
+
+    return layerTileUrl(selectedLayer, {
+      colorMap: selectedColorMap,
+      min: Number.isFinite(parsedMin) ? parsedMin : undefined,
+      max: Number.isFinite(parsedMax) ? parsedMax : undefined,
+    });
+  }, [rangeMax, rangeMin, selectedColorMap, selectedLayer]);
 
   return (
     <div className="space-y-5">
@@ -130,12 +213,98 @@ export default function ClimateLayersPage() {
         </div>
 
         {/* Preview map */}
-        <Card className="sticky top-4 h-80 overflow-hidden bg-gray-100 lg:h-[500px] dark:border-slate-800 dark:bg-slate-900">
+        <div className="space-y-4">
+          <Card className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-200">
+                  <Palette className="h-4 w-4" />
+                  {t('climate.palette')}
+                </label>
+                <select
+                  value={selectedColorMap}
+                  onChange={(event) => setSelectedColorMap(event.target.value)}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  disabled={!selectedLayer}
+                >
+                  {COLOR_MAP_OPTIONS.map((colorMap) => (
+                    <option key={colorMap} value={colorMap}>
+                      {colorMap}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-200">
+                  <Droplets className="h-4 w-4" />
+                  {t('climate.opacity')}: {Math.round(opacity * 100)}%
+                </label>
+                <input
+                  type="range"
+                  min="0.15"
+                  max="1"
+                  step="0.05"
+                  value={opacity}
+                  onChange={(event) => setOpacity(Number(event.target.value))}
+                  disabled={!selectedLayer}
+                  className="w-full accent-blue-600"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-200">
+                  <SlidersHorizontal className="h-4 w-4" />
+                  {t('climate.minValue')}
+                </label>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  value={rangeMin}
+                  onChange={(event) => setRangeMin(event.target.value)}
+                  placeholder={
+                    typeof selectedMinValue === 'number'
+                      ? String(selectedMinValue)
+                      : t('climate.auto')
+                  }
+                  disabled={!selectedLayer}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-200">
+                  <SlidersHorizontal className="h-4 w-4" />
+                  {t('climate.maxValue')}
+                </label>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  value={rangeMax}
+                  onChange={(event) => setRangeMax(event.target.value)}
+                  placeholder={
+                    typeof selectedMaxValue === 'number'
+                      ? String(selectedMaxValue)
+                      : t('climate.auto')
+                  }
+                  disabled={!selectedLayer}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                />
+              </div>
+            </div>
+
+            <p className="mt-3 text-xs text-gray-500 dark:text-slate-400">
+              {t('climate.renderHint')}
+            </p>
+          </Card>
+
+          <Card className="sticky top-4 h-80 overflow-hidden bg-gray-100 lg:h-[500px] dark:border-slate-800 dark:bg-slate-900">
           {selectedLayer ? (
             <MapboxMap
               initialViewState={{ longitude: -52, latitude: -15, zoom: 4 }}
               stations={[]}
-              tileLayerUrl={layerTileUrl(selectedLayer)}
+              tileLayerUrl={tileUrl}
+              tileLayerOpacity={opacity}
             />
           ) : (
             <div className="flex h-full flex-col items-center justify-center gap-2 text-gray-400 dark:text-slate-500">
@@ -150,7 +319,8 @@ export default function ClimateLayersPage() {
               {selectedLayer.attributes.variable}
             </div>
           )}
-        </Card>
+          </Card>
+        </div>
       </div>
     </div>
   );

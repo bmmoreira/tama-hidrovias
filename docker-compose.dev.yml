@@ -17,7 +17,7 @@ services:
 
   strapi:
     build: ./cms
-    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    user: "${HOST_UID:?Set HOST_UID to your host uid}:${HOST_GID:?Set HOST_GID to your host gid}"
     command: npm run develop
     environment:
       HOME: /tmp
@@ -63,7 +63,6 @@ services:
       PORT: 3000
       NEXTAUTH_URL: http://app.local
       NEXT_PUBLIC_STRAPI_URL: http://db.local
-      NEXT_PUBLIC_TILESERVER_URL: http://tiles.local
       STRAPI_INTERNAL_URL: http://strapi:1337
       WATCHPACK_POLLING: "true"
       CHOKIDAR_USEPOLLING: "true"
@@ -71,6 +70,7 @@ services:
       - ./web:/app
       - /app/node_modules
       - /app/.next
+      - ./assets/tiles:/forecast-tiles:ro
     depends_on:
       - strapi
     networks:
@@ -78,12 +78,11 @@ services:
     stdin_open: true
     tty: true
 
-  tileserver:
-    build: ./tileserver
-    ports:
-      - "8080:8080"
+  titiler:
+    image: ghcr.io/developmentseed/titiler:latest
+    command: uvicorn titiler.application.main:app --host 0.0.0.0 --port 8080 --workers 1
     volumes:
-      - ./data/geotiffs:/data/geotiffs:ro
+      - ./assets/tiles:/data/geotiffs:ro
     networks:
       - tama-network
 
@@ -92,7 +91,7 @@ services:
     depends_on:
       - web
       - strapi
-      - tileserver
+      - titiler
     ports:
       - "8000:80"
     volumes:

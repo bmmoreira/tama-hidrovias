@@ -45,5 +45,9 @@ Documentation
 
 - Added project documentation for role levels, dashboard customization, and
   Strapi-specific authorization behavior.
+- Added Sphinx documentation for the public map forecast overlay flow and the
+  TiTiler-backed forecast API routes.
+- Expanded TypeDoc-facing comments for the public forecast drawer, forecast
+  tile discovery helpers, and raster overlay map props.
 - Added frontend and CMS project notes describing the custom auth and role
   model.
