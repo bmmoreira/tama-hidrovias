@@ -8,6 +8,7 @@ import { getAppSettings, getStations, getUserPreferences } from '@/lib/strapi';
 import type { MapStylePreference } from '@/lib/strapi';
 import StationExplorerOverlay from '@/components/maps/StationExplorerOverlay';
 import ForecastDrawer from '@/components/maps/ForecastDrawer';
+import ForecastLegend from '@/components/maps/ForecastLegend';
 import type { ForecastOverlayConfig } from '@/components/maps/ForecastDrawer';
 import HomeButton from '@/components/ui/HomeButton';
 import DashboardButton from '@/components/ui/DashboardButton';
@@ -50,6 +51,7 @@ export default function MapPage() {
     zoom: 4,
   });
   const [forecastOverlay, setForecastOverlay] = useState<ForecastOverlayConfig>();
+  const [forecastDrawerOpen, setForecastDrawerOpen] = useState(false);
   const [mapStyle, setMapStyle] = useState<MapStylePreference>('outdoors');
   const stationExplorer = useStationExplorer({
     onStationFocus: (station) => {
@@ -93,7 +95,14 @@ export default function MapPage() {
             fitToTileLayerBounds={forecastOverlay?.fitToBounds}
           >
             <StationExplorerOverlay controller={stationExplorer} />
-            <ForecastDrawer onTileLayerChange={setForecastOverlay} />
+            <ForecastLegend
+              overlay={forecastOverlay}
+              drawerOpen={forecastDrawerOpen}
+            />
+            <ForecastDrawer
+              onTileLayerChange={setForecastOverlay}
+              onOpenChange={setForecastDrawerOpen}
+            />
             {status === 'authenticated' ? <DashboardButton /> : <HomeButton />}
           </MapboxMap>
         ) : (

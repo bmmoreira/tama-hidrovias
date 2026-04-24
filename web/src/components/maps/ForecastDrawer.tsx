@@ -46,11 +46,13 @@ export type ForecastOverlayConfig = {
   tileLayerBounds?: [number, number, number, number];
   tileLayerOpacity?: number;
   fitToBounds?: boolean;
+  legendColorMap?: ForecastColorMap;
 };
 
 /** Props for the public map forecast drawer. */
 export interface ForecastDrawerProps {
   onTileLayerChange: (overlay?: ForecastOverlayConfig) => void;
+  onOpenChange?: (isOpen: boolean) => void;
 }
 
 const fetcher = async (url: string) => {
@@ -83,6 +85,28 @@ const COLOR_MAP_OPTIONS = [
   'rainbow',
   'blues',
 ] as const;
+
+type ForecastColorMap = (typeof COLOR_MAP_OPTIONS)[number];
+
+function isFiniteNumber(value: number | null | undefined): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function mapPercentToValue(percent: number, min: number, max: number) {
+  return min + ((max - min) * percent) / 100;
+}
+
+function mapValueToPercent(value: number, min: number, max: number) {
+  if (max <= min) {
+    return 0;
+  }
+
+  return Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100));
+}
+
+function formatSliderValue(value: number | undefined) {
+  return typeof value === 'number' ? value.toFixed(2) : 'Auto';
+}
 
 function buildForecastTileUrl(
   frame: ForecastFrame,
@@ -122,6 +146,7 @@ function formatAreaLabel(area: string) {
  */
 export default function ForecastDrawer({
   onTileLayerChange,
+  onOpenChange,
 }: ForecastDrawerProps) {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
@@ -129,10 +154,10 @@ export default function ForecastDrawer({
   const [selectedFrameIndex, setSelectedFrameIndex] = useState(0);
   const [isEnabled, setIsEnabled] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [selectedColorMap, setSelectedColorMap] = useState('viridis');
+  const [selectedColorMap, setSelectedColorMap] = useState<ForecastColorMap>('viridis');
   const [opacity, setOpacity] = useState(0.82);
-  const [rangeMin, setRangeMin] = useState('');
-  const [rangeMax, setRangeMax] = useState('');
+  const [rangeMinPercent, setRangeMinPercent] = useState(0);
+  const [rangeMaxPercent, setRangeMaxPercent] = useState(100);
   const [hasCustomRange, setHasCustomRange] = useState(false);
 
   const { data, error, isLoading } = useSWR('/api/forecast-tiles', fetcher, {
@@ -156,6 +181,22 @@ export default function ForecastDrawer({
       revalidateOnFocus: false,
     },
   );
+  const dataRangeMin = frameMetadata?.data.min;
+  const dataRangeMax = frameMetadata?.data.max;
+  const hasDataRange =
+    isFiniteNumber(dataRangeMin) &&
+    isFiniteNumber(dataRangeMax) &&
+    dataRangeMax > dataRangeMin;
+  const resolvedMinValue = hasDataRange
+    ? mapPercentToValue(rangeMinPercent, dataRangeMin, dataRangeMax)
+    : undefined;
+  const resolvedMaxValue = hasDataRange
+    ? mapPercentToValue(rangeMaxPercent, dataRangeMin, dataRangeMax)
+    : undefined;
+
+  useEffect(() => {
+    onOpenChange?.(isOpen);
+  }, [isOpen, onOpenChange]);
 
   useEffect(() => {
     if (groups.length === 0) {
@@ -163,6 +204,8 @@ export default function ForecastDrawer({
       setSelectedFrameIndex(0);
       setIsEnabled(false);
       setIsPlaying(false);
+      setRangeMinPercent(0);
+      setRangeMaxPercent(100);
       return;
     }
 
@@ -195,8 +238,8 @@ export default function ForecastDrawer({
     }
 
     const metadata = frameMetadata?.data;
-    const parsedMin = rangeMin === '' ? undefined : Number(rangeMin);
-    const parsedMax = rangeMax === '' ? undefined : Number(rangeMax);
+    const parsedMin = hasDataRange ? resolvedMinValue : undefined;
+    const parsedMax = hasDataRange ? resolvedMaxValue : undefined;
 
     onTileLayerChange({
       tileLayerUrl: buildForecastTileUrl(activeFrame, {
@@ -207,6 +250,7 @@ export default function ForecastDrawer({
       tileLayerBounds: metadata?.bounds ?? undefined,
       tileLayerOpacity: opacity,
       fitToBounds: !isPlaying,
+      legendColorMap: selectedColorMap,
     });
   }, [
     activeFrame,
@@ -216,9 +260,12 @@ export default function ForecastDrawer({
     isPlaying,
     onTileLayerChange,
     opacity,
-    rangeMax,
-    rangeMin,
+    rangeMaxPercent,
+    rangeMinPercent,
+    resolvedMaxValue,
+    resolvedMinValue,
     selectedColorMap,
+    hasDataRange,
   ]);
 
   useEffect(() => {
@@ -226,15 +273,26 @@ export default function ForecastDrawer({
       return;
     }
 
-    setRangeMin(
-      frameMetadata.data.recommendedMin == null
-        ? ''
-        : String(frameMetadata.data.recommendedMin),
+    if (
+      !isFiniteNumber(frameMetadata.data.min) ||
+      !isFiniteNumber(frameMetadata.data.max) ||
+      frameMetadata.data.max <= frameMetadata.data.min
+    ) {
+      setRangeMinPercent(0);
+      setRangeMaxPercent(100);
+      return;
+    }
+
+    const fallbackMin = frameMetadata.data.min;
+    const fallbackMax = frameMetadata.data.max;
+    const recommendedMin = frameMetadata.data.recommendedMin ?? fallbackMin;
+    const recommendedMax = frameMetadata.data.recommendedMax ?? fallbackMax;
+
+    setRangeMinPercent(
+      mapValueToPercent(recommendedMin, fallbackMin, fallbackMax),
     );
-    setRangeMax(
-      frameMetadata.data.recommendedMax == null
-        ? ''
-        : String(frameMetadata.data.recommendedMax),
+    setRangeMaxPercent(
+      mapValueToPercent(recommendedMax, fallbackMin, fallbackMax),
     );
   }, [frameMetadata, hasCustomRange]);
 
@@ -258,8 +316,8 @@ export default function ForecastDrawer({
     setIsEnabled(true);
     setIsPlaying(false);
     setHasCustomRange(false);
-    setRangeMin('');
-    setRangeMax('');
+    setRangeMinPercent(0);
+    setRangeMaxPercent(100);
   };
 
   const selectFrame = (frameIndex: number) => {
@@ -267,8 +325,8 @@ export default function ForecastDrawer({
     setIsEnabled(true);
     setIsPlaying(false);
     setHasCustomRange(false);
-    setRangeMin('');
-    setRangeMax('');
+    setRangeMinPercent(0);
+    setRangeMaxPercent(100);
   };
 
   const clearOverlay = () => {
@@ -276,8 +334,8 @@ export default function ForecastDrawer({
     setIsPlaying(false);
     setSelectedFrameIndex(0);
     setHasCustomRange(false);
-    setRangeMin('');
-    setRangeMax('');
+    setRangeMinPercent(0);
+    setRangeMaxPercent(100);
   };
 
   return (
@@ -392,7 +450,9 @@ export default function ForecastDrawer({
                 </label>
                 <select
                   value={selectedColorMap}
-                  onChange={(event) => setSelectedColorMap(event.target.value)}
+                  onChange={(event) =>
+                    setSelectedColorMap(event.target.value as ForecastColorMap)
+                  }
                   className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
                 >
                   {COLOR_MAP_OPTIONS.map((colorMap) => (
@@ -422,36 +482,42 @@ export default function ForecastDrawer({
               <div className="space-y-2">
                 <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
                   <SlidersHorizontal className="h-4 w-4" />
-                  {t('forecastDrawer.minValue')}
+                  {t('forecastDrawer.minValue')}: {formatSliderValue(resolvedMinValue)}
                 </label>
                 <input
-                  type="number"
-                  inputMode="decimal"
-                  value={rangeMin}
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={rangeMinPercent}
                   onChange={(event) => {
                     setHasCustomRange(true);
-                    setRangeMin(event.target.value);
+                    setRangeMinPercent(
+                      Math.min(Number(event.target.value), rangeMaxPercent),
+                    );
                   }}
-                  placeholder={t('forecastDrawer.auto')}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
+                  className="w-full accent-sky-600"
                 />
               </div>
 
               <div className="space-y-2">
                 <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
                   <SlidersHorizontal className="h-4 w-4" />
-                  {t('forecastDrawer.maxValue')}
+                  {t('forecastDrawer.maxValue')}: {formatSliderValue(resolvedMaxValue)}
                 </label>
                 <input
-                  type="number"
-                  inputMode="decimal"
-                  value={rangeMax}
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={rangeMaxPercent}
                   onChange={(event) => {
                     setHasCustomRange(true);
-                    setRangeMax(event.target.value);
+                    setRangeMaxPercent(
+                      Math.max(Number(event.target.value), rangeMinPercent),
+                    );
                   }}
-                  placeholder={t('forecastDrawer.auto')}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
+                  className="w-full accent-sky-600"
                 />
               </div>
             </div>
