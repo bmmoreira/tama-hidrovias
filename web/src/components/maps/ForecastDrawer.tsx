@@ -1,10 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import useSWR from 'swr';
 import clsx from 'clsx';
-import { CloudRain, Droplets, Loader2, Palette, Pause, Play, SlidersHorizontal, X } from 'lucide-react';
+import { CloudRain, Loader2, Pause, Play, X } from 'lucide-react';
+import { DEFAULT_FORECAST_LAYER_SETTINGS, type AppSettings } from '@/lib/strapi';
+import { isAnalystRole } from '@/lib/roles';
 import { useTranslation } from '@/lib/use-app-translation';
+import ForecastLayerControls from './ForecastLayerControls';
 
 type ForecastFrame = {
   area: string;
@@ -53,6 +56,8 @@ export type ForecastOverlayConfig = {
 export interface ForecastDrawerProps {
   onTileLayerChange: (overlay?: ForecastOverlayConfig) => void;
   onOpenChange?: (isOpen: boolean) => void;
+  appSettings?: AppSettings;
+  userRole?: string;
 }
 
 const fetcher = async (url: string) => {
@@ -75,7 +80,8 @@ const fetchForecastMetadata = async (url: string) => {
   return (await response.json()) as ForecastFrameMetadataResponse;
 };
 
-const COLOR_MAP_OPTIONS = [
+/** Colormap options currently supported by the public forecast overlay UI. */
+export const COLOR_MAP_OPTIONS = [
   'viridis',
   'plasma',
   'inferno',
@@ -86,7 +92,8 @@ const COLOR_MAP_OPTIONS = [
   'blues',
 ] as const;
 
-type ForecastColorMap = (typeof COLOR_MAP_OPTIONS)[number];
+/** Supported TiTiler colormap names exposed by the public forecast UI. */
+export type ForecastColorMap = (typeof COLOR_MAP_OPTIONS)[number];
 
 function isFiniteNumber(value: number | null | undefined): value is number {
   return typeof value === 'number' && Number.isFinite(value);
@@ -104,8 +111,8 @@ function mapValueToPercent(value: number, min: number, max: number) {
   return Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100));
 }
 
-function formatSliderValue(value: number | undefined) {
-  return typeof value === 'number' ? value.toFixed(2) : 'Auto';
+function clampPercent(value: number) {
+  return Math.min(100, Math.max(0, value));
 }
 
 function buildForecastTileUrl(
@@ -140,6 +147,44 @@ function formatAreaLabel(area: string) {
     .join(' ');
 }
 
+  /** Compare raster bounds so identical overlay configs are not re-emitted. */
+function areBoundsEqual(
+  left?: [number, number, number, number],
+  right?: [number, number, number, number],
+) {
+  if (!left && !right) {
+    return true;
+  }
+
+  if (!left || !right) {
+    return false;
+  }
+
+  return left.every((value, index) => value === right[index]);
+}
+
+/** Skip parent updates when the effective overlay config did not change. */
+function areOverlayConfigsEqual(
+  left?: ForecastOverlayConfig,
+  right?: ForecastOverlayConfig,
+) {
+  if (!left && !right) {
+    return true;
+  }
+
+  if (!left || !right) {
+    return false;
+  }
+
+  return (
+    left.tileLayerUrl === right.tileLayerUrl &&
+    left.tileLayerOpacity === right.tileLayerOpacity &&
+    left.fitToBounds === right.fitToBounds &&
+    left.legendColorMap === right.legendColorMap &&
+    areBoundsEqual(left.tileLayerBounds, right.tileLayerBounds)
+  );
+}
+
 /**
  * Drawer UI used on the public ``/map`` page to browse and animate forecast
  * GeoTIFF overlays served through the internal Next.js forecast routes.
@@ -147,6 +192,8 @@ function formatAreaLabel(area: string) {
 export default function ForecastDrawer({
   onTileLayerChange,
   onOpenChange,
+  appSettings,
+  userRole,
 }: ForecastDrawerProps) {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
@@ -154,11 +201,17 @@ export default function ForecastDrawer({
   const [selectedFrameIndex, setSelectedFrameIndex] = useState(0);
   const [isEnabled, setIsEnabled] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [selectedColorMap, setSelectedColorMap] = useState<ForecastColorMap>('viridis');
+  const [selectedColorMap, setSelectedColorMap] = useState<ForecastColorMap>('rainbow');
   const [opacity, setOpacity] = useState(0.82);
   const [rangeMinPercent, setRangeMinPercent] = useState(0);
   const [rangeMaxPercent, setRangeMaxPercent] = useState(100);
   const [hasCustomRange, setHasCustomRange] = useState(false);
+  // Prevent the parent map from rebuilding the raster source for no-op updates.
+  const lastOverlayRef = useRef<ForecastOverlayConfig>();
+
+  const canCustomizeForecastLayer = isAnalystRole(userRole);
+  const forecastDefaults = appSettings?.forecastLayer;
+  const animationIntervalMs = forecastDefaults?.animationIntervalMs ?? DEFAULT_FORECAST_LAYER_SETTINGS.animationIntervalMs;
 
   const { data, error, isLoading } = useSWR('/api/forecast-tiles', fetcher, {
     revalidateOnFocus: false,
@@ -195,6 +248,19 @@ export default function ForecastDrawer({
     : undefined;
 
   useEffect(() => {
+    if (!forecastDefaults) {
+      return;
+    }
+
+    if (!COLOR_MAP_OPTIONS.includes(forecastDefaults.colorMap as ForecastColorMap)) {
+      return;
+    }
+
+    setSelectedColorMap(forecastDefaults.colorMap as ForecastColorMap);
+    setOpacity(forecastDefaults.opacity);
+  }, [forecastDefaults]);
+
+  useEffect(() => {
     onOpenChange?.(isOpen);
   }, [isOpen, onOpenChange]);
 
@@ -206,6 +272,7 @@ export default function ForecastDrawer({
       setIsPlaying(false);
       setRangeMinPercent(0);
       setRangeMaxPercent(100);
+      setHasCustomRange(false);
       return;
     }
 
@@ -233,7 +300,10 @@ export default function ForecastDrawer({
 
   useEffect(() => {
     if (!activeFrame || !isEnabled) {
-      onTileLayerChange(undefined);
+      if (lastOverlayRef.current) {
+        lastOverlayRef.current = undefined;
+        onTileLayerChange(undefined);
+      }
       return;
     }
 
@@ -241,7 +311,7 @@ export default function ForecastDrawer({
     const parsedMin = hasDataRange ? resolvedMinValue : undefined;
     const parsedMax = hasDataRange ? resolvedMaxValue : undefined;
 
-    onTileLayerChange({
+    const nextOverlay: ForecastOverlayConfig = {
       tileLayerUrl: buildForecastTileUrl(activeFrame, {
         colorMap: selectedColorMap,
         min: Number.isFinite(parsedMin) ? parsedMin : undefined,
@@ -251,7 +321,15 @@ export default function ForecastDrawer({
       tileLayerOpacity: opacity,
       fitToBounds: !isPlaying,
       legendColorMap: selectedColorMap,
-    });
+    };
+
+    if (areOverlayConfigsEqual(lastOverlayRef.current, nextOverlay)) {
+      return;
+    }
+
+    lastOverlayRef.current = nextOverlay;
+
+    onTileLayerChange(nextOverlay);
   }, [
     activeFrame,
     frameMetadata,
@@ -269,7 +347,7 @@ export default function ForecastDrawer({
   ]);
 
   useEffect(() => {
-    if (!frameMetadata?.data || hasCustomRange) {
+    if (!frameMetadata?.data || (hasCustomRange && canCustomizeForecastLayer)) {
       return;
     }
 
@@ -285,16 +363,25 @@ export default function ForecastDrawer({
 
     const fallbackMin = frameMetadata.data.min;
     const fallbackMax = frameMetadata.data.max;
-    const recommendedMin = frameMetadata.data.recommendedMin ?? fallbackMin;
-    const recommendedMax = frameMetadata.data.recommendedMax ?? fallbackMax;
+    const defaultMin = forecastDefaults?.minValue;
+    const defaultMax = forecastDefaults?.maxValue;
+    const recommendedMin =
+      typeof defaultMin === 'number'
+        ? Math.min(Math.max(defaultMin, fallbackMin), fallbackMax)
+        : frameMetadata.data.recommendedMin ?? fallbackMin;
+    const recommendedMax =
+      typeof defaultMax === 'number'
+        ? Math.min(Math.max(defaultMax, fallbackMin), fallbackMax)
+        : frameMetadata.data.recommendedMax ?? fallbackMax;
 
     setRangeMinPercent(
-      mapValueToPercent(recommendedMin, fallbackMin, fallbackMax),
+      clampPercent(mapValueToPercent(recommendedMin, fallbackMin, fallbackMax)),
     );
     setRangeMaxPercent(
-      mapValueToPercent(recommendedMax, fallbackMin, fallbackMax),
+      clampPercent(mapValueToPercent(recommendedMax, fallbackMin, fallbackMax)),
     );
-  }, [frameMetadata, hasCustomRange]);
+    setHasCustomRange(false);
+  }, [canCustomizeForecastLayer, forecastDefaults, frameMetadata, hasCustomRange]);
 
   useEffect(() => {
     if (!isPlaying || frames.length < 2) {
@@ -303,10 +390,10 @@ export default function ForecastDrawer({
 
     const timer = window.setInterval(() => {
       setSelectedFrameIndex((currentIndex) => (currentIndex + 1) % frames.length);
-    }, 1200);
+    }, animationIntervalMs);
 
     return () => window.clearInterval(timer);
-  }, [frames.length, isPlaying]);
+  }, [animationIntervalMs, frames.length, isPlaying]);
 
   const toggleDrawer = () => setIsOpen((currentValue) => !currentValue);
 
@@ -436,92 +523,37 @@ export default function ForecastDrawer({
                 {t('forecastDrawer.clear')}
               </button>
             </div>
-            <p className="mt-3 text-xs text-slate-500">
-              {t('forecastDrawer.renderHint')}
-            </p>
           </section>
 
-          <section className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                  <Palette className="h-4 w-4" />
-                  {t('forecastDrawer.palette')}
-                </label>
-                <select
-                  value={selectedColorMap}
-                  onChange={(event) =>
-                    setSelectedColorMap(event.target.value as ForecastColorMap)
-                  }
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
-                >
-                  {COLOR_MAP_OPTIONS.map((colorMap) => (
-                    <option key={colorMap} value={colorMap}>
-                      {colorMap}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                  <Droplets className="h-4 w-4" />
-                  {t('forecastDrawer.opacity')}: {Math.round(opacity * 100)}%
-                </label>
-                <input
-                  type="range"
-                  min="0.15"
-                  max="1"
-                  step="0.05"
-                  value={opacity}
-                  onChange={(event) => setOpacity(Number(event.target.value))}
-                  className="w-full accent-sky-600"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                  <SlidersHorizontal className="h-4 w-4" />
-                  {t('forecastDrawer.minValue')}: {formatSliderValue(resolvedMinValue)}
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  step="1"
-                  value={rangeMinPercent}
-                  onChange={(event) => {
-                    setHasCustomRange(true);
-                    setRangeMinPercent(
-                      Math.min(Number(event.target.value), rangeMaxPercent),
-                    );
-                  }}
-                  className="w-full accent-sky-600"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                  <SlidersHorizontal className="h-4 w-4" />
-                  {t('forecastDrawer.maxValue')}: {formatSliderValue(resolvedMaxValue)}
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  step="1"
-                  value={rangeMaxPercent}
-                  onChange={(event) => {
-                    setHasCustomRange(true);
-                    setRangeMaxPercent(
-                      Math.max(Number(event.target.value), rangeMinPercent),
-                    );
-                  }}
-                  className="w-full accent-sky-600"
-                />
-              </div>
-            </div>
-          </section>
+          {canCustomizeForecastLayer ? (
+            <ForecastLayerControls
+              colorMapOptions={COLOR_MAP_OPTIONS}
+              selectedColorMap={selectedColorMap}
+              opacity={opacity}
+              resolvedMinValue={resolvedMinValue}
+              resolvedMaxValue={resolvedMaxValue}
+              rangeMinPercent={rangeMinPercent}
+              rangeMaxPercent={rangeMaxPercent}
+              onColorMapChange={(colorMap) =>
+                setSelectedColorMap(colorMap as ForecastColorMap)
+              }
+              onOpacityChange={setOpacity}
+              onRangeMinChange={(value) => {
+                setHasCustomRange(true);
+                setRangeMinPercent(Math.min(value, rangeMaxPercent));
+              }}
+              onRangeMaxChange={(value) => {
+                setHasCustomRange(true);
+                setRangeMaxPercent(Math.max(value, rangeMinPercent));
+              }}
+            />
+          ) : (
+            <section className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+              <p className="text-sm text-slate-500">
+                {t('forecastDrawer.adminControlled')}
+              </p>
+            </section>
+          )}
 
           <section>
             <p className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">

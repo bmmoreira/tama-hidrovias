@@ -213,16 +213,30 @@ export default function MapboxMap({
     });
   }, [stations]);
 
-  // Manage raster tile layer
+  // Rebuild the raster source only when the URL template or bounds change.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
 
-    // Remove existing tile layer/source
-    if (map.getLayer(TILE_LAYER_ID)) map.removeLayer(TILE_LAYER_ID);
-    if (map.getSource(TILE_SOURCE_ID)) map.removeSource(TILE_SOURCE_ID);
+    if (!tileLayerUrl) {
+      if (map.getLayer(TILE_LAYER_ID)) {
+        map.removeLayer(TILE_LAYER_ID);
+      }
 
-    if (!tileLayerUrl) return;
+      if (map.getSource(TILE_SOURCE_ID)) {
+        map.removeSource(TILE_SOURCE_ID);
+      }
+
+      return;
+    }
+
+    if (map.getLayer(TILE_LAYER_ID)) {
+      map.removeLayer(TILE_LAYER_ID);
+    }
+
+    if (map.getSource(TILE_SOURCE_ID)) {
+      map.removeSource(TILE_SOURCE_ID);
+    }
 
     map.addSource(TILE_SOURCE_ID, {
       type: 'raster',
@@ -237,9 +251,24 @@ export default function MapboxMap({
         source: TILE_SOURCE_ID,
         paint: { 'raster-opacity': tileLayerOpacity },
       },
-      LAYER_ID, // insert below station circles
+      LAYER_ID,
     );
-  }, [tileLayerBounds, tileLayerOpacity, tileLayerUrl]);
+  }, [tileLayerBounds, tileLayerUrl]);
+
+  // Opacity-only changes can be applied in place without re-requesting tiles.
+  useEffect(() => {
+    const map = mapRef.current;
+
+    if (!map || !map.isStyleLoaded() || !map.getLayer(TILE_LAYER_ID)) {
+      return;
+    }
+
+    map.setPaintProperty(
+      TILE_LAYER_ID,
+      'raster-opacity',
+      tileLayerOpacity,
+    );
+  }, [tileLayerOpacity]);
 
   useEffect(() => {
     const map = mapRef.current;

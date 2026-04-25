@@ -3,10 +3,18 @@ import { resolveForecastTileSource } from '@/lib/forecast-tiles';
 
 const TITILER_INTERNAL_URL =
   process.env.TITILER_INTERNAL_URL ?? 'http://titiler:8080';
+const TILE_CACHE_CONTROL = 'public, max-age=300, stale-while-revalidate=86400';
+// Mapbox expects a decodable image response even for out-of-bounds tiles.
+const TRANSPARENT_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4////fwAJ+wP9KobjigAAAABJRU5ErkJggg==',
+  'base64',
+);
 
 /**
  * Proxy raster tile requests from the public map through Next.js so the
- * frontend can stay on internal API routes while TiTiler handles GeoTIFF rendering.
+ * frontend can stay on internal API routes while TiTiler handles GeoTIFF
+ * rendering. Missing tiles are translated to a transparent PNG to avoid image
+ * decode failures in the browser.
  */
 export async function GET(
   request: NextRequest,
@@ -58,10 +66,12 @@ export async function GET(
   );
 
   if (response.status === 404) {
-    return new NextResponse(null, {
-      status: 204,
+    return new NextResponse(TRANSPARENT_PNG, {
+      status: 200,
       headers: {
-        'Cache-Control': 'no-store',
+        'Content-Type': 'image/png',
+        'Content-Length': String(TRANSPARENT_PNG.byteLength),
+        'Cache-Control': TILE_CACHE_CONTROL,
       },
     });
   }
@@ -79,7 +89,7 @@ export async function GET(
     status: response.status,
     headers: {
       'Content-Type': response.headers.get('content-type') ?? 'image/png',
-      'Cache-Control': 'no-store',
+      'Cache-Control': TILE_CACHE_CONTROL,
     },
   });
 }

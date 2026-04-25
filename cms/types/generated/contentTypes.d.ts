@@ -385,6 +385,8 @@ export interface ApiAppSettingAppSetting extends Schema.CollectionType {
       Attribute.Private;
     featureCollectionLayer: Attribute.Component<'app.feature-collection-layer'> &
       Attribute.Required;
+    forecastLayer: Attribute.Component<'app.default-forecast-layer'> &
+      Attribute.Required;
     map: Attribute.Component<'app.default-map'> & Attribute.Required;
     updatedAt: Attribute.DateTime;
     updatedBy: Attribute.Relation<

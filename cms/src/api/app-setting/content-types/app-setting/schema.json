@@ -23,6 +23,12 @@
       "component": "app.default-map",
       "required": true
     },
+    "forecastLayer": {
+      "type": "component",
+      "repeatable": false,
+      "component": "app.default-forecast-layer",
+      "required": true
+    },
     "featureCollectionLayer": {
       "type": "component",
       "repeatable": false,

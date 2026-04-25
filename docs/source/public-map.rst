@@ -129,6 +129,18 @@ The drawer exposes a small set of rendering controls:
 - bounds returned by TiTiler are passed to ``MapboxMap`` for optional
   fit-to-bounds behaviour
 
+Only analysts can see and edit the styling controls in the public drawer. For
+other users, the palette, opacity, min, max, and animation interval come from
+global app settings managed in the dashboard admin page.
+
+To reduce unnecessary rerendering on the public map:
+
+- ``ForecastDrawer`` avoids re-emitting identical overlay configurations
+- ``MapboxMap`` updates raster opacity in place instead of recreating the
+   raster source for opacity-only changes
+- the forecast tile proxy now serves cacheable tile responses for repeated
+   requests using the same tile URL
+
 The metadata route returns:
 
 - ``bounds`` from TiTiler ``/cog/info``
@@ -140,11 +152,14 @@ Operational Notes
 
 - The public map no longer depends on the removed TileServer GL service.
 - The ``tiles.local`` gateway host now points to TiTiler for diagnostics.
-- The Next.js tile proxy returns ``204`` for out-of-bounds tiles so the map can
-  pan outside the raster extent without flooding the browser console with hard
-  errors.
+- The Next.js tile proxy returns a 1x1 transparent PNG for out-of-bounds tiles
+   so Mapbox receives a valid image response instead of an undecodable empty
+   body.
 - If new forecast files are added to ``assets/tiles``, the drawer will pick
-  them up on the next request because the internal routes use ``cache: no-store``.
+   them up on the next request because the list and metadata routes still use
+   ``cache: no-store``.
+- Forecast tile responses are cacheable for a short period, which helps reduce
+   repeated TiTiler work when the same visible tiles are requested again.
 
 TypeScript API Reference
 ------------------------

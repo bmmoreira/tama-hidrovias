@@ -3,6 +3,16 @@
 const APP_SETTING_UID = 'api::app-setting.app-setting';
 const ALLOWED_LANGUAGES = new Set(['pt-BR', 'en', 'es', 'fr']);
 const ALLOWED_MAP_STYLES = new Set(['outdoors', 'streets', 'satellite', 'dark']);
+const ALLOWED_FORECAST_COLOR_MAPS = new Set([
+  'viridis',
+  'plasma',
+  'inferno',
+  'magma',
+  'cividis',
+  'turbo',
+  'rainbow',
+  'blues',
+]);
 const ALLOWED_ADMIN_ROLES = new Set(['admin', 'analyst', 'super-admin']);
 
 const DEFAULT_APP_SETTINGS = {
@@ -14,6 +24,13 @@ const DEFAULT_APP_SETTINGS = {
     defaultZoom: 4,
     centerLatitude: -15,
     centerLongitude: -52,
+  },
+  forecastLayer: {
+    colorMap: 'rainbow',
+    opacity: 0.82,
+    minValue: 9,
+    maxValue: 15,
+    animationIntervalMs: 1200,
   },
   featureCollectionLayer: {
     circleRadius: 6,
@@ -28,6 +45,7 @@ const DEFAULT_APP_SETTINGS = {
 const APP_SETTING_POPULATE = {
   appearance: true,
   map: true,
+  forecastLayer: true,
   featureCollectionLayer: true,
 };
 
@@ -97,6 +115,7 @@ async function getAuthenticatedUserFromRequest(ctx) {
 function normalizePayload(body = {}) {
   const appearance = body.appearance ?? {};
   const map = body.map ?? {};
+  const forecastLayer = body.forecastLayer ?? {};
   const featureCollectionLayer = body.featureCollectionLayer ?? {};
 
   return {
@@ -120,6 +139,35 @@ function normalizePayload(body = {}) {
       centerLongitude: parseFiniteNumber(
         map.centerLongitude,
         DEFAULT_APP_SETTINGS.map.centerLongitude,
+      ),
+    },
+    forecastLayer: {
+      colorMap: ALLOWED_FORECAST_COLOR_MAPS.has(forecastLayer.colorMap)
+        ? forecastLayer.colorMap
+        : DEFAULT_APP_SETTINGS.forecastLayer.colorMap,
+      opacity: clampNumber(
+        parseFiniteNumber(
+          forecastLayer.opacity,
+          DEFAULT_APP_SETTINGS.forecastLayer.opacity,
+        ),
+        0.15,
+        1,
+      ),
+      minValue: parseFiniteNumber(
+        forecastLayer.minValue,
+        DEFAULT_APP_SETTINGS.forecastLayer.minValue,
+      ),
+      maxValue: parseFiniteNumber(
+        forecastLayer.maxValue,
+        DEFAULT_APP_SETTINGS.forecastLayer.maxValue,
+      ),
+      animationIntervalMs: clampNumber(
+        parseFiniteNumber(
+          forecastLayer.animationIntervalMs,
+          DEFAULT_APP_SETTINGS.forecastLayer.animationIntervalMs,
+        ),
+        100,
+        10000,
       ),
     },
     featureCollectionLayer: {
@@ -205,6 +253,27 @@ function serializeAppSetting(appSetting) {
       centerLongitude: Number(
         appSetting.map?.centerLongitude ??
           DEFAULT_APP_SETTINGS.map.centerLongitude,
+      ),
+    },
+    forecastLayer: {
+      colorMap:
+        appSetting.forecastLayer?.colorMap ??
+        DEFAULT_APP_SETTINGS.forecastLayer.colorMap,
+      opacity: Number(
+        appSetting.forecastLayer?.opacity ??
+          DEFAULT_APP_SETTINGS.forecastLayer.opacity,
+      ),
+      minValue: Number(
+        appSetting.forecastLayer?.minValue ??
+          DEFAULT_APP_SETTINGS.forecastLayer.minValue,
+      ),
+      maxValue: Number(
+        appSetting.forecastLayer?.maxValue ??
+          DEFAULT_APP_SETTINGS.forecastLayer.maxValue,
+      ),
+      animationIntervalMs: Number(
+        appSetting.forecastLayer?.animationIntervalMs ??
+          DEFAULT_APP_SETTINGS.forecastLayer.animationIntervalMs,
       ),
     },
     featureCollectionLayer: {

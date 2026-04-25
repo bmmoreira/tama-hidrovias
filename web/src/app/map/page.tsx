@@ -25,7 +25,7 @@ const MapboxMap = dynamic(() => import('@/components/MapboxMap'), {
 });
 
 export default function MapPage() {
-  const { status } = useSession();
+  const { data: session, status } = useSession();
 
   const { data: stationsData } = useSWR('map-stations', () => getStations(), {
     revalidateOnFocus: false,
@@ -102,6 +102,8 @@ export default function MapPage() {
             <ForecastDrawer
               onTileLayerChange={setForecastOverlay}
               onOpenChange={setForecastDrawerOpen}
+              appSettings={appSettings}
+              userRole={session?.user?.role}
             />
             {status === 'authenticated' ? <DashboardButton /> : <HomeButton />}
           </MapboxMap>

@@ -51,3 +51,15 @@ Documentation
   tile discovery helpers, and raster overlay map props.
 - Added frontend and CMS project notes describing the custom auth and role
   model.
+
+Forecast overlay defaults and rendering
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Added global app settings for forecast palette, opacity, min/max range, and
+  animation interval.
+- Restricted public forecast styling controls to analysts and moved them into a
+  dedicated reusable component.
+- Reduced redundant public-map raster rerenders by skipping identical overlay
+  updates and avoiding raster source recreation for opacity-only changes.
+- Changed the forecast tile proxy to return a transparent PNG for missing tiles
+  so browser image decode errors do not surface during map panning.

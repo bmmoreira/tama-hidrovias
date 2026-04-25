@@ -1,0 +1,35 @@
+{
+  "collectionName": "components_app_default_forecast_layers",
+  "info": {
+    "displayName": "Default Forecast Layer"
+  },
+  "options": {},
+  "attributes": {
+    "colorMap": {
+      "type": "enumeration",
+      "enum": ["viridis", "plasma", "inferno", "magma", "cividis", "turbo", "rainbow", "blues"],
+      "default": "rainbow",
+      "required": true
+    },
+    "opacity": {
+      "type": "decimal",
+      "default": 0.82,
+      "required": true
+    },
+    "minValue": {
+      "type": "decimal",
+      "default": 9,
+      "required": true
+    },
+    "maxValue": {
+      "type": "decimal",
+      "default": 15,
+      "required": true
+    },
+    "animationIntervalMs": {
+      "type": "integer",
+      "default": 1200,
+      "required": true
+    }
+  }
+}
