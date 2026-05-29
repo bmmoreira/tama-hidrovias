@@ -9,7 +9,8 @@ export interface ForecastLegendProps {
   drawerOpen?: boolean;
 }
 
-const LEGEND_VALUES = [5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1] as const;
+// Generate values 1..15 and display from max -> min (top -> bottom)
+const LEGEND_VALUES = Array.from({ length: 15 }, (_, i) => 15 - i) as number[];
 
 const COLOR_MAP_GRADIENTS: Record<string, string> = {
   viridis: 'linear-gradient(to top, #440154 0%, #3b528b 22%, #21918c 48%, #5ec962 74%, #fde725 100%)',
@@ -50,8 +51,9 @@ export default function ForecastLegend({
       ].join(' ')}
     >
       <div className="flex min-w-0 items-center">
+        {/* hide the vertical label on very small screens to save space */}
         <div
-          className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600 sm:text-[11px]"
+          className="hidden text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-600 sm:flex sm:text-[11px]"
           style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
         >
           {t('forecastDrawer.legendLabel')}
@@ -65,23 +67,40 @@ export default function ForecastLegend({
             <span>{t('forecastDrawer.legendTitle')}</span>
           </div>
 
-          <div className="relative h-36 w-3 rounded-full border border-white/70 shadow-inner sm:h-44 sm:w-4" style={{ background: getGradient(overlay.legendColorMap) }}>
-            {LEGEND_VALUES.map((value) => {
-              const position = ((5 - value) / 4) * 100;
+          {/* compact on mobile: smaller height and width, expand on sm+ */}
+          <div className="relative h-28 w-2 rounded-full border border-white/70 shadow-inner sm:h-44 sm:w-4" style={{ background: getGradient(overlay.legendColorMap) }}>
+            {(() => {
+              const max = Math.max(...LEGEND_VALUES);
+              const min = Math.min(...LEGEND_VALUES);
 
-              return (
-                <div
-                  key={value}
-                  className="absolute left-full ml-1.5 flex -translate-y-1/2 items-center gap-1"
-                  style={{ top: `${position}%` }}
-                >
-                  <span className="h-px w-2 bg-slate-400" />
-                  <span className="text-[10px] font-medium text-slate-700 sm:text-[11px]">
-                    {value.toFixed(1).replace('.0', '')}
-                  </span>
-                </div>
-              );
-            })}
+              return LEGEND_VALUES.map((value) => {
+                const position = ((max - value) / (max - min)) * 100;
+
+                // Label strategy:
+                // - show tick marks for all values
+                // - label only the major ticks (1, 5, 10, 15)
+                // - on extra-small screens show only 1 and 15 to reduce clutter
+                const isMajor = value === 1 || value % 5 === 0 || value === max;
+                const showOnXs = value === 1 || value === max;
+
+                return (
+                  <div
+                    key={value}
+                    className="absolute left-full ml-1.5 flex -translate-y-1/2 items-center gap-1"
+                    style={{ top: `${position}%` }}
+                  >
+                    <span className="h-px w-2 bg-slate-400" />
+                    <span
+                      className={`text-[9px] font-medium text-slate-700 sm:text-[11px] ${
+                        isMajor ? (showOnXs ? 'inline' : 'hidden sm:inline') : 'hidden'
+                      }`}
+                    >
+                      {String(value)}
+                    </span>
+                  </div>
+                );
+              });
+            })()}
           </div>
         </div>
       </div>
