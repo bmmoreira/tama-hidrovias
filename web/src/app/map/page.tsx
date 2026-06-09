@@ -7,6 +7,9 @@ import useSWR from 'swr';
 import { getAppSettings, getStations, getUserPreferences } from '@/lib/strapi';
 import type { MapStylePreference } from '@/lib/strapi';
 import StationExplorerOverlay from '@/components/maps/StationExplorerOverlay';
+import ForecastDrawer from '@/components/maps/ForecastDrawer';
+import ForecastLegend from '@/components/maps/ForecastLegend';
+import type { ForecastOverlayConfig } from '@/components/maps/ForecastDrawer';
 import HomeButton from '@/components/ui/HomeButton';
 import DashboardButton from '@/components/ui/DashboardButton';
 import { useStationExplorer } from '@/components/maps/useStationExplorer';
@@ -22,7 +25,7 @@ const MapboxMap = dynamic(() => import('@/components/MapboxMap'), {
 });
 
 export default function MapPage() {
-  const { status } = useSession();
+  const { data: session, status } = useSession();
 
   const { data: stationsData } = useSWR('map-stations', () => getStations(), {
     revalidateOnFocus: false,
@@ -47,6 +50,8 @@ export default function MapPage() {
     latitude: -15,
     zoom: 4,
   });
+  const [forecastOverlay, setForecastOverlay] = useState<ForecastOverlayConfig>();
+  const [forecastDrawerOpen, setForecastDrawerOpen] = useState(false);
   const [mapStyle, setMapStyle] = useState<MapStylePreference>('outdoors');
   const stationExplorer = useStationExplorer({
     onStationFocus: (station) => {
@@ -84,8 +89,22 @@ export default function MapPage() {
             mapStyle={mapStyle}
             stations={stations}
             onStationDoubleClick={stationExplorer.focusStation}
+            tileLayerUrl={forecastOverlay?.tileLayerUrl}
+            tileLayerOpacity={forecastOverlay?.tileLayerOpacity}
+            tileLayerBounds={forecastOverlay?.tileLayerBounds}
+            fitToTileLayerBounds={forecastOverlay?.fitToBounds}
           >
             <StationExplorerOverlay controller={stationExplorer} />
+            <ForecastLegend
+              overlay={forecastOverlay}
+              drawerOpen={forecastDrawerOpen}
+            />
+            <ForecastDrawer
+              onTileLayerChange={setForecastOverlay}
+              onOpenChange={setForecastDrawerOpen}
+              appSettings={appSettings}
+              userRole={session?.user?.role}
+            />
             {status === 'authenticated' ? <DashboardButton /> : <HomeButton />}
           </MapboxMap>
         ) : (

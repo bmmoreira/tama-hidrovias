@@ -3,7 +3,14 @@
 import { useEffect, useState } from 'react';
 import useSWR from 'swr';
 import { Loader2 } from 'lucide-react';
-import { getAppSettings, updateAppSettings, type LanguagePreference, type MapStylePreference } from '@/lib/strapi';
+import {
+  DEFAULT_FEATURE_COLLECTION_LAYER_SETTINGS,
+  DEFAULT_FORECAST_LAYER_SETTINGS,
+  getAppSettings,
+  updateAppSettings,
+  type LanguagePreference,
+  type MapStylePreference,
+} from '@/lib/strapi';
 import { APP_SETTINGS_UPDATED_EVENT } from '@/lib/i18n';
 import { useTranslation } from '@/lib/use-app-translation';
 import { Button } from '@/components/ui/button';
@@ -13,6 +20,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 const LANGUAGE_OPTIONS: LanguagePreference[] = ['pt-BR', 'en', 'es', 'fr'];
 const MAP_STYLE_OPTIONS: MapStylePreference[] = ['outdoors', 'streets', 'satellite', 'dark'];
+const FORECAST_COLOR_MAP_OPTIONS = [
+  'viridis',
+  'plasma',
+  'inferno',
+  'magma',
+  'cividis',
+  'turbo',
+  'rainbow',
+  'blues',
+] as const;
 
 type FormState = {
   language: LanguagePreference;
@@ -20,6 +37,11 @@ type FormState = {
   defaultZoom: string;
   centerLatitude: string;
   centerLongitude: string;
+  forecastColorMap: string;
+  forecastOpacity: string;
+  forecastMinValue: string;
+  forecastMaxValue: string;
+  forecastAnimationIntervalMs: string;
   featureCircleRadius: string;
   featurePositiveColor: string;
   featureNegativeColor: string;
@@ -34,6 +56,11 @@ const DEFAULT_FORM: FormState = {
   defaultZoom: '4',
   centerLatitude: '-15',
   centerLongitude: '-52',
+  forecastColorMap: 'rainbow',
+  forecastOpacity: '0.82',
+  forecastMinValue: '9',
+  forecastMaxValue: '15',
+  forecastAnimationIntervalMs: '1200',
   featureCircleRadius: '6',
   featurePositiveColor: '#0284c7',
   featureNegativeColor: '#ea580c',
@@ -79,18 +106,38 @@ export default function AppSettingsPanel() {
       return;
     }
 
+    const appearance = data.data.appearance;
+    const map = data.data.map;
+    const forecastLayer = data.data.forecastLayer ?? DEFAULT_FORECAST_LAYER_SETTINGS;
+    const featureCollectionLayer =
+      data.data.featureCollectionLayer ?? DEFAULT_FEATURE_COLLECTION_LAYER_SETTINGS;
+    const forecastColorMap = FORECAST_COLOR_MAP_OPTIONS.includes(
+      forecastLayer.colorMap as (typeof FORECAST_COLOR_MAP_OPTIONS)[number],
+    )
+      ? forecastLayer.colorMap
+      : DEFAULT_FORECAST_LAYER_SETTINGS.colorMap;
+
     setForm({
-      language: data.data.appearance.language,
-      mapStyle: data.data.map.mapStyle,
-      defaultZoom: String(data.data.map.defaultZoom),
-      centerLatitude: String(data.data.map.centerLatitude),
-      centerLongitude: String(data.data.map.centerLongitude),
-      featureCircleRadius: String(data.data.featureCollectionLayer.circleRadius),
-      featurePositiveColor: data.data.featureCollectionLayer.positiveColor,
-      featureNegativeColor: data.data.featureCollectionLayer.negativeColor,
-      featureStrokeWidth: String(data.data.featureCollectionLayer.strokeWidth),
-      featureStrokeColor: data.data.featureCollectionLayer.strokeColor,
-      featureCircleOpacity: String(data.data.featureCollectionLayer.circleOpacity),
+      language: appearance?.language ?? DEFAULT_FORM.language,
+      mapStyle: map?.mapStyle ?? DEFAULT_FORM.mapStyle,
+      defaultZoom: String(map?.defaultZoom ?? DEFAULT_FORM.defaultZoom),
+      centerLatitude: String(
+        map?.centerLatitude ?? DEFAULT_FORM.centerLatitude,
+      ),
+      centerLongitude: String(
+        map?.centerLongitude ?? DEFAULT_FORM.centerLongitude,
+      ),
+      forecastColorMap,
+      forecastOpacity: String(forecastLayer.opacity),
+      forecastMinValue: String(forecastLayer.minValue),
+      forecastMaxValue: String(forecastLayer.maxValue),
+      forecastAnimationIntervalMs: String(forecastLayer.animationIntervalMs),
+      featureCircleRadius: String(featureCollectionLayer.circleRadius),
+      featurePositiveColor: featureCollectionLayer.positiveColor,
+      featureNegativeColor: featureCollectionLayer.negativeColor,
+      featureStrokeWidth: String(featureCollectionLayer.strokeWidth),
+      featureStrokeColor: featureCollectionLayer.strokeColor,
+      featureCircleOpacity: String(featureCollectionLayer.circleOpacity),
     });
     setHasInitialized(true);
   }, [data, hasInitialized]);
@@ -109,6 +156,13 @@ export default function AppSettingsPanel() {
           defaultZoom: Number(form.defaultZoom),
           centerLatitude: Number(form.centerLatitude),
           centerLongitude: Number(form.centerLongitude),
+        },
+        forecastLayer: {
+          colorMap: form.forecastColorMap,
+          opacity: Number(form.forecastOpacity),
+          minValue: Number(form.forecastMinValue),
+          maxValue: Number(form.forecastMaxValue),
+          animationIntervalMs: Number(form.forecastAnimationIntervalMs),
         },
         featureCollectionLayer: {
           circleRadius: Number(form.featureCircleRadius),
@@ -424,6 +478,108 @@ export default function AppSettingsPanel() {
                 setForm((current) => ({
                   ...current,
                   featureStrokeColor: event.target.value,
+                }))
+              }
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('admin.forecastLayer')}</CardTitle>
+          <CardDescription>{t('admin.forecastLayerDescription')}</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2 md:col-span-2">
+            <label className="text-xs font-medium text-gray-700 dark:text-slate-300">
+              {t('forecastDrawer.palette')}
+            </label>
+            <Select
+              value={form.forecastColorMap}
+              onValueChange={(value) =>
+                setForm((current) => ({
+                  ...current,
+                  forecastColorMap: value,
+                }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {FORECAST_COLOR_MAP_OPTIONS.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {value}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-gray-700 dark:text-slate-300">
+              {t('forecastDrawer.opacity')}
+            </label>
+            <Input
+              type="number"
+              step="0.05"
+              min="0.15"
+              max="1"
+              value={form.forecastOpacity}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  forecastOpacity: event.target.value,
+                }))
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-gray-700 dark:text-slate-300">
+              {t('forecastDrawer.minValue')}
+            </label>
+            <Input
+              type="number"
+              step="0.1"
+              value={form.forecastMinValue}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  forecastMinValue: event.target.value,
+                }))
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-gray-700 dark:text-slate-300">
+              {t('forecastDrawer.maxValue')}
+            </label>
+            <Input
+              type="number"
+              step="0.1"
+              value={form.forecastMaxValue}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  forecastMaxValue: event.target.value,
+                }))
+              }
+            />
+          </div>
+          <div className="space-y-2 md:col-span-2">
+            <label className="text-xs font-medium text-gray-700 dark:text-slate-300">
+              {t('admin.forecastAnimationIntervalMs')}
+            </label>
+            <Input
+              type="number"
+              step="100"
+              min="100"
+              max="10000"
+              value={form.forecastAnimationIntervalMs}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  forecastAnimationIntervalMs: event.target.value,
                 }))
               }
             />

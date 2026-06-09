@@ -14,6 +14,7 @@ version = '0.1.0'
 extensions = [
     'sphinx.ext.duration',
     'sphinx.ext.intersphinx',
+    'sphinxcontrib.mermaid',
 ]
 
 intersphinx_mapping = {

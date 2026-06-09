@@ -172,6 +172,26 @@ class StrapiClient:
 
         logger.info("Batch insert complete for %d record(s)", len(records))
 
+    def batch_insert_swot_measurements(self, records: list[dict[str, Any]]) -> None:
+        """Insert a list of SWOT measurement dictionaries.
+
+        Each dict should contain the field names expected by Strapi's
+        ``/api/swot-measurements`` endpoint.
+
+        Parameters
+        ----------
+        records:
+            List of SWOT measurement dicts.
+        """
+        logger.info("Batch inserting %d SWOT measurement(s)", len(records))
+        for i, record in enumerate(records):
+            try:
+                self._request("POST", "/api/swot-measurements", json={"data": record})
+            except Exception as exc:
+                logger.error("Failed to insert SWOT record %d: %s", i, exc)
+
+        logger.info("Batch insert complete for %d SWOT record(s)", len(records))
+
     # ------------------------------------------------------------------
     # Forecasts
     # ------------------------------------------------------------------

@@ -10,7 +10,7 @@ This repository is a monorepo containing the source code for the entire tama-hid
 -   **`/cms`:** A Strapi-based headless CMS serving the data API.
 -   **`/pipeline`:** A Python pipeline for collecting and processing hydrological data.
 -   **`/docs`:** Project and architecture documentation (Sphinx).
--   **`/tileserver`:** Raster tile service.
+-   **`titiler` service via Docker Compose:** Dynamic GeoTIFF tile service.
 -   **`/pgadmin`:** pgAdmin bootstrap configuration.
 
 > **Note:** Each service directory contains its own detailed `README.md` and configuration.

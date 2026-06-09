@@ -38,7 +38,10 @@ export type ClimateLayer = {
     model?: string;
     period_start?: string;
     period_end?: string;
-    geotiff?: { data?: { attributes: { name: string } } };
+    colormap?: string;
+    min_value?: number;
+    max_value?: number;
+    geotiff?: { data?: { attributes: { name: string; url?: string } } };
     [key: string]: unknown;
   };
 };
@@ -87,6 +90,14 @@ export type FeatureCollectionLayerSettings = {
   circleOpacity: number;
 };
 
+export type ForecastLayerSettings = {
+  colorMap: string;
+  opacity: number;
+  minValue: number;
+  maxValue: number;
+  animationIntervalMs: number;
+};
+
 /** Default visual settings for the feature collection layer. */
 export const DEFAULT_FEATURE_COLLECTION_LAYER_SETTINGS: FeatureCollectionLayerSettings = {
   circleRadius: 6,
@@ -95,6 +106,14 @@ export const DEFAULT_FEATURE_COLLECTION_LAYER_SETTINGS: FeatureCollectionLayerSe
   strokeWidth: 1.5,
   strokeColor: '#ffffff',
   circleOpacity: 0.9,
+};
+
+export const DEFAULT_FORECAST_LAYER_SETTINGS: ForecastLayerSettings = {
+  colorMap: 'rainbow',
+  opacity: 0.82,
+  minValue: 9,
+  maxValue: 15,
+  animationIntervalMs: 1200,
 };
 
 /** Severity threshold for alert notifications.
@@ -240,6 +259,7 @@ export type AppSettings = {
     centerLatitude: number;
     centerLongitude: number;
   };
+  forecastLayer: ForecastLayerSettings;
   featureCollectionLayer: FeatureCollectionLayerSettings;
 };
 
@@ -254,6 +274,7 @@ export type AppSettingsUpdateInput = {
     centerLatitude: number;
     centerLongitude: number;
   };
+  forecastLayer: ForecastLayerSettings;
   featureCollectionLayer: FeatureCollectionLayerSettings;
 };
 
@@ -427,6 +448,7 @@ function buildClimateLayersPath() {
   // populate clause is intentionally narrow to keep responses smaller.
   const query = new URLSearchParams();
   query.set('populate[geotiff][fields][0]', 'name');
+  query.set('populate[geotiff][fields][1]', 'url');
   query.set('sort[0]', 'period_start:desc');
   query.set('pagination[pageSize]', '200');
   return `/api/climate-layers?${query.toString()}`;

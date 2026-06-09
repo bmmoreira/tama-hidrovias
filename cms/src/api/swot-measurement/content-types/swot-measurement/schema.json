@@ -1,0 +1,52 @@
+{
+  "kind": "collectionType",
+  "collectionName": "swot_measurements",
+  "info": {
+    "singularName": "swot-measurement",
+    "pluralName": "swot-measurements",
+    "displayName": "SWOT Measurement"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "station_id": {
+      "type": "string",
+      "required": true
+    },
+    "datetime": {
+      "type": "datetime",
+      "required": true
+    },
+    "mean": {
+      "type": "float"
+    },
+    "count": {
+      "type": "integer"
+    },
+    "std": {
+      "type": "float"
+    },
+    "min": {
+      "type": "float"
+    },
+    "max": {
+      "type": "float"
+    },
+    "median": {
+      "type": "float"
+    },
+    "mean_dist_m": {
+      "type": "float"
+    },
+    "median_dist_m": {
+      "type": "float"
+    },
+    "min_dist_m": {
+      "type": "float"
+    },
+    "max_dist_m": {
+      "type": "float"
+    }
+  }
+}

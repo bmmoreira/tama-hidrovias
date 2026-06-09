@@ -14,7 +14,7 @@ At a high level, there are four browser-visible entrypoints:
 - ``app.*`` for the Next.js frontend
 - ``db.*`` for the Strapi CMS and API
 - ``assets.*`` for static assets and public uploads
-- ``tiles.*`` for raster tiles served by TileServer GL
+- ``tiles.*`` for raster tiles served by TiTiler
 
 In local development, these are typically:
 
@@ -43,7 +43,7 @@ internal Docker network:
 
 - ``web_app`` → ``web:3000`` (Next.js application)
 - ``strapi_cms`` → ``strapi:1337`` (Strapi CMS)
-- ``tileserver_backend`` → ``tileserver:8080`` (TileServer GL)
+- ``titiler_backend`` → ``titiler:8080`` (TiTiler)
 
 and four server blocks for the browser-visible hosts:
 
@@ -51,7 +51,7 @@ and four server blocks for the browser-visible hosts:
 - ``server_name db.local db.*`` routes ``/`` to ``strapi_cms``
 - ``server_name assets.local assets.*`` serves ``/`` from ``/srv/assets/`` and
   ``/uploads/`` from ``/srv/strapi-uploads/``
-- ``server_name tiles.local tiles.*`` routes ``/`` to ``tileserver_backend``
+- ``server_name tiles.local tiles.*`` routes ``/`` to ``titiler_backend``
 
 Static assets and Strapi uploads are mounted into the Nginx container via
 volumes in ``docker-compose.yml``:
@@ -74,13 +74,6 @@ Frontend (browser-facing)
   (for example, absolute media URLs). In development this is typically::
 
       NEXT_PUBLIC_STRAPI_URL=http://db.local
-
-- ``NEXT_PUBLIC_TILESERVER_URL``
-
-  Base URL for raster tiles, used when building tile URLs in the map views.
-  In development::
-
-      NEXT_PUBLIC_TILESERVER_URL=http://tiles.local
 
 - ``NEXTAUTH_URL``
 
@@ -153,7 +146,6 @@ For a typical local Docker development environment:
    these hostnames::
 
       NEXT_PUBLIC_STRAPI_URL=http://db.local
-      NEXT_PUBLIC_TILESERVER_URL=http://tiles.local
       NEXTAUTH_URL=http://app.local
 
 3. Start the stack with Docker Compose::
@@ -165,7 +157,7 @@ After that you should be able to access:
 - ``http://app.local`` for the web application
 - ``http://db.local`` for the Strapi admin
 - ``http://assets.local`` for static assets and uploads
-- ``http://tiles.local`` for tile diagnostics or direct testing
+- ``http://tiles.local`` for TiTiler diagnostics or direct testing
 
 Upload Size Limits
 ------------------
@@ -208,7 +200,6 @@ Recommended adjustments:
       example::
 
                   NEXT_PUBLIC_STRAPI_URL=https://db.example.com
-                  NEXT_PUBLIC_TILESERVER_URL=https://tiles.example.com
                   NEXTAUTH_URL=https://app.example.com
 
 - Ensure that the TLS terminator (load balancer, reverse proxy, or Nginx

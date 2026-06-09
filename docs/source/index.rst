@@ -10,7 +10,7 @@ The repository is organized as a coordinated set of services:
 - ``cms/`` for the CMS and API
 - ``pipeline/`` for the data pipeline
 - ``pgadmin/`` for pgAdmin bootstrap configuration
-- ``tileserver/`` for raster tile delivery
+- ``titiler`` service for dynamic raster tile delivery
 
 .. note::
 
@@ -68,6 +68,8 @@ Contents
    gateway
    dashboard
    preferences
+   public-map
    mapview
    changelog
+   architecture
    api

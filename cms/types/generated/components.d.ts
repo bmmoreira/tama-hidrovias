@@ -12,6 +12,35 @@ export interface AppDefaultAppearance extends Schema.Component {
   };
 }
 
+export interface AppDefaultForecastLayer extends Schema.Component {
+  collectionName: 'components_app_default_forecast_layers';
+  info: {
+    displayName: 'Default Forecast Layer';
+  };
+  attributes: {
+    animationIntervalMs: Attribute.Integer &
+      Attribute.Required &
+      Attribute.DefaultTo<1200>;
+    colorMap: Attribute.Enumeration<
+      [
+        'viridis',
+        'plasma',
+        'inferno',
+        'magma',
+        'cividis',
+        'turbo',
+        'rainbow',
+        'blues'
+      ]
+    > &
+      Attribute.Required &
+      Attribute.DefaultTo<'rainbow'>;
+    maxValue: Attribute.Decimal & Attribute.Required & Attribute.DefaultTo<15>;
+    minValue: Attribute.Decimal & Attribute.Required & Attribute.DefaultTo<9>;
+    opacity: Attribute.Decimal & Attribute.Required & Attribute.DefaultTo<0.82>;
+  };
+}
+
 export interface AppDefaultMap extends Schema.Component {
   collectionName: 'components_app_default_maps';
   info: {
@@ -144,6 +173,7 @@ declare module '@strapi/types' {
   export module Shared {
     export interface Components {
       'app.default-appearance': AppDefaultAppearance;
+      'app.default-forecast-layer': AppDefaultForecastLayer;
       'app.default-map': AppDefaultMap;
       'app.feature-collection-layer': AppFeatureCollectionLayer;
       'preferences.alert-settings': PreferencesAlertSettings;
