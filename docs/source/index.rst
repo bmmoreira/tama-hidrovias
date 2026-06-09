@@ -71,4 +71,5 @@ Contents
    public-map
    mapview
    changelog
+   architecture
    api
