@@ -58,7 +58,7 @@ export default function StationExplorerOverlay({
       <StationSearchPanel
         isOpen={controller.panelOpen}
         onClose={controller.closePanel}
-        onStationSelect={controller.selectStation}
+        onFeatureSelect={controller.selectFeature}
       />
 
       {controller.selectedStation ? (
