@@ -70,6 +70,7 @@ export async function GET(
         max: bandStats.max ?? null,
         recommendedMin: bandStats.percentile_2 ?? bandStats.min ?? null,
         recommendedMax: bandStats.percentile_98 ?? bandStats.max ?? null,
+        cogInfo: info,
       },
     });
   } catch (error) {

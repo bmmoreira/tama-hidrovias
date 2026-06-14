@@ -110,7 +110,6 @@ export default function MapPage() {
               onTileLayerChange={setForecastOverlay}
               onOpenChange={setForecastDrawerOpen}
               appSettings={appSettings}
-              userRole={session?.user?.role}
             />
             {status === 'authenticated' ? <DashboardButton /> : <HomeButton />}
           </MapboxMap>
