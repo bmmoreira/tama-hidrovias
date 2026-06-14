@@ -606,6 +606,47 @@ export interface ApiStationStation extends Schema.CollectionType {
   };
 }
 
+export interface ApiSwotMeasurementSwotMeasurement
+  extends Schema.CollectionType {
+  collectionName: 'swot_measurements';
+  info: {
+    displayName: 'SWOT Measurement';
+    pluralName: 'swot-measurements';
+    singularName: 'swot-measurement';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    count: Attribute.Integer;
+    createdAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::swot-measurement.swot-measurement',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    datetime: Attribute.DateTime & Attribute.Required;
+    max: Attribute.Float;
+    max_dist_m: Attribute.Float;
+    mean: Attribute.Float;
+    mean_dist_m: Attribute.Float;
+    median: Attribute.Float;
+    median_dist_m: Attribute.Float;
+    min: Attribute.Float;
+    min_dist_m: Attribute.Float;
+    station_id: Attribute.String & Attribute.Required;
+    std: Attribute.Float;
+    updatedAt: Attribute.DateTime;
+    updatedBy: Attribute.Relation<
+      'api::swot-measurement.swot-measurement',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
 export interface ApiUserPreferenceUserPreference extends Schema.CollectionType {
   collectionName: 'user_preferences';
   info: {
@@ -1092,6 +1133,7 @@ declare module '@strapi/types' {
       'api::map-feature-collection.map-feature-collection': ApiMapFeatureCollectionMapFeatureCollection;
       'api::measurement.measurement': ApiMeasurementMeasurement;
       'api::station.station': ApiStationStation;
+      'api::swot-measurement.swot-measurement': ApiSwotMeasurementSwotMeasurement;
       'api::user-preference.user-preference': ApiUserPreferenceUserPreference;
       'plugin::content-releases.release': PluginContentReleasesRelease;
       'plugin::content-releases.release-action': PluginContentReleasesReleaseAction;

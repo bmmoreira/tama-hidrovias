@@ -18,7 +18,11 @@ services:
   strapi:
     build: ./cms
     user: "${HOST_UID:?Set HOST_UID to your host uid}:${HOST_GID:?Set HOST_GID to your host gid}"
+    ports:
+      - "1337:1337"
     command: npm run develop
+    env_file:
+      - .env
     environment:
       HOME: /tmp
       XDG_CONFIG_HOME: /tmp/.config
@@ -58,6 +62,8 @@ services:
       target: deps
     user: "0:0"
     command: npm run dev -- --hostname 0.0.0.0
+    env_file:
+      - .env
     environment:
       NODE_ENV: development
       PORT: 3000
@@ -70,7 +76,7 @@ services:
       - ./web:/app
       - /app/node_modules
       - /app/.next
-      - ./assets/tiles:/forecast-tiles:ro
+      - ./assets/tiff:/forecast-tiles:ro
     depends_on:
       - strapi
     networks:
@@ -82,7 +88,7 @@ services:
     image: ghcr.io/developmentseed/titiler:latest
     command: uvicorn titiler.application.main:app --host 0.0.0.0 --port 8080 --workers 1
     volumes:
-      - ./assets/tiles:/data/geotiffs:ro
+      - ./assets/tiff:/data/geotiffs:ro
     networks:
       - tama-network
 

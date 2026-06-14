@@ -227,15 +227,15 @@ export default function ForecastDrawer({
     isEnabled && frames.length > 0
       ? frames[Math.min(selectedFrameIndex, frames.length - 1)]
       : null;
-  const { data: frameMetadata } = useSWR(
+  const { data: frameMetadata, isLoading: isMetadataLoading } = useSWR(
     activeFrame?.metadataUrl ?? null,
     fetchForecastMetadata,
     {
       revalidateOnFocus: false,
     },
   );
-  const dataRangeMin = frameMetadata?.data.min;
-  const dataRangeMax = frameMetadata?.data.max;
+  const dataRangeMin = frameMetadata?.data?.min;
+  const dataRangeMax = frameMetadata?.data?.max;
   const hasDataRange =
     isFiniteNumber(dataRangeMin) &&
     isFiniteNumber(dataRangeMax) &&
@@ -263,6 +263,13 @@ export default function ForecastDrawer({
   useEffect(() => {
     onOpenChange?.(isOpen);
   }, [isOpen, onOpenChange]);
+
+  useEffect(() => {
+    if (isOpen) {
+      const totalFiles = groups.reduce((acc, group) => acc + group.frames.length, 0);
+      console.log(`Number of files in assets/tiff folder: ${totalFiles}`);
+    }
+  }, [isOpen, groups]);
 
   useEffect(() => {
     if (groups.length === 0) {
@@ -307,16 +314,27 @@ export default function ForecastDrawer({
       return;
     }
 
+    // Do not emit a new overlay if we are still fetching the initial metadata
+    // for this frame. Emitting without metadata causes TiTiler to render
+    // a solid color (unscaled) and aborts in-flight requests.
+    if (!frameMetadata && isMetadataLoading) {
+      return;
+    }
+
     const metadata = frameMetadata?.data;
     const parsedMin = hasDataRange ? resolvedMinValue : undefined;
     const parsedMax = hasDataRange ? resolvedMaxValue : undefined;
 
+    const tileLayerUrl = buildForecastTileUrl(activeFrame, {
+      colorMap: selectedColorMap,
+      min: Number.isFinite(parsedMin) ? parsedMin : undefined,
+      max: Number.isFinite(parsedMax) ? parsedMax : undefined,
+    });
+
+    console.log('[ForecastDrawer] Emitting new tile layer URL:', tileLayerUrl);
+
     const nextOverlay: ForecastOverlayConfig = {
-      tileLayerUrl: buildForecastTileUrl(activeFrame, {
-        colorMap: selectedColorMap,
-        min: Number.isFinite(parsedMin) ? parsedMin : undefined,
-        max: Number.isFinite(parsedMax) ? parsedMax : undefined,
-      }),
+      tileLayerUrl,
       tileLayerBounds: metadata?.bounds ?? undefined,
       tileLayerOpacity: opacity,
       fitToBounds: !isPlaying,

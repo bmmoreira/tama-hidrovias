@@ -3,56 +3,115 @@
 import { useState, useMemo } from 'react';
 import useSWR from 'swr';
 import { Search, X, ChevronRight } from 'lucide-react';
-import { getStations } from '@/lib/strapi';
-import type { Station } from '@/lib/strapi';
+import { getMapFeatureCollection } from '@/lib/strapi';
+import type { MapFeatureCollectionFeature } from '@/lib/strapi';
 import clsx from 'clsx';
 import { useTranslation } from '@/lib/use-app-translation';
+import type { StationExplorerFeatureTarget } from '@/components/maps/useStationExplorer';
 
-const SOURCES = ['all', 'ANA', 'HydroWeb', 'SNIRH', 'Virtual'] as const;
+function parseSearchString(value: unknown) {
+  return value == null ? undefined : String(value).trim() || undefined;
+}
+
+function parseSearchNumber(value: unknown) {
+  const number = typeof value === 'number' ? value : Number(value);
+
+  return Number.isFinite(number) ? number : undefined;
+}
+
+function getFeatureProperty(
+  feature: MapFeatureCollectionFeature,
+  keys: string[],
+) {
+  for (const key of keys) {
+    const value = parseSearchString(feature.properties[key]);
+
+    if (value) {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
+function toFeatureSearchTarget(
+  feature: MapFeatureCollectionFeature,
+  index: number,
+): StationExplorerFeatureTarget | null {
+  const [longitude, latitude] = feature.geometry.coordinates;
+
+  if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) {
+    return null;
+  }
+
+  const fid =
+    getFeatureProperty(feature, ['fid', 'FID']) ??
+    getFeatureProperty(feature, ['id', 'ID']) ??
+    parseSearchString(feature.id);
+  const code = getFeatureProperty(feature, ['codigo', 'Codigo', 'code', 'Code']);
+  const name =
+    getFeatureProperty(feature, ['name', 'Name', 'nome', 'Nome']) ??
+    code ??
+    fid ??
+    `Feature ${index + 1}`;
+
+  return {
+    id: fid ?? code ?? String(index),
+    name,
+    code,
+    fid,
+    longitude,
+    latitude,
+    source: getFeatureProperty(feature, ['source', 'Source', 'fonte', 'Fonte']),
+    satellite: getFeatureProperty(feature, ['sat', 'satellite', 'Satellite']),
+    river: getFeatureProperty(feature, ['river', 'River', 'rio', 'Rio']),
+    basin: getFeatureProperty(feature, ['basin', 'Basin', 'bacia', 'Bacia']),
+    startDate: getFeatureProperty(feature, ['s_date', 'startDate', 'start_date']),
+    endDate: getFeatureProperty(feature, ['e_date', 'endDate', 'end_date']),
+    value: parseSearchNumber(feature.properties.value),
+    change: parseSearchNumber(feature.properties.change),
+    anomaly: parseSearchNumber(feature.properties.anomalia),
+  };
+}
 
 /** Props for the slide-in search panel used to find stations on the map. */
 export interface StationSearchPanelProps {
-  onStationSelect: (station: Station) => void;
+  onFeatureSelect: (feature: StationExplorerFeatureTarget) => void;
   isOpen: boolean;
   onClose: () => void;
 }
 
 export default function StationSearchPanel({
-  onStationSelect,
+  onFeatureSelect,
   isOpen,
   onClose,
 }: StationSearchPanelProps) {
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
-  const [source, setSource] = useState<(typeof SOURCES)[number]>('all');
-  const [variable, setVariable] = useState('all');
 
-  const variables = [
-    { value: 'all', label: t('stationSearch.allVariables') },
-    { value: 'level_m', label: t('stationSearch.level') },
-    { value: 'flow_m3s', label: t('stationSearch.flow') },
-    { value: 'precipitation_mm', label: t('stationSearch.precipitation') },
-    { value: 'water_surface_elevation_m', label: t('stationSearch.elevation') },
-  ] as const;
-
-  const { data, isLoading } = useSWR('stations-search', () => getStations(), {
-    revalidateOnFocus: false,
-  });
+  const { data, isLoading } = useSWR(
+    'map-feature-collection-search',
+    () => getMapFeatureCollection(),
+    { revalidateOnFocus: false },
+  );
 
   const filtered = useMemo(() => {
-    const stations = data?.data ?? [];
-    return stations.filter((s: Station) => {
+    const features =
+      data?.data?.featureCollection.features
+        .map(toFeatureSearchTarget)
+        .filter((feature): feature is StationExplorerFeatureTarget => feature !== null) ??
+      [];
+
+    return features.filter((feature) => {
+      const normalizedQuery = query.toLowerCase();
       const matchQuery =
         !query ||
-        s.attributes.name.toLowerCase().includes(query.toLowerCase()) ||
-        s.attributes.code.toLowerCase().includes(query.toLowerCase());
-      const matchSource =
-        source === 'all' || s.attributes.source === source;
-      // variable filtering is metadata-level; we filter by source only for now
-      void variable;
-      return matchQuery && matchSource;
+        feature.name.toLowerCase().includes(normalizedQuery) ||
+        feature.code?.toLowerCase().includes(normalizedQuery) ||
+        feature.fid?.toLowerCase().includes(normalizedQuery);
+      return matchQuery;
     });
-  }, [data, query, source, variable]);
+  }, [data, query]);
 
   return (
     <>
@@ -104,34 +163,6 @@ export default function StationSearchPanel({
               className="w-full rounded-lg border border-gray-200 py-2 pl-9 pr-4 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
             />
           </div>
-
-          {/* Source select */}
-          <select
-            value={source}
-            onChange={(e) =>
-              setSource(e.target.value as (typeof SOURCES)[number])
-            }
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-          >
-            {SOURCES.map((s) => (
-              <option key={s} value={s}>
-                {s === 'all' ? t('stationSearch.allSources') : s}
-              </option>
-            ))}
-          </select>
-
-          {/* Variable select */}
-          <select
-            value={variable}
-            onChange={(e) => setVariable(e.target.value)}
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-          >
-            {variables.map((v) => (
-              <option key={v.value} value={v.value}>
-                {v.label}
-              </option>
-            ))}
-          </select>
         </div>
 
         {/* Results */}
@@ -153,22 +184,22 @@ export default function StationSearchPanel({
             </p>
           )}
 
-          {filtered.map((station: Station) => (
+          {filtered.map((feature) => (
             <button
-              key={station.id}
+              key={`${feature.id}:${feature.longitude}:${feature.latitude}`}
               onClick={() => {
-                onStationSelect(station);
+                onFeatureSelect(feature);
                 onClose();
               }}
               className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left transition hover:bg-blue-50"
             >
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-gray-800">
-                  {station.attributes.name}
+                  {feature.name}
                 </p>
                 <p className="text-xs text-gray-400">
-                  {station.attributes.code} · {station.attributes.source} ·{' '}
-                  {station.attributes.basin}
+                  FID: {feature.fid ?? '-'} · Codigo: {feature.code ?? '-'}
+                  {feature.basin ? ` · ${feature.basin}` : ''}
                 </p>
               </div>
               <ChevronRight className="ml-2 h-4 w-4 shrink-0 text-gray-300" />

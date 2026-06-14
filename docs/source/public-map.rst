@@ -99,24 +99,35 @@ Forecast Tile Discovery
 -----------------------
 
 ``web/src/lib/forecast-tiles.ts`` is responsible for discovering files and
-turning them into UI-friendly frame records.
+turning them into UI-friendly frame records. It reads directories recursively
+to support aggregating files into logical areas by subfolder.
 
 Current assumptions:
 
 - forecast rasters live under ``assets/tiles`` on the host
 - the web container sees the same files under ``/forecast-tiles``
-- filenames follow the pattern
-  ``AREA_YYYYMMDD_HHMMSS[_WGS84].tif`` or ``.tiff``
+- filenames optionally follow the pattern ``AREA_YYYYMMDD_HHMMSS[_WGS84].tif``
+  or a more flexible datetime pattern like ``AREA_YYYY-MM-DDTHHhMM.tif``.
+
+Grouping by Subfolder (The Subfolder Tweak)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If a ``.tif`` or ``.tiff`` file is placed inside a subfolder (for example,
+``assets/tiles/tapajos/`` or ``assets/tiles/profundidade/``), the name of the
+subfolder is automatically used as the target ``area`` (tag) to aggregate the
+images. This allows administrators to drop images with custom names into a new
+subfolder, and the application will instantly group them into a single playback
+sequence in the ``ForecastDrawer`` for animation over the Mapbox map.
 
 Derived frame fields include:
 
-- ``area`` for grouping related frames
-- ``slug`` for route-safe frame lookup
+- ``area`` for grouping related frames (derived from the subfolder name, or falls back to the filename prefix)
+- ``slug`` for route-safe frame lookup (uses the relative path of the file to prevent clashes)
 - ``timestamp`` for ordering
 - ``label`` for the drawer UI
 
-Files that do not match the expected naming pattern are ignored by the list
-route instead of failing the public map.
+Files that do not contain parsable dates will fall back to using extracted
+numeric dates to ensure they can still be rendered and animated.
 
 Rendering Controls
 ------------------

@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
+import useSWR from 'swr';
 import {
   Area,
   AreaChart,
@@ -128,6 +129,39 @@ export default function StationDetailsModal({
     [data],
   );
 
+  const code = data?.code;
+  const { data: swotResponse } = useSWR(
+    open && code ? `/api/swot-measurements?filters[station_id][$eq]=${code}&sort[0]=datetime:asc&pagination[pageSize]=1000` : null,
+    (url: string) => fetch(url).then(r => r.json())
+  );
+
+  useEffect(() => {
+    if (open && code) {
+      console.log(`[SWOT API Check] Requesting SWOT data for station codigo: ${code}`);
+    }
+  }, [open, code]);
+
+  useEffect(() => {
+    if (swotResponse) {
+      const recordsCount = swotResponse.data?.length || 0;
+      console.log(`[SWOT API Check] Strapi returned ${recordsCount} SWOT records for codigo: ${code}`);
+    }
+  }, [swotResponse, code]);
+
+  const swotChartData = useMemo(() => {
+    if (!swotResponse?.data) return [];
+    return swotResponse.data.map((item: any) => {
+      const attrs = item.attributes;
+      return {
+        label: new Date(attrs.datetime).toLocaleDateString(),
+        median: attrs.median,
+        stdBandTop: attrs.median !== null && attrs.std !== null ? attrs.median + attrs.std : null,
+        stdBandBottom: attrs.median !== null && attrs.std !== null ? attrs.median - attrs.std : null,
+        std: attrs.std
+      };
+    });
+  }, [swotResponse]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[92vh] w-[calc(100%-1rem)] max-w-6xl overflow-y-auto rounded-[1.75rem] border border-gray-200 bg-white p-0 shadow-2xl dark:border-slate-800 dark:bg-slate-950 sm:w-[calc(100%-2rem)]">
@@ -141,9 +175,14 @@ export default function StationDetailsModal({
                 {t('mapDetails.subtitle')}
               </DialogDescription>
               <div className="mt-4 flex flex-wrap gap-2 text-xs font-medium text-slate-600 dark:text-slate-300">
+                {data.fid !== undefined ? (
+                  <span className="rounded-full border border-slate-200 bg-white/90 px-3 py-1 dark:border-slate-700 dark:bg-slate-900/80">
+                    FID: {data.fid}
+                  </span>
+                ) : null}
                 {data.code ? (
                   <span className="rounded-full border border-slate-200 bg-white/90 px-3 py-1 dark:border-slate-700 dark:bg-slate-900/80">
-                    {data.code}
+                    Codigo: {data.code}
                   </span>
                 ) : null}
                 {data.source ? (
@@ -181,6 +220,35 @@ export default function StationDetailsModal({
                     value={t('mapDetails.forecastWindowValue')}
                   />
                 </section>
+
+                                {swotChartData.length > 0 ? (
+                  <Card className="overflow-hidden border-gray-200/80 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-950/90">
+                    <CardHeader className="pb-2">
+                      <CardTitle>SWOT Measurements</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-64 w-full sm:h-72">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={swotChartData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.22)" />
+                            <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                            <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} domain={['auto', 'auto']} />
+                            <Tooltip
+                              contentStyle={{ borderRadius: 16, borderColor: '#cbd5e1' }}
+                              formatter={(value: number, key: string) => [
+                                `${value.toFixed(2)} m`,
+                                key === 'median' ? 'Median' : key === 'stdBandTop' ? '+1 Std Dev' : '-1 Std Dev',
+                              ]}
+                            />
+                            <Line type="monotone" dataKey="median" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 3 }} />
+                            <Line type="monotone" dataKey="stdBandTop" stroke="#c4b5fd" strokeWidth={1} dot={false} strokeDasharray="4 4" />
+                            <Line type="monotone" dataKey="stdBandBottom" stroke="#c4b5fd" strokeWidth={1} dot={false} strokeDasharray="4 4" />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : null}
 
                 <Card className="overflow-hidden border-gray-200/80 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-950/90">
                   <CardHeader className="pb-2">
@@ -244,6 +312,8 @@ export default function StationDetailsModal({
                     </div>
                   </CardContent>
                 </Card>
+
+
               </div>
 
               <div className="space-y-4">
@@ -252,6 +322,10 @@ export default function StationDetailsModal({
                     <CardTitle>{t('mapDetails.baseInfoTitle')}</CardTitle>
                   </CardHeader>
                   <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                    <div>
+                      <div className="text-xs font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-slate-400">FID</div>
+                      <div className="mt-1 text-sm text-slate-900 dark:text-slate-100">{data.fid ?? '...'}</div>
+                    </div>
                     <div>
                       <div className="text-xs font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-slate-400">{t('mapDetails.code')}</div>
                       <div className="mt-1 text-sm text-slate-900 dark:text-slate-100">{data.code ?? t('mapPopup.noCode')}</div>

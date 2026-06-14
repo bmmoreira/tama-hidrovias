@@ -3,6 +3,7 @@
 import { Search, X } from 'lucide-react';
 import StationChart from '@/components/StationChart';
 import StationSearchPanel from '@/components/StationSearchPanel';
+import StationDetailsModal from './StationDetailsModal';
 import type { StationVariable } from '@/lib/strapi';
 import { useTranslation } from '@/lib/use-app-translation';
 import type { StationExplorerController } from './useStationExplorer';
@@ -47,18 +48,49 @@ export default function StationExplorerOverlay({
   return (
     <>
       <button
+        // Opens the shared station explorer state managed by useStationExplorer.
+        // The panel below receives controller.panelOpen and becomes visible.
         onClick={controller.openPanel}
         className="absolute left-4 top-4 z-20 flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-lg transition hover:bg-gray-50 md:left-4"
         aria-label={t('map.openStationSearch')}
       >
         <Search className="h-4 w-4 text-gray-500" />
-        <span className="hidden sm:inline">{t('map.searchStations')}</span>
+        <span className="hidden sm:inline">{t('map.searchStations')}2</span>
       </button>
 
       <StationSearchPanel
         isOpen={controller.panelOpen}
         onClose={controller.closePanel}
-        onStationSelect={controller.selectStation}
+        onFeatureSelect={controller.selectFeature}
+      />
+
+      <StationDetailsModal
+        open={controller.detailOpen && controller.selectedFeature !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            controller.closeDetails();
+          }
+        }}
+        data={
+          controller.selectedFeature
+            ? {
+                name: controller.selectedFeature.name,
+                code: controller.selectedFeature.code,
+                fid: controller.selectedFeature.fid,
+                source: controller.selectedFeature.source,
+                satellite: controller.selectedFeature.satellite,
+                river: controller.selectedFeature.river,
+                basin: controller.selectedFeature.basin,
+                startDate: controller.selectedFeature.startDate,
+                endDate: controller.selectedFeature.endDate,
+                value: controller.selectedFeature.value,
+                change: controller.selectedFeature.change,
+                anomaly: controller.selectedFeature.anomaly,
+                longitude: controller.selectedFeature.longitude,
+                latitude: controller.selectedFeature.latitude,
+              }
+            : null
+        }
       />
 
       {controller.selectedStation ? (

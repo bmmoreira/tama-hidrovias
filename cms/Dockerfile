@@ -2,7 +2,7 @@ FROM node:18-alpine
 
 WORKDIR /srv/app
 
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat python3 make g++
 
 COPY package.json .
 RUN npm install --legacy-peer-deps

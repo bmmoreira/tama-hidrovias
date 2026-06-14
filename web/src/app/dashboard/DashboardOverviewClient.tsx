@@ -1,10 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { Activity, BarChart2, Layers, Radio } from 'lucide-react';
+import useSWR from 'swr';
+import { Activity, BarChart2, Layers, Radio, Table as TableIcon } from 'lucide-react';
 import { useTranslation } from '@/lib/use-app-translation';
 import SummaryCard from '@/components/SummaryCard';
 import DashboardCharts from './DashboardCharts';
+import { SwotDataTable } from '@/components/SwotDataTable';
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function DashboardOverviewClient({
   totalStations,
@@ -12,6 +16,13 @@ export default function DashboardOverviewClient({
   totalStations: number;
 }) {
   const { t } = useTranslation();
+  
+  const { data: swotData } = useSWR(
+    '/api/swot-measurements?pagination[pageSize]=100',
+    fetcher
+  );
+  const swotCount = swotData?.data?.length || 0;
+
   const quickLinks = [
     {
       href: '/dashboard/stations',
@@ -48,12 +59,20 @@ export default function DashboardOverviewClient({
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <SummaryCard title={t('dashboard.totalStations')} value={totalStations} Icon={Radio} color="blue" description={t('dashboard.allSources')} />
-        <SummaryCard title={t('dashboard.recentMeasurements')} value="—" Icon={Activity} color="green" description={t('dashboard.last24Hours')} />
+        <SummaryCard title={t('dashboard.recentMeasurements')} value={swotCount > 0 ? swotCount : '—'} Icon={Activity} color="green" description={t('dashboard.swotMeasurements')} />
         <SummaryCard title={t('dashboard.activeForecasts')} value="—" Icon={BarChart2} color="amber" description={t('dashboard.next15Days')} />
         <SummaryCard title={t('dashboard.climateLayers')} value="—" Icon={Layers} color="purple" description={t('dashboard.available')} />
       </div>
 
       <DashboardCharts />
+
+      <div className="space-y-4">
+        <div className="flex items-center space-x-2">
+          <TableIcon className="h-5 w-5 text-gray-500 dark:text-slate-400" />
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">{t('dashboard.swotDataTable') || 'SWOT Measurements'}</h2>
+        </div>
+        <SwotDataTable />
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {quickLinks.map((ql) => (

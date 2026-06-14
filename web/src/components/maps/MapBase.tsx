@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Map, {
   Layer,
   type MapLayerMouseEvent,
@@ -111,7 +111,11 @@ function parseString(value: unknown) {
 
 /** Extract a numeric external id from a GeoJSON feature, if present. */
 function parseFeatureExternalId(feature: MapGeoJSONFeature) {
-  return parseFiniteNumber(feature.properties?.id);
+  const props = feature.properties;
+  if (!props) return undefined;
+
+  // Prefer `id`, but fall back to `Codigo` which may be used as an identifier.
+  return parseFiniteNumber(props.id) ?? parseFiniteNumber(props.Codigo);
 }
 
 /**
@@ -143,8 +147,9 @@ function buildPopupFeatureFromStation(
   const metadata = getStationMetadata(station);
 
   return {
-    name: featurePopup.name,
-    code: station.attributes.code,
+    name: station.attributes.name ?? featurePopup.name,
+    code: station.attributes.code ?? featurePopup.code,
+    fid: featurePopup.fid,
     source: station.attributes.source,
     satellite: featurePopup.satellite ?? parseString(metadata.satellite) ?? parseString(metadata.sat),
     river: station.attributes.river ?? featurePopup.river,
@@ -199,9 +204,14 @@ function toPopupFeature(feature: MapGeoJSONFeature): PopupFeature | null {
   const properties = feature.properties ?? {};
 
   return {
-    name: typeof properties.name === 'string' ? properties.name : 'Feature',
-    code: undefined,
-    source: undefined,
+    name: properties.name != null ? String(properties.name) : properties.Nome != null ? String(properties.Nome) : 'Feature',
+    code: properties.code != null ? String(properties.code) : properties.Codigo != null ? String(properties.Codigo) : undefined,
+    fid:
+      parseFiniteNumber(properties.fid) ??
+      parseFiniteNumber(feature.id) ??
+      (properties.Codigo != null ? String(properties.Codigo) : undefined) ??
+      (typeof properties.fid === 'string' ? properties.fid : undefined),
+    source: typeof properties.source === 'string' ? properties.source : undefined,
     satellite:
       typeof properties.sat === 'string'
         ? properties.sat
@@ -234,6 +244,7 @@ export default function MainMap({
   stations = [],
   featureCollection,
   featureCollectionLayerStyle,
+  onStationDoubleClick,
   tileLayerUrl,
   children,
 }: MapboxMapProps) {
@@ -267,10 +278,15 @@ export default function MainMap({
     );
 
     if (!clickedFeature) {
+      setPopupFeature(null);
       return;
     }
 
     const matchedStation = findMatchingStation(stations, clickedFeature);
+    
+    console.log('[MapBase] Clicked feature properties:', clickedFeature.properties);
+    console.log('[MapBase] Clicked feature id:', clickedFeature.id);
+
     const nextPopupFeature = matchedStation
       ? buildPopupFeatureFromStation(matchedStation, clickedFeature)
       : toPopupFeature(clickedFeature);
@@ -283,6 +299,29 @@ export default function MainMap({
     setPopupFeature(nextPopupFeature);
   };
 
+  const handleFeatureDoubleClick = (event: MapLayerMouseEvent) => {
+    const clickedFeature = event.features?.find(
+      (feature) => feature.layer?.id === FEATURE_COLLECTION_LAYER_ID,
+    );
+
+    if (!clickedFeature || !onStationDoubleClick) {
+      return;
+    }
+
+    const matchedStation = findMatchingStation(stations, clickedFeature);
+    if (matchedStation) {
+      onStationDoubleClick(matchedStation);
+    }
+  };
+
+  const onMouseEnter = useCallback(() => {
+    if (mapRef.current) mapRef.current.getCanvas().style.cursor = 'pointer';
+  }, []);
+
+  const onMouseLeave = useCallback(() => {
+    if (mapRef.current) mapRef.current.getCanvas().style.cursor = '';
+  }, []);
+
   return (
     <div className="relative h-full w-full">
       <Map
@@ -293,6 +332,9 @@ export default function MainMap({
         attributionControl
         interactiveLayerIds={featureCollection ? [FEATURE_COLLECTION_LAYER_ID] : undefined}
         onClick={handleFeatureClick}
+        onDblClick={handleFeatureDoubleClick}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
         reuseMaps
       >
         <NavigationControl position="top-right" />
@@ -344,4 +386,3 @@ export default function MainMap({
     </div>
   );
 }
-

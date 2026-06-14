@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useCallback, type ReactNode } from 'react';
+import { useRef, useEffect, useCallback, useMemo, type ReactNode } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import type { MapStylePreference, Station } from '@/lib/strapi';
@@ -62,6 +62,20 @@ export default function MapboxMap({
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const popupRef = useRef<mapboxgl.Popup | null>(null);
   const onDoubleClickRef = useRef(onStationDoubleClick);
+
+  const validTileLayerBounds = useMemo(() => {
+    if (!tileLayerBounds || tileLayerBounds.length < 4) return undefined;
+    const [minLng, minLat, maxLng, maxLat] = tileLayerBounds;
+    if (!Number.isFinite(minLng) || !Number.isFinite(minLat) || !Number.isFinite(maxLng) || !Number.isFinite(maxLat)) {
+      return undefined;
+    }
+    return [
+      minLng,
+      Math.max(-89.999, Math.min(89.999, minLat)),
+      maxLng,
+      Math.max(-89.999, Math.min(89.999, maxLat)),
+    ] as [number, number, number, number];
+  }, [tileLayerBounds]);
 
   useEffect(() => {
     onDoubleClickRef.current = onStationDoubleClick;
@@ -242,7 +256,7 @@ export default function MapboxMap({
       type: 'raster',
       tiles: [tileLayerUrl],
       tileSize: 256,
-      ...(tileLayerBounds ? { bounds: tileLayerBounds } : {}),
+      ...(validTileLayerBounds ? { bounds: validTileLayerBounds } : {}),
     });
     map.addLayer(
       {
@@ -253,7 +267,7 @@ export default function MapboxMap({
       },
       LAYER_ID,
     );
-  }, [tileLayerBounds, tileLayerUrl]);
+  }, [validTileLayerBounds, tileLayerUrl]);
 
   // Opacity-only changes can be applied in place without re-requesting tiles.
   useEffect(() => {
@@ -273,14 +287,14 @@ export default function MapboxMap({
   useEffect(() => {
     const map = mapRef.current;
 
-    if (!map || !tileLayerBounds || !fitToTileLayerBounds) {
+    if (!map || !validTileLayerBounds || !fitToTileLayerBounds) {
       return;
     }
 
     map.fitBounds(
       [
-        [tileLayerBounds[0], tileLayerBounds[1]],
-        [tileLayerBounds[2], tileLayerBounds[3]],
+        [validTileLayerBounds[0], validTileLayerBounds[1]],
+        [validTileLayerBounds[2], validTileLayerBounds[3]],
       ],
       {
         padding: 64,
@@ -288,7 +302,7 @@ export default function MapboxMap({
         maxZoom: 10,
       },
     );
-  }, [fitToTileLayerBounds, tileLayerBounds, tileLayerUrl]);
+  }, [fitToTileLayerBounds, validTileLayerBounds, tileLayerUrl]);
 
   useEffect(() => {
     if (!mapRef.current) {

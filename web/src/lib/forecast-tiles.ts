@@ -24,8 +24,6 @@ export type ForecastTileSource = {
   absolutePath: string;
 };
 
-const FORECAST_TILE_PATTERN = /^(?<area>[A-Za-z_]+?)_?(?<date>\d{8})_(?<time>\d{6})(?:_WGS84)?\.tiff?$/i;
-
 function formatAreaLabel(area: string) {
   return area
     .split('_')
@@ -38,21 +36,49 @@ function formatTimestamp(date: string, time: string) {
   return `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}T${time.slice(0, 2)}:${time.slice(2, 4)}:${time.slice(4, 6)}Z`;
 }
 
-function buildFrame(fileName: string): ForecastTileFrame | null {
-  const match = FORECAST_TILE_PATTERN.exec(fileName);
+function buildFrame(relativePath: string, subfolder: string): ForecastTileFrame | null {
+  const baseName = path.basename(relativePath);
+  
+  let area = '';
+  let date = '';
+  let time = '';
 
-  if (!match?.groups) {
-    return null;
+  const originalMatch = /^(?<area>[A-Za-z_]+?)_?(?<date>\d{8})_(?<time>\d{6})(?:_WGS84)?\.tiff?$/i.exec(baseName);
+  const flexibleMatch = /^(?<area>[A-Za-z_]+?)_?(?<year>\d{4})-?(?<month>\d{2})-?(?<day>\d{2})[T_]?(?<hour>\d{2})[h:]?(?<minute>\d{2})[m:]?(?<second>\d{2})?.*\.tiff?$/i.exec(baseName);
+
+  if (originalMatch?.groups) {
+    area = originalMatch.groups.area.toUpperCase();
+    date = originalMatch.groups.date;
+    time = originalMatch.groups.time;
+  } else if (flexibleMatch?.groups) {
+    area = flexibleMatch.groups.area.toUpperCase();
+    date = `${flexibleMatch.groups.year}${flexibleMatch.groups.month}${flexibleMatch.groups.day}`;
+    time = `${flexibleMatch.groups.hour}${flexibleMatch.groups.minute}${flexibleMatch.groups.second || '00'}`;
+  } else {
+    // Fallback if no known date pattern is matched
+    area = baseName.split('_')[0].toUpperCase();
+    const nums = baseName.replace(/\D/g, '');
+    if (nums.length >= 14) {
+      date = nums.slice(0, 8);
+      time = nums.slice(8, 14);
+    } else if (nums.length >= 8) {
+      date = nums.slice(0, 8);
+      time = nums.slice(8).padEnd(6, '0');
+    } else {
+      date = '19700101';
+      time = '000000';
+    }
   }
 
-  const area = match.groups.area.toUpperCase();
-  const date = match.groups.date;
-  const time = match.groups.time;
+  // If a subfolder exists, it overrides the filename area prefix to aggregate images
+  if (subfolder) {
+    area = subfolder.toUpperCase().replace(/[\/\\]/g, '_');
+  }
 
   return {
     area,
-    slug: fileName.replace(/\.tiff?$/i, ''),
-    fileName,
+    slug: relativePath.replace(/\.tiff?$/i, ''),
+    fileName: relativePath,
     date,
     time,
     timestamp: formatTimestamp(date, time),
@@ -103,25 +129,51 @@ export async function resolveForecastTileSource(
   return null;
 }
 
+async function getFilesRecursively(
+  dir: string,
+  currentSubdir: string = ''
+): Promise<{ name: string; relativePath: string; subfolder: string }[]> {
+  const entries = await fs.readdir(dir, { withFileTypes: true });
+  const files: { name: string; relativePath: string; subfolder: string }[] = [];
+
+  for (const entry of entries) {
+    if (entry.isDirectory()) {
+      const newSubdir = currentSubdir ? `${currentSubdir}/${entry.name}` : entry.name;
+      const subFiles = await getFilesRecursively(path.join(dir, entry.name), newSubdir);
+      files.push(...subFiles);
+    } else if (entry.isFile() && /\.(tif|tiff)$/i.test(entry.name)) {
+      files.push({
+        name: entry.name,
+        relativePath: currentSubdir ? `${currentSubdir}/${entry.name}` : entry.name,
+        subfolder: currentSubdir,
+      });
+    }
+  }
+  return files;
+}
+
 /**
  * Read and group forecast GeoTIFF files by area from the shared assets/tiles
  * folder mounted into the web container.
  *
- * Frames are grouped by the leading area token in the file name and ordered by
- * their derived timestamp so the forecast drawer can animate them in sequence.
+ * Frames are grouped by their subfolder name (if any), otherwise by the leading 
+ * area token in the file name. They are ordered by their derived timestamp so 
+ * the forecast drawer can animate them in sequence.
  */
 export async function listForecastTileGroups(): Promise<ForecastTileGroup[]> {
   const directory = await resolveForecastTilesDirectory();
-  const entries = await fs.readdir(directory, { withFileTypes: true });
+  
+  let allFiles: { name: string; relativePath: string; subfolder: string }[] = [];
+  try {
+    allFiles = await getFilesRecursively(directory);
+  } catch (error) {
+    console.error('Error reading forecast tiles directory:', error);
+  }
 
   const grouped = new Map<string, ForecastTileFrame[]>();
 
-  for (const entry of entries) {
-    if (!entry.isFile()) {
-      continue;
-    }
-
-    const frame = buildFrame(entry.name);
+  for (const fileInfo of allFiles) {
+    const frame = buildFrame(fileInfo.relativePath, fileInfo.subfolder);
 
     if (!frame) {
       continue;

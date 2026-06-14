@@ -15,6 +15,7 @@ import {
 export interface StationPopupData {
   name: string;
   code?: string;
+  fid?: number | string;
   source?: string;
   satellite?: string;
   river?: string;
@@ -93,9 +94,11 @@ export default function StationPopup({
               {data.name}
             </CardTitle>
             <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
-              {data.code || data.source ? (
+              {data.code || data.source || data.fid !== undefined ? (
                 <div className="truncate text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  {data.code ?? t('mapPopup.noCode')}
+                  {data.fid !== undefined ? `FID: ${data.fid} ` : ''}
+                  {data.fid !== undefined && data.code ? '· ' : ''}
+                  {data.code ? `Codigo: ${data.code}` : data.fid !== undefined ? '' : t('mapPopup.noCode')}
                   {data.source ? ` · ${data.source}` : ''}
                 </div>
               ) : null}

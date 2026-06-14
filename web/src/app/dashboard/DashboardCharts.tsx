@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import useSWR from 'swr';
-import { getStations } from '@/lib/strapi';
-import type { Station } from '@/lib/strapi';
-import StationChart from '@/components/StationChart';
+import { getSwotMeasurements } from '@/lib/strapi';
+import SwotChart from '@/components/SwotChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTranslation } from '@/lib/use-app-translation';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -17,56 +17,85 @@ import {
 
 export default function DashboardCharts() {
   const { t } = useTranslation();
-  const { data: stationsData } = useSWR('dashboard-stations', () =>
-    getStations({ 'pagination[pageSize]': '10' }),
+  
+  // Fetch a batch of recent SWOT measurements to extract available station IDs
+  const { data: swotData } = useSWR('dashboard-swot-stations', () =>
+    getSwotMeasurements({ 'pagination[pageSize]': '1000' })
   );
 
-  const stations: Station[] = stationsData?.data ?? [];
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
+  const [typedId, setTypedId] = useState<string>('');
 
-  const stationId = selectedId ?? stations[0]?.id;
+  // Extract unique station IDs from the measurements
+  const uniqueStations = useMemo(() => {
+    if (!swotData?.data) return [];
+    const ids = new Set<string>();
+    swotData.data.forEach((m: any) => {
+      if (m.attributes?.station_id) {
+        ids.add(m.attributes.station_id);
+      }
+    });
+    return Array.from(ids);
+  }, [swotData]);
 
-  const to = new Date().toISOString();
-  const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const activeStationId = selectedStationId ?? uniqueStations[0];
+
+  const handleSelectChange = (value: string) => {
+    setSelectedStationId(value);
+    setTypedId(value);
+  };
+
+  const handleTypeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setTypedId(val);
+    if (val.trim() !== '') {
+      setSelectedStationId(val.trim());
+    } else {
+      setSelectedStationId(uniqueStations[0] || null);
+    }
+  };
 
   return (
     <Card>
       <CardHeader className="mb-0 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <CardTitle className="text-base text-gray-800 dark:text-slate-100">
-          {t('dashboard.recentMeasurementsChart')}
+          {t('dashboard.recentMeasurementsChart') || 'Recent SWOT Measurements'}
         </CardTitle>
-        {stations.length > 0 && (
-          <Select
-            value={String(stationId ?? '')}
-            onValueChange={(value) => setSelectedId(Number(value))}
-          >
-            <SelectTrigger className="sm:w-80">
-              <SelectValue placeholder={t('dashboard.selectStation')} />
-            </SelectTrigger>
-            <SelectContent>
-            {stations.map((s: Station) => (
-              <SelectItem key={s.id} value={String(s.id)}>
-                {s.attributes.name} ({s.attributes.code})
-              </SelectItem>
-            ))}
-            </SelectContent>
-          </Select>
-        )}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Input 
+            placeholder={t('dashboard.typeStationId') || 'Type Station ID...'} 
+            value={typedId}
+            onChange={handleTypeChange}
+            className="sm:w-48"
+          />
+          {uniqueStations.length > 0 && (
+            <Select
+              value={activeStationId ?? ''}
+              onValueChange={handleSelectChange}
+            >
+              <SelectTrigger className="sm:w-60">
+                <SelectValue placeholder={t('dashboard.selectStation') || 'Select Station'} />
+              </SelectTrigger>
+              <SelectContent>
+                {uniqueStations.map((stationId) => (
+                  <SelectItem key={stationId} value={stationId}>
+                    Station ID: {stationId}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
       </CardHeader>
 
       <CardContent>
-        {stationId ? (
-        <StationChart
-          stationId={stationId}
-          variable="level_m"
-          from={from}
-          to={to}
-        />
-      ) : (
-        <div className="flex h-48 items-center justify-center text-sm text-gray-400 dark:text-slate-500">
-          {t('dashboard.noStation')}
-        </div>
-      )}
+        {activeStationId ? (
+          <SwotChart stationId={activeStationId} />
+        ) : (
+          <div className="flex h-48 items-center justify-center text-sm text-gray-400 dark:text-slate-500">
+            {t('dashboard.noStation') || 'No stations available.'}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

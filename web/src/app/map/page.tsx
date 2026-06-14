@@ -61,6 +61,13 @@ export default function MapPage() {
         zoom: 12,
       });
     },
+    onFeatureFocus: (feature) => {
+      setFlyTarget({
+        longitude: feature.longitude,
+        latitude: feature.latitude,
+        zoom: 12,
+      });
+    },
   });
 
   useEffect(() => {

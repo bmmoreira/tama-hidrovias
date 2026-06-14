@@ -58,6 +58,26 @@ export type Measurement = {
   attributes: Record<string, any>;
 };
 
+/** SWOT measurement record from Strapi. */
+export type SwotMeasurement = {
+  id: number;
+  attributes: {
+    station_id: string;
+    datetime: string;
+    mean?: number;
+    count?: number;
+    std?: number;
+    min?: number;
+    max?: number;
+    median?: number;
+    mean_dist_m?: number;
+    median_dist_m?: number;
+    min_dist_m?: number;
+    max_dist_m?: number;
+    [key: string]: any;
+  };
+};
+
 /** Supported measurement variables for stations (levels, flows, etc.). */
 export type StationVariable =
   | 'level_m'
@@ -287,6 +307,7 @@ export type MapFeatureCollectionPointGeometry = {
 /** Single GeoJSON feature inside a feature collection. */
 export type MapFeatureCollectionFeature = {
   type: 'Feature';
+  id?: string | number;
   properties: Record<string, unknown>;
   geometry: MapFeatureCollectionPointGeometry;
 };
@@ -424,6 +445,18 @@ function buildMeasurementsPath(
   return `/api/measurements?${query.toString()}`;
 }
 
+function buildSwotMeasurementsPath(params?: Record<string, string>) {
+  const query = new URLSearchParams(params || {});
+  if (!query.has('pagination[pageSize]')) {
+    query.set('pagination[pageSize]', '100');
+  }
+  if (!query.has('sort[0]')) {
+    query.set('sort[0]', 'datetime:desc');
+  }
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  return `/api/swot-measurements${suffix}`;
+}
+
 function buildForecastsPath(stationId?: number, variable?: string) {
   // Forecast requests are sorted by issue date first and valid date second so
   // the UI can group the freshest forecast runs without re-sorting client-side.
@@ -488,6 +521,11 @@ export async function getMeasurements(
   to?: string,
 ) {
   const path = buildMeasurementsPath(stationId, variable, from, to);
+  return fetchJson(withBase(path));
+}
+
+export async function getSwotMeasurements(params?: Record<string, string>) {
+  const path = buildSwotMeasurementsPath(params);
   return fetchJson(withBase(path));
 }
 

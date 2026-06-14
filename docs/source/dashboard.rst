@@ -252,5 +252,27 @@ Current implementation files:
 The effective language is resolved from saved user preferences when available,
 otherwise from the global app settings fallback for guests.
 
+Dashboard Charts
+----------------
+
+The dashboard provides a visual overview of time-series data using dynamic charts.
+
+- ``web/src/app/dashboard/DashboardCharts.tsx``
+- ``web/src/components/SwotChart.tsx``
+
+The ``DashboardCharts`` component is responsible for providing the station selection context. It dynamically fetches recent records from the ``/api/swot-measurements`` endpoint to extract a list of unique, active ``station_id``s, ensuring the user only selects from stations that have valid SWOT data.
+
+Once a station is selected, the data is passed to the ``SwotChart`` component. This component utilizes ``recharts`` to plot the ``mean`` and ``median`` metrics over time. A key interactive feature of this chart is the inclusion of the Recharts ``Brush`` component, which is rendered as a complementary mini-chart below the main visualization. The brush allows users to perform discrete time-axis zooming and panning by dragging its edges or sliding the entire selection window left and right.
+
+SWOT Measurements Data Table
+----------------------------
+
+The dashboard overview includes a sortable data table specifically designed to list SWOT measurements:
+
+- ``web/src/components/SwotDataTable.tsx``
+- ``web/src/components/ui/table.tsx`` (Shadcn UI table primitives)
+
+This implementation uses ``@tanstack/react-table`` to provide an interactive, sortable client-side table. It fetches data dynamically via ``swr`` calling the ``/api/swot-measurements`` proxy route. The dashboard summary cards have also been updated to reflect the count of available SWOT records natively.
+
 For the full technical flow, model details, and route behavior, see
 ``preferences.rst``.
