@@ -1,0 +1,91 @@
+{
+  "kind": "collectionType",
+  "collectionName": "raster_layers",
+  "info": {
+    "singularName": "raster-layer",
+    "pluralName": "raster-layers",
+    "displayName": "Raster Layer",
+    "description": "Spatial metadata and rendering stats for hydrological Cloud Optimized GeoTIFFs (COGs)"
+  },
+  "options": { "draftAndPublish": true },
+  "pluginOptions": {},
+  "attributes": {
+    "layer_id": {
+      "type": "string",
+      "unique": true,
+      "required": true
+    },
+    "display_name": {
+      "type": "string",
+      "required": true
+    },
+    "file_url": {
+      "type": "string",
+      "required": true
+    },
+    "area_name": {
+      "type": "string",
+      "required": true
+    },
+    "hydrology_variable": {
+      "type": "string",
+      "required": true
+    },
+    "acquisition_date": {
+      "type": "date"
+    },
+    "acquisition_time": {
+      "type": "time"
+    },
+    "file_projection": {
+      "type": "string"
+    },
+    "computed_min": {
+      "type": "decimal",
+      "required": true
+    },
+    "computed_max": {
+      "type": "decimal",
+      "required": true
+    },
+    "colormap_name": {
+      "type": "enumeration",
+      "enum": [
+        "rainbow",
+        "viridis",
+        "plasma",
+        "inferno",
+        "magma",
+        "cividis",
+        "turbo",
+        "terrain",
+        "spectral",
+        "blues"
+      ],
+      "default": "viridis"
+    },
+    "bounds": {
+      "type": "json",
+      "required": true
+    },
+    "crs": {
+      "type": "string",
+      "default": "http://www.opengis.net/def/crs/EPSG/0/4326"
+    },
+    "dtype": {
+      "type": "string"
+    },
+    "nodata_value": {
+      "type": "decimal"
+    },
+    "width": {
+      "type": "integer"
+    },
+    "height": {
+      "type": "integer"
+    },
+    "band_count": {
+      "type": "integer"
+    }
+  }
+}

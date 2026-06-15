@@ -49,6 +49,7 @@ The platform's core hydrological and meteorological data is managed via several 
 - **SWOT Measurements** (``/api/swot-measurements``): A specialized schema for importing satellite altimetry data (Surface Water and Ocean Topography). This includes statistical fields like mean, count, standard deviation, min, and max values.
 - **Forecasts** (``/api/forecasts``): Predictive hydrological models and output data.
 - **Climate Layers** (``/api/climate-layers``): Metadata for meteorological raster layers used in map visualizations.
+- **Raster Layers** (``/api/raster-layers``): Filename-derived metadata, spatial bounds, and colormap-stretch statistics for forecast GeoTIFFs, synced on demand from TiTiler and consumed by the Forecast TIFFs dashboard and the public ``ForecastDrawer``. See ``raster-layers.rst``.
 
 These domain APIs form the backbone of the Python data pipeline, which relies on ``StrapiClient`` to batch insert large volumes of telemetry and forecast records directly into the CMS.
 

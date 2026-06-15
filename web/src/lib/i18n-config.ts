@@ -35,6 +35,7 @@ export const resources = {
         overview: 'Visão Geral',
         stations: 'Estações',
         forecasts: 'Previsões',
+        forecastTiffs: 'GeoTIFFs',
         climateLayers: 'Camadas Climáticas',
         mapFeatures: 'GeoJSON do mapa',
         mapview: 'Mapa (painel)',
@@ -475,6 +476,7 @@ export const resources = {
         overview: 'Overview',
         stations: 'Stations',
         forecasts: 'Forecasts',
+        forecastTiffs: 'Forecast TIFFs',
         climateLayers: 'Climate Layers',
         mapFeatures: 'Map GeoJSON',
         mapview: 'Map (dashboard)',
@@ -899,7 +901,7 @@ export const resources = {
   es: {
     translation: {
       nav: { map: 'Mapa', dashboard: 'Panel', settings: 'Preferencias', login: 'Entrar', logout: 'Salir', account: 'Cuenta', menu: 'Menú' },
-      sidebar: { overview: 'Resumen', stations: 'Estaciones', forecasts: 'Pronósticos', climateLayers: 'Capas Climáticas', mapFeatures: 'GeoJSON del mapa', mapview: 'Mapa (panel)', preferences: 'Preferencias', admin: 'Admin' },
+      sidebar: { overview: 'Resumen', stations: 'Estaciones', forecasts: 'Pronósticos', forecastTiffs: 'TIFFs de Pronósticos', climateLayers: 'Capas Climáticas', mapFeatures: 'GeoJSON del mapa', mapview: 'Mapa (panel)', preferences: 'Preferencias', admin: 'Admin' },
       readOnly: {
         badgeLabel: 'Solo lectura',
         badgeTitle: 'Su perfil puede ver datos, pero no ejecutar acciones de escritura.',
@@ -943,7 +945,7 @@ export const resources = {
   fr: {
     translation: {
       nav: { map: 'Carte', dashboard: 'Tableau de bord', settings: 'Préférences', login: 'Connexion', logout: 'Déconnexion', account: 'Compte', menu: 'Menu' },
-      sidebar: { overview: 'Vue d’ensemble', stations: 'Stations', forecasts: 'Prévisions', climateLayers: 'Couches climatiques', mapFeatures: 'GeoJSON de la carte', mapview: 'Carte (tableau de bord)', preferences: 'Préférences', admin: 'Admin' },
+      sidebar: { overview: 'Vue d’ensemble', stations: 'Stations', forecasts: 'Prévisions', forecastTiffs: 'TIFFs de Prévisions', climateLayers: 'Couches climatiques', mapFeatures: 'GeoJSON de la carte', mapview: 'Carte (tableau de bord)', preferences: 'Préférences', admin: 'Admin' },
       readOnly: {
         badgeLabel: 'Lecture seule',
         badgeTitle: 'Votre profil peut consulter les données, mais pas effectuer des actions d’écriture.',

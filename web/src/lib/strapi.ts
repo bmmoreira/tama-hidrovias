@@ -46,6 +46,36 @@ export type ClimateLayer = {
   };
 };
 
+/**
+ * Spatial metadata and rendering stats for a hydrological Cloud
+ * Optimized GeoTIFF (COG), parsed from its filename and the TiTiler
+ * `/cog/info` and `/cog/statistics` payloads.
+ */
+export type RasterLayer = {
+  id: number;
+  attributes: {
+    layer_id: string;
+    display_name: string;
+    file_url: string;
+    area_name: string;
+    hydrology_variable: string;
+    acquisition_date?: string | null;
+    acquisition_time?: string | null;
+    file_projection?: string | null;
+    computed_min: number;
+    computed_max: number;
+    colormap_name?: string | null;
+    bounds: [number, number, number, number];
+    crs?: string | null;
+    dtype?: string | null;
+    nodata_value?: number | null;
+    width?: number | null;
+    height?: number | null;
+    band_count?: number | null;
+    [key: string]: unknown;
+  };
+};
+
 /** Generic forecast payload returned from Strapi forecast endpoints. */
 export type Forecast = {
   id: number;
@@ -487,6 +517,10 @@ function buildClimateLayersPath() {
   return `/api/climate-layers?${query.toString()}`;
 }
 
+function buildRasterLayersPath() {
+  return '/api/raster-layers';
+}
+
 function buildUserPreferencesPath() {
   return '/api/users/me/preferences';
 }
@@ -507,6 +541,34 @@ export async function getStations(params?: Record<string, string>) {
 export async function getClimateLayers() {
   const path = buildClimateLayersPath();
   return fetchJson(withBase(path));
+}
+
+/**
+ * Fetches all published `RasterLayer` entries (spatial metadata and
+ * colormap stretch stats for forecast GeoTIFFs).
+ *
+ * Consumers typically match entries to on-disk files by comparing the
+ * basename of {@link RasterLayer.attributes.file_url} against a file name,
+ * see {@link getRasterLayerFileBaseName}.
+ */
+export async function getRasterLayers(): Promise<{ data: RasterLayer[] }> {
+  const path = buildRasterLayersPath();
+  return fetchJson(withBase(path));
+}
+
+/**
+ * Parses the given GeoTIFF's filename and TiTiler `/cog/info` and
+ * `/cog/statistics` payloads, then creates or updates the matching
+ * `RasterLayer` entry in Strapi.
+ */
+export async function syncRasterLayer(filePath: string): Promise<{ data: RasterLayer }> {
+  return fetchJson('/api/raster-layers/sync', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ path: filePath }),
+  });
 }
 
 export async function getForecasts(stationId?: number, variable?: string) {

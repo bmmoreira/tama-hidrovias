@@ -11,6 +11,7 @@ import {
   SlidersHorizontal,
   Settings,
   Map,
+  FileImage,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useTranslation } from '@/lib/use-app-translation';
@@ -28,6 +29,11 @@ export default function Sidebar() {
     { href: '/dashboard', label: t('sidebar.overview'), Icon: LayoutDashboard },
     { href: '/dashboard/stations', label: t('sidebar.stations'), Icon: Radio },
     { href: '/dashboard/forecasts', label: t('sidebar.forecasts'), Icon: BarChart2 },
+    {
+      href: '/dashboard/forecast-tiffs',
+      label: t('sidebar.forecastTiffs'),
+      Icon: FileImage,
+    },
     {
       href: '/dashboard/climate-layers',
       label: t('sidebar.climateLayers'),

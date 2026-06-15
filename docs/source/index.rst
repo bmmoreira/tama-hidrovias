@@ -69,6 +69,7 @@ Contents
    dashboard
    preferences
    public-map
+   raster-layers
    mapview
    changelog
    architecture

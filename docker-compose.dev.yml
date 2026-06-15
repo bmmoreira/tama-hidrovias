@@ -61,7 +61,9 @@ services:
       context: ./web
       target: deps
     user: "0:0"
-    command: npm run dev -- --hostname 0.0.0.0
+    ports:
+      - "3000:3000"
+    command: sh -c "npm install && npm run dev -- --hostname 0.0.0.0"
     env_file:
       - .env
     environment:
@@ -76,7 +78,7 @@ services:
       - ./web:/app
       - /app/node_modules
       - /app/.next
-      - ./assets/tiff:/forecast-tiles:ro
+      - ./assets/tiff:/forecast-tiles
     depends_on:
       - strapi
     networks:

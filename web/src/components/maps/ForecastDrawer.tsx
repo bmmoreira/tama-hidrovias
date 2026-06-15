@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import useSWR from 'swr';
 import clsx from 'clsx';
 import { CloudRain, Loader2, Pause, Play, RefreshCw, X } from 'lucide-react';
-import { DEFAULT_FORECAST_LAYER_SETTINGS, type AppSettings } from '@/lib/strapi';
+import { DEFAULT_FORECAST_LAYER_SETTINGS, getRasterLayers, type AppSettings, type RasterLayer } from '@/lib/strapi';
+import { getRasterLayerFileBaseName } from '@/lib/raster-layer-filename';
 import { useTranslation } from '@/lib/use-app-translation';
 
 type ForecastFrame = {
@@ -233,8 +234,65 @@ export default function ForecastDrawer({
     },
   );
 
-  const resolvedMinValue = envMin ?? frameMetadata?.data?.recommendedMin ?? frameMetadata?.data?.min ?? undefined;
-  const resolvedMaxValue = envMax ?? frameMetadata?.data?.recommendedMax ?? frameMetadata?.data?.max ?? undefined;
+  const { data: rasterLayersData } = useSWR('raster-layers', () => getRasterLayers(), {
+    revalidateOnFocus: false,
+  });
+
+  // Index RasterLayer entries by file basename so the active frame's GeoTIFF
+  // can be matched regardless of any directory prefix in `file_url`.
+  const rasterLayerByFile = useMemo(() => {
+    const map = new Map<string, RasterLayer>();
+    for (const layer of rasterLayersData?.data ?? []) {
+      map.set(getRasterLayerFileBaseName(layer.attributes.file_url), layer);
+    }
+    return map;
+  }, [rasterLayersData]);
+
+  const activeRasterLayer = activeFrame
+    ? rasterLayerByFile.get(getRasterLayerFileBaseName(activeFrame.fileName))
+    : undefined;
+
+  // Colormap stretch range, preferring the curated values stored on the
+  // matching RasterLayer entry over the on-the-fly TiTiler statistics.
+  const resolvedMinValue =
+    envMin ??
+    (isFiniteNumber(activeRasterLayer?.attributes.computed_min)
+      ? activeRasterLayer?.attributes.computed_min
+      : undefined) ??
+    frameMetadata?.data?.recommendedMin ??
+    frameMetadata?.data?.min ??
+    undefined;
+  const resolvedMaxValue =
+    envMax ??
+    (isFiniteNumber(activeRasterLayer?.attributes.computed_max)
+      ? activeRasterLayer?.attributes.computed_max
+      : undefined) ??
+    frameMetadata?.data?.recommendedMax ??
+    frameMetadata?.data?.max ??
+    undefined;
+
+  useEffect(() => {
+    if (!activeFrame) return;
+
+    const fileName = getRasterLayerFileBaseName(activeFrame.fileName);
+    const hasRasterLayerMatch =
+      isFiniteNumber(activeRasterLayer?.attributes.computed_min) &&
+      isFiniteNumber(activeRasterLayer?.attributes.computed_max);
+
+    if (envMin !== undefined || envMax !== undefined) {
+      console.log(
+        `[ForecastDrawer] "${fileName}": using NEXT_PUBLIC_FORECAST_MIN/MAX override (min=${resolvedMinValue}, max=${resolvedMaxValue}).`,
+      );
+    } else if (hasRasterLayerMatch) {
+      console.log(
+        `[ForecastDrawer] "${fileName}": matched RasterLayer "${activeRasterLayer?.attributes.layer_id}" -- using computed_min/max from cog info (min=${resolvedMinValue}, max=${resolvedMaxValue}).`,
+      );
+    } else {
+      console.log(
+        `[ForecastDrawer] "${fileName}": no RasterLayer match -- using default TiTiler statistics (min=${resolvedMinValue}, max=${resolvedMaxValue}).`,
+      );
+    }
+  }, [activeFrame, activeRasterLayer, resolvedMinValue, resolvedMaxValue, envMin, envMax]);
 
   useEffect(() => {
     onOpenChange?.(isOpen);

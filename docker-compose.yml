@@ -76,13 +76,13 @@ services:
     networks:
       - tama-network
     volumes:
-      - ./assets/tiles:/forecast-tiles:ro
+      - ./assets/tiff:/forecast-tiles
 
   titiler:
     image: ghcr.io/developmentseed/titiler:latest
     command: uvicorn titiler.application.main:app --host 0.0.0.0 --port 8080 --workers 1
     volumes:
-      - ./assets/tiff:/data/geotiffs:ro
+      - ./assets/tiff:/data/geotiffs
     networks:
       - tama-network
 

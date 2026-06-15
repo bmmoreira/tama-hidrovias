@@ -91,12 +91,14 @@ Current Protected Flows
 -----------------------
 
 The current write-protected dashboard flows are station creation, station
-editing, station deletion, and map feature collection editing.
+editing, station deletion, map feature collection editing, and Forecast TIFFs
+raster layer metadata sync.
 
 UI implementation:
 
 - ``web/src/app/dashboard/stations/page.tsx``
 - ``web/src/app/dashboard/map-features/page.tsx``
+- ``web/src/app/dashboard/forecast-tiffs/page.tsx``
 
 Current behavior:
 
@@ -112,6 +114,9 @@ Current behavior:
 - analysts and admin-capable roles can add a new feature, edit an existing feature, or remove one
 - the feature editor modal validates Point coordinates and JSON properties before save
 - each save writes the full updated ``featureCollection`` back through the protected internal Next.js route
+- on the Forecast TIFFs page, each file row has a refresh button visible to ``analyst``/``admin`` roles
+- clicking it calls ``POST /api/raster-layers/sync`` for that file and revalidates the ``RasterLayer`` list on success
+- the button shows a spinner for the file currently being synced and is disabled for that row until it finishes
 
 At the moment, station deletion is the only destructive dashboard flow. Any
 future destructive action should reuse ``web/src/components/ConfirmationModal.tsx``

@@ -555,6 +555,69 @@ export interface ApiMeasurementMeasurement extends Schema.CollectionType {
   };
 }
 
+export interface ApiRasterLayerRasterLayer extends Schema.CollectionType {
+  collectionName: 'raster_layers';
+  info: {
+    description: 'Spatial metadata and rendering stats for hydrological Cloud Optimized GeoTIFFs (COGs)';
+    displayName: 'Raster Layer';
+    pluralName: 'raster-layers';
+    singularName: 'raster-layer';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    acquisition_date: Attribute.Date;
+    acquisition_time: Attribute.Time;
+    area_name: Attribute.String & Attribute.Required;
+    band_count: Attribute.Integer;
+    bounds: Attribute.JSON & Attribute.Required;
+    colormap_name: Attribute.Enumeration<
+      [
+        'rainbow',
+        'viridis',
+        'plasma',
+        'inferno',
+        'magma',
+        'cividis',
+        'turbo',
+        'terrain',
+        'spectral',
+        'blues'
+      ]
+    > &
+      Attribute.DefaultTo<'viridis'>;
+    computed_max: Attribute.Decimal & Attribute.Required;
+    computed_min: Attribute.Decimal & Attribute.Required;
+    createdAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::raster-layer.raster-layer',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    crs: Attribute.String &
+      Attribute.DefaultTo<'http://www.opengis.net/def/crs/EPSG/0/4326'>;
+    display_name: Attribute.String & Attribute.Required;
+    dtype: Attribute.String;
+    file_projection: Attribute.String;
+    file_url: Attribute.String & Attribute.Required;
+    height: Attribute.Integer;
+    hydrology_variable: Attribute.String & Attribute.Required;
+    layer_id: Attribute.String & Attribute.Required & Attribute.Unique;
+    nodata_value: Attribute.Decimal;
+    publishedAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    updatedBy: Attribute.Relation<
+      'api::raster-layer.raster-layer',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    width: Attribute.Integer;
+  };
+}
+
 export interface ApiStationStation extends Schema.CollectionType {
   collectionName: 'stations';
   info: {
@@ -1132,6 +1195,7 @@ declare module '@strapi/types' {
       'api::forecast.forecast': ApiForecastForecast;
       'api::map-feature-collection.map-feature-collection': ApiMapFeatureCollectionMapFeatureCollection;
       'api::measurement.measurement': ApiMeasurementMeasurement;
+      'api::raster-layer.raster-layer': ApiRasterLayerRasterLayer;
       'api::station.station': ApiStationStation;
       'api::swot-measurement.swot-measurement': ApiSwotMeasurementSwotMeasurement;
       'api::user-preference.user-preference': ApiUserPreferenceUserPreference;

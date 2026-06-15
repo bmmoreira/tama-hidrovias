@@ -158,6 +158,27 @@ The metadata route returns:
 - raw ``min`` and ``max`` statistics
 - ``recommendedMin`` and ``recommendedMax`` from percentiles when available
 
+Raster Layer Min/Max Override
+------------------------------
+
+Before falling back to the metadata route's statistics, the drawer also
+fetches the ``RasterLayer`` collection (``GET /api/raster-layers``) and
+matches entries to the active frame's file by filename. When a match has
+finite ``computed_min``/``computed_max`` values, those take precedence over
+TiTiler's ``recommendedMin``/``recommendedMax`` and raw ``min``/``max``.
+
+The resulting priority order for ``min``/``max`` is:
+
+1. an explicit environment override, if configured
+2. the matched ``RasterLayer``'s ``computed_min`` / ``computed_max``
+3. ``recommendedMin`` / ``recommendedMax`` from the metadata route
+4. raw ``min`` / ``max`` from the metadata route
+
+This allows curated stretch values -- populated via the Forecast TIFFs
+dashboard sync button -- to override the on-the-fly TiTiler statistics
+without changing how the metadata route itself behaves. See
+``raster-layers.rst`` for the full ``RasterLayer`` collection and sync flow.
+
 Operational Notes
 -----------------
 
@@ -183,3 +204,5 @@ Most relevant entries include:
 - ``ForecastDrawer`` and ``ForecastOverlayConfig``
 - ``MapboxMapProps`` raster overlay options
 - ``listForecastTileGroups()`` and ``resolveForecastTileSource()``
+- ``RasterLayer``, ``getRasterLayers()``, and ``getRasterLayerFileBaseName()``
+  (see ``raster-layers.rst``)
