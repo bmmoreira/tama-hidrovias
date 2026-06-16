@@ -143,8 +143,6 @@ const MAPBOX_STYLE_URLS: Record<MapStylePreference, string> = {
 
 interface GaugePopupState {
   feature: SwotGaugeFeature;
-  x: number;
-  y: number;
 }
 
 export default function MapboxMap({
@@ -348,8 +346,7 @@ export default function MapboxMap({
 
       el.addEventListener('click', (e) => {
         e.stopPropagation();
-        const point = map.project(feature.geometry.coordinates as [number, number]);
-        setGaugePopup({ feature, x: point.x, y: point.y });
+        setGaugePopup({ feature });
       });
 
       return marker;
@@ -464,10 +461,13 @@ export default function MapboxMap({
 
         return (
           <div
-            className="pointer-events-none absolute z-50"
-            style={{ left: gaugePopup.x + 14, top: gaugePopup.y, transform: 'translateY(-50%)' }}
+            className="absolute inset-0 z-50 flex items-center justify-center p-4"
+            onClick={() => setGaugePopup(null)}
           >
-            <div className="pointer-events-auto w-64 overflow-hidden rounded-2xl border border-white/20 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-md dark:border-slate-700/60 dark:bg-slate-900/95">
+            <div
+              className="pointer-events-auto w-72 max-w-full overflow-hidden rounded-2xl border border-white/20 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-md dark:border-slate-700/60 dark:bg-slate-900/95"
+              onClick={(e) => e.stopPropagation()}
+            >
 
               {/* Header */}
               <div className="relative bg-gradient-to-br from-sky-500 to-cyan-600 px-4 pb-3 pt-4">

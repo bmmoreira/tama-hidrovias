@@ -13,6 +13,7 @@ import type { ForecastOverlayConfig } from '@/components/maps/ForecastDrawer';
 import HomeButton from '@/components/ui/HomeButton';
 import DashboardButton from '@/components/ui/DashboardButton';
 import { useStationExplorer } from '@/components/maps/useStationExplorer';
+import WelcomeModal from '@/components/maps/WelcomeModal';
 
 // Dynamic import to avoid SSR issues with mapbox-gl
 const MapboxMap = dynamic(() => import('@/components/MapboxMap'), {
@@ -91,6 +92,7 @@ export default function MapPage() {
 
   return (
     <div className="relative flex h-screen w-full overflow-hidden">
+      <WelcomeModal />
       {/* Map */}
       <div className="flex-1">
         {!isPreferencesLoading || preferences ? (
