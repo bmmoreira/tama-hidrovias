@@ -1,9 +1,11 @@
 'use client';
 
-import { useRef, useEffect, useCallback, useMemo, type ReactNode } from 'react';
+import { useRef, useEffect, useCallback, useMemo, useState, type ReactNode } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import type { MapStylePreference, Station } from '@/lib/strapi';
+import type { MapStylePreference, Station, SwotGaugeFeature } from '@/lib/strapi';
+import StationDetailsModal from '@/components/maps/StationDetailsModal';
+import type { StationPopupData } from '@/components/maps/StationPopup';
 
 export interface ViewState {
   longitude: number;
@@ -32,6 +34,8 @@ export interface MapboxMapProps {
   tileLayerBounds?: [number, number, number, number];
   /** Whether the map should fit to the raster bounds when the overlay changes. */
   fitToTileLayerBounds?: boolean;
+  /** Latest SWOT node/gauge readings rendered as colorized triangles. */
+  swotGaugeFeatures?: SwotGaugeFeature[];
   children?: ReactNode;
 }
 
@@ -40,12 +44,108 @@ const LAYER_ID = 'stations-layer';
 const TILE_SOURCE_ID = 'raster-tile-source';
 const TILE_LAYER_ID = 'raster-tile-layer';
 
+// Magnitude (in the same unit as `Change`) at which the color spectrum
+// reaches its most saturated value.
+const SWOT_GAUGE_CHANGE_SCALE_MAX = 5;
+
+function hexToRgb(hex: string): [number, number, number] {
+  const normalized = hex.replace('#', '');
+  return [
+    parseInt(normalized.substring(0, 2), 16),
+    parseInt(normalized.substring(2, 4), 16),
+    parseInt(normalized.substring(4, 6), 16),
+  ];
+}
+
+function interpolateColor(from: string, to: string, t: number): string {
+  const clamped = Math.min(1, Math.max(0, t));
+  const [r1, g1, b1] = hexToRgb(from);
+  const [r2, g2, b2] = hexToRgb(to);
+
+  const r = Math.round(r1 + (r2 - r1) * clamped);
+  const g = Math.round(g1 + (g2 - g1) * clamped);
+  const b = Math.round(b1 + (b2 - b1) * clamped);
+
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+// No data → neutral gray. Otherwise, positive change ramps through a green
+// spectrum and negative change (rendered as an inverted triangle) ramps
+// through an orange/red spectrum, both scaled by magnitude.
+function getSwotGaugeColor(change: number | null): string {
+  if (typeof change !== 'number' || !Number.isFinite(change)) {
+    return '#94a3b8';
+  }
+
+  const t = Math.abs(change) / SWOT_GAUGE_CHANGE_SCALE_MAX;
+
+  return change < 0
+    ? interpolateColor('#fed7aa', '#b91c1c', t)
+    : interpolateColor('#bbf7d0', '#15803d', t);
+}
+
+// Builds an SVG triangle marker so the Change value can be rendered inside.
+// A negative change uses a downward-pointing triangle (inverted) on an
+// orange/red spectrum; positive uses upward on a green spectrum.
+function createSwotGaugeElement(change: number | null): HTMLDivElement {
+  const color = getSwotGaugeColor(change);
+  const inverted = typeof change === 'number' && change < 0;
+
+  const size = 58;
+  const pad = 3;
+  const mid = size / 2;
+  const bottom = size - pad;
+
+  // Upward triangle: apex top-centre, base at bottom.
+  // Downward triangle: base at top, apex bottom-centre.
+  const points = inverted
+    ? `${pad},${pad} ${bottom},${pad} ${mid},${bottom}`
+    : `${mid},${pad} ${pad},${bottom} ${bottom},${bottom}`;
+
+  // Place the label in the widest part of the triangle (near the base).
+  const textY = inverted ? Math.round(size * 0.28) : Math.round(size * 0.80);
+
+  const label =
+    typeof change === 'number'
+      ? `${change >= 0 ? '+' : ''}${change.toFixed(1)}`
+      : '–';
+
+  const el = document.createElement('div');
+  el.style.cursor = 'pointer';
+  el.style.filter = 'drop-shadow(0 1px 2px rgba(0,0,0,0.45))';
+  el.innerHTML = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="${points}" fill="${color}" />
+    <text
+      x="${mid}"
+      y="${textY}"
+      text-anchor="middle"
+      dominant-baseline="middle"
+      font-size="12"
+      font-weight="700"
+      font-family="system-ui,-apple-system,sans-serif"
+      fill="white"
+      stroke="rgba(0,0,0,0.25)"
+      stroke-width="2"
+      paint-order="stroke"
+      stroke-linejoin="round"
+    >${label}</text>
+  </svg>`;
+
+  return el;
+}
+
 const MAPBOX_STYLE_URLS: Record<MapStylePreference, string> = {
   outdoors: 'mapbox://styles/mapbox/outdoors-v12',
   streets: 'mapbox://styles/mapbox/streets-v12',
   satellite: 'mapbox://styles/mapbox/satellite-streets-v12',
   dark: 'mapbox://styles/mapbox/dark-v11',
 };
+
+interface GaugePopupState {
+  feature: SwotGaugeFeature;
+  x: number;
+  y: number;
+}
 
 export default function MapboxMap({
   initialViewState = { longitude: -52, latitude: -15, zoom: 4 },
@@ -56,12 +156,15 @@ export default function MapboxMap({
   tileLayerOpacity = 0.7,
   tileLayerBounds,
   fitToTileLayerBounds = false,
+  swotGaugeFeatures = [],
   children,
 }: MapboxMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const popupRef = useRef<mapboxgl.Popup | null>(null);
   const onDoubleClickRef = useRef(onStationDoubleClick);
+  const [gaugePopup, setGaugePopup] = useState<GaugePopupState | null>(null);
+  const [gaugeModal, setGaugeModal] = useState<StationPopupData | null>(null);
 
   const validTileLayerBounds = useMemo(() => {
     if (!tileLayerBounds || tileLayerBounds.length < 4) return undefined;
@@ -187,6 +290,7 @@ export default function MapboxMap({
       map.on('mouseleave', LAYER_ID, () => {
         map.getCanvas().style.cursor = '';
       });
+
     });
 
     mapRef.current = map;
@@ -226,6 +330,35 @@ export default function MapboxMap({
       })),
     });
   }, [stations]);
+
+  // Manage SWOT gauge DOM markers. Markers are independent of style-load
+  // timing, so this effect runs as soon as the map is constructed and
+  // feature data is available — no isStyleLoaded() gate needed.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const markers = swotGaugeFeatures.map((feature) => {
+      const { Change } = feature.properties;
+      const el = createSwotGaugeElement(Change);
+
+      const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
+        .setLngLat(feature.geometry.coordinates)
+        .addTo(map);
+
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const point = map.project(feature.geometry.coordinates as [number, number]);
+        setGaugePopup({ feature, x: point.x, y: point.y });
+      });
+
+      return marker;
+    });
+
+    return () => {
+      markers.forEach((marker) => marker.remove());
+    };
+  }, [swotGaugeFeatures]);
 
   // Rebuild the raster source only when the URL template or bounds change.
   useEffect(() => {
@@ -323,6 +456,108 @@ export default function MapboxMap({
         }
       `}</style>
       {children}
+
+      {gaugePopup !== null && (() => {
+        const p = gaugePopup.feature.properties;
+        const hasChange = typeof p.Change === 'number';
+        const changePositive = hasChange && (p.Change as number) >= 0;
+
+        return (
+          <div
+            className="pointer-events-none absolute z-50"
+            style={{ left: gaugePopup.x + 14, top: gaugePopup.y, transform: 'translateY(-50%)' }}
+          >
+            <div className="pointer-events-auto w-64 overflow-hidden rounded-2xl border border-white/20 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-md dark:border-slate-700/60 dark:bg-slate-900/95">
+
+              {/* Header */}
+              <div className="relative bg-gradient-to-br from-sky-500 to-cyan-600 px-4 pb-3 pt-4">
+                <button
+                  onClick={() => setGaugePopup(null)}
+                  className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-white/80 transition hover:bg-white/35 hover:text-white"
+                  aria-label="Fechar"
+                >
+                  <svg viewBox="0 0 10 10" className="h-2.5 w-2.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                    <path d="M2 2l6 6M8 2l-6 6" />
+                  </svg>
+                </button>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/70">SWOT Gauge</p>
+                <h3 className="mt-0.5 pr-6 text-sm font-bold leading-tight text-white">{p.Nome}</h3>
+                <p className="mt-1 text-[11px] text-white/60">ID: {p.station_id}</p>
+              </div>
+
+              {/* Change highlight */}
+              <div className={`flex items-center gap-3 px-4 py-3 ${changePositive ? 'bg-emerald-50 dark:bg-emerald-950/30' : hasChange ? 'bg-red-50 dark:bg-red-950/20' : 'bg-gray-50 dark:bg-slate-800/40'}`}>
+                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white shadow-sm ${changePositive ? 'bg-emerald-500' : hasChange ? 'bg-red-500' : 'bg-gray-400'}`}>
+                  {hasChange ? (changePositive ? '▲' : '▼') : '—'}
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest text-gray-500 dark:text-slate-400">Variação</p>
+                  <p className={`text-lg font-bold leading-none ${changePositive ? 'text-emerald-600 dark:text-emerald-400' : hasChange ? 'text-red-500 dark:text-red-400' : 'text-gray-400'}`}>
+                    {hasChange ? `${(p.Change as number) >= 0 ? '+' : ''}${(p.Change as number).toFixed(2)} m` : '—'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Data rows */}
+              <div className="divide-y divide-gray-100 dark:divide-slate-800">
+                <div className="flex items-center justify-between px-4 py-2">
+                  <span className="text-xs text-gray-500 dark:text-slate-400">Mediana</span>
+                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                    {typeof p.median === 'number' ? `${p.median.toFixed(3)} m` : '—'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between px-4 py-2">
+                  <span className="text-xs text-gray-500 dark:text-slate-400">Desvio padrão</span>
+                  <span className="text-xs text-slate-600 dark:text-slate-300">
+                    {typeof p.std === 'number' ? `± ${p.std.toFixed(4)} m` : '—'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between px-4 py-2">
+                  <span className="text-xs text-gray-500 dark:text-slate-400">Variação/dia</span>
+                  <span className={`text-xs font-medium ${typeof p.Change_day === 'number' && p.Change_day >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+                    {typeof p.Change_day === 'number' ? `${p.Change_day >= 0 ? '+' : ''}${p.Change_day.toFixed(3)} m/dia` : '—'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between px-4 py-2">
+                  <span className="text-xs text-gray-500 dark:text-slate-400">Data</span>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400">{p.date ?? '—'}</span>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="flex flex-col gap-1 bg-gray-50 px-4 py-3 dark:bg-slate-800/50">
+                {typeof p.delta_days === 'number' && (
+                  <p className="text-[10px] text-gray-400 dark:text-slate-500">
+                    Intervalo entre medições: {p.delta_days.toFixed(1)} dias
+                  </p>
+                )}
+                <button
+                  onClick={() => {
+                    setGaugeModal({
+                      name: p.Nome,
+                      code: p.station_id,
+                      latitude: p.latitude,
+                      longitude: p.longitude,
+                      value: typeof p.median === 'number' ? p.median : undefined,
+                      change: typeof p.Change === 'number' ? p.Change : undefined,
+                    });
+                    setGaugePopup(null);
+                  }}
+                  className="mt-1 w-full rounded-xl bg-sky-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-sky-700 active:scale-[0.98] dark:bg-sky-500 dark:hover:bg-sky-400"
+                >
+                  Ver detalhes da estação →
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      <StationDetailsModal
+        open={gaugeModal !== null}
+        onOpenChange={(open) => { if (!open) setGaugeModal(null); }}
+        data={gaugeModal}
+      />
     </div>
   );
 }

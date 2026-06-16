@@ -83,6 +83,15 @@ export const resources = {
         recentMeasurementsChart: 'Medições Recentes',
         selectStation: 'Selecione uma estação',
         noStation: 'Nenhuma estação disponível',
+        swotDataTable: 'Dados SWOT',
+        swot: {
+          stationId: 'ID da Estação',
+          datetime: 'Data e hora',
+          mean : 'Valor médio',
+          count: 'Contagem de pontos',
+          median: 'Valor mediano',
+          std: 'Desvio padrão',
+        },
       },
       forecasts: {
         title: 'Previsões',
@@ -122,7 +131,7 @@ export const resources = {
         source: 'Fonte',
       },
       forecastDrawer: {
-        button: 'Previsões',
+        button: 'Medições',
         title: 'Camadas de previsão',
         subtitle: 'Selecione uma área e percorra a sequência temporal do alagamento.',
         activeLayer: 'Camada ativa',

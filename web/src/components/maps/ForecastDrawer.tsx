@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import useSWR from 'swr';
 import clsx from 'clsx';
-import { CloudRain, Loader2, Pause, Play, RefreshCw, X } from 'lucide-react';
+import { CloudRain, Loader2, Pause, Play, RefreshCw, X, Ship } from 'lucide-react';
 import { DEFAULT_FORECAST_LAYER_SETTINGS, getRasterLayers, type AppSettings, type RasterLayer } from '@/lib/strapi';
 import { getRasterLayerFileBaseName } from '@/lib/raster-layer-filename';
 import { useTranslation } from '@/lib/use-app-translation';
@@ -440,7 +440,7 @@ export default function ForecastDrawer({
           aria-expanded={isOpen}
           aria-controls="forecast-drawer"
         >
-          <CloudRain className="h-4 w-4" />
+          <Ship className="h-4 w-4" />
           <span>{t('forecastDrawer.button')}</span>
           {activeFrame ? (
             <span className="hidden rounded-full bg-sky-100 px-2 py-0.5 text-xs text-sky-700 sm:inline-flex">

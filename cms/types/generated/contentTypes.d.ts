@@ -669,6 +669,38 @@ export interface ApiStationStation extends Schema.CollectionType {
   };
 }
 
+export interface ApiSwotGaugeCollectionSwotGaugeCollection
+  extends Schema.SingleType {
+  collectionName: 'swot_gauge_collections';
+  info: {
+    description: 'GeoJSON FeatureCollection of the latest SWOT node/gauge readings rendered on the public map';
+    displayName: 'SWOT Gauge Collection';
+    pluralName: 'swot-gauge-collections';
+    singularName: 'swot-gauge-collection';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    createdAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::swot-gauge-collection.swot-gauge-collection',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    featureCollection: Attribute.JSON & Attribute.Required;
+    name: Attribute.String & Attribute.Required & Attribute.Unique;
+    updatedAt: Attribute.DateTime;
+    updatedBy: Attribute.Relation<
+      'api::swot-gauge-collection.swot-gauge-collection',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
 export interface ApiSwotMeasurementSwotMeasurement
   extends Schema.CollectionType {
   collectionName: 'swot_measurements';
@@ -1197,6 +1229,7 @@ declare module '@strapi/types' {
       'api::measurement.measurement': ApiMeasurementMeasurement;
       'api::raster-layer.raster-layer': ApiRasterLayerRasterLayer;
       'api::station.station': ApiStationStation;
+      'api::swot-gauge-collection.swot-gauge-collection': ApiSwotGaugeCollectionSwotGaugeCollection;
       'api::swot-measurement.swot-measurement': ApiSwotMeasurementSwotMeasurement;
       'api::user-preference.user-preference': ApiUserPreferenceUserPreference;
       'plugin::content-releases.release': PluginContentReleasesRelease;

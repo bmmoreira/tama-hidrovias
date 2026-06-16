@@ -7,9 +7,9 @@ import type { ForecastOverlayConfig } from './ForecastDrawer';
 export interface ForecastLegendProps {
   overlay?: ForecastOverlayConfig;
   drawerOpen?: boolean;
+  hasSwotGauges?: boolean;
 }
 
-// Generate values 1..15 and display from max -> min (top -> bottom)
 const LEGEND_VALUES = Array.from({ length: 15 }, (_, i) => 15 - i) as number[];
 
 const COLOR_MAP_GRADIENTS: Record<string, string> = {
@@ -24,86 +24,162 @@ const COLOR_MAP_GRADIENTS: Record<string, string> = {
 };
 
 function getGradient(colorMap?: string) {
-  if (!colorMap) {
-    return COLOR_MAP_GRADIENTS.viridis;
-  }
+  return COLOR_MAP_GRADIENTS[colorMap ?? ''] ?? COLOR_MAP_GRADIENTS.viridis;
+}
 
-  return COLOR_MAP_GRADIENTS[colorMap] ?? COLOR_MAP_GRADIENTS.viridis;
+function TriangleUp({ color, size = 14 }: { color: string; size?: number }) {
+  const h = Math.round(size * 0.86);
+  return (
+    <svg width={size} height={h} viewBox={`0 0 ${size} ${h}`} xmlns="http://www.w3.org/2000/svg">
+      <polygon points={`${size / 2},0 0,${h} ${size},${h}`} fill={color} />
+    </svg>
+  );
+}
+
+function TriangleDown({ color, size = 14 }: { color: string; size?: number }) {
+  const h = Math.round(size * 0.86);
+  return (
+    <svg width={size} height={h} viewBox={`0 0 ${size} ${h}`} xmlns="http://www.w3.org/2000/svg">
+      <polygon points={`0,0 ${size},0 ${size / 2},${h}`} fill={color} />
+    </svg>
+  );
 }
 
 export default function ForecastLegend({
   overlay,
   drawerOpen = false,
+  hasSwotGauges = false,
 }: ForecastLegendProps) {
   const { t } = useTranslation();
 
-  if (!overlay?.tileLayerUrl || !overlay.legendColorMap) {
+  const showForecast = !!(overlay?.tileLayerUrl && overlay.legendColorMap);
+
+  if (!showForecast && !hasSwotGauges) {
     return null;
   }
 
   return (
     <div
       className={[
-        'absolute z-20 flex items-stretch gap-2 rounded-2xl bg-white/92 px-2.5 py-3 shadow-xl shadow-slate-950/10 backdrop-blur transition-all sm:gap-3 sm:px-3',
+        'absolute z-20 flex flex-col gap-3 rounded-2xl bg-white/92 px-3 py-3 shadow-xl shadow-slate-950/10 backdrop-blur transition-all dark:bg-slate-900/92',
         drawerOpen
-          ? 'right-3 top-24 sm:right-4 sm:top-28 md:right-[27.5rem] md:bottom-4 md:top-auto'
+          ? 'right-3 top-24 sm:right-4 sm:top-28 md:bottom-4 md:right-[27.5rem] md:top-auto'
           : 'bottom-4 right-3 sm:bottom-4 sm:right-4',
       ].join(' ')}
     >
-      <div className="flex min-w-0 items-center">
-        {/* hide the vertical label on very small screens to save space */}
-        <div
-          className="hidden text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-600 sm:flex sm:text-[11px]"
-          style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
-        >
-          {t('forecastDrawer.legendLabel')}
-        </div>
-      </div>
+      {/* ── SWOT Gauge legend ── */}
+      {hasSwotGauges && (
+        <div className="flex flex-col gap-2">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+            SWOT Gauges
+          </p>
 
-      <div className="flex items-start gap-2">
-        <div className="flex flex-col items-center gap-1">
-          <div className="flex items-center gap-1 text-[10px] font-semibold text-sky-900 sm:text-xs">
-            <Waves className="h-3.5 w-3.5" />
-            <span>{t('forecastDrawer.legendTitle')}</span>
+          {/* Positive change row */}
+          <div className="flex items-center gap-2">
+            <div className="flex w-5 shrink-0 justify-center">
+              <TriangleUp color="#15803d" size={13} />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <div
+                className="h-2 w-28 rounded-full"
+                style={{ background: 'linear-gradient(to right, #bbf7d0, #15803d)' }}
+              />
+              <div className="flex justify-between px-0.5">
+                <span className="text-[9px] leading-none text-slate-400">0</span>
+                <span className="text-[9px] leading-none text-slate-400">≥ +5 m</span>
+              </div>
+            </div>
           </div>
 
-          {/* compact on mobile: smaller height and width, expand on sm+ */}
-          <div className="relative h-28 w-2 rounded-full border border-white/70 shadow-inner sm:h-44 sm:w-4" style={{ background: getGradient(overlay.legendColorMap) }}>
-            {(() => {
-              const max = Math.max(...LEGEND_VALUES);
-              const min = Math.min(...LEGEND_VALUES);
+          {/* Negative change row (inverted triangle) */}
+          <div className="flex items-center gap-2">
+            <div className="flex w-5 shrink-0 justify-center">
+              <TriangleDown color="#b91c1c" size={13} />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <div
+                className="h-2 w-28 rounded-full"
+                style={{ background: 'linear-gradient(to right, #fed7aa, #b91c1c)' }}
+              />
+              <div className="flex justify-between px-0.5">
+                <span className="text-[9px] leading-none text-slate-400">0</span>
+                <span className="text-[9px] leading-none text-slate-400">≤ −5 m</span>
+              </div>
+            </div>
+          </div>
 
-              return LEGEND_VALUES.map((value) => {
-                const position = ((max - value) / (max - min)) * 100;
-
-                // Label strategy:
-                // - show tick marks for all values
-                // - label only the major ticks (1, 5, 10, 15)
-                // - on extra-small screens show only 1 and 15 to reduce clutter
-                const isMajor = value === 1 || value % 5 === 0 || value === max;
-                const showOnXs = value === 1 || value === max;
-
-                return (
-                  <div
-                    key={value}
-                    className="absolute left-full ml-1.5 flex -translate-y-1/2 items-center gap-1"
-                    style={{ top: `${position}%` }}
-                  >
-                    <span className="h-px w-2 bg-slate-400" />
-                    <span
-                      className={`text-[9px] font-medium text-slate-700 sm:text-[11px] ${
-                        isMajor ? (showOnXs ? 'inline' : 'hidden sm:inline') : 'hidden'
-                      }`}
-                    >
-                      {String(value)}
-                    </span>
-                  </div>
-                );
-              });
-            })()}
+          {/* No data row */}
+          <div className="flex items-center gap-2">
+            <div className="flex w-5 shrink-0 justify-center">
+              <TriangleUp color="#94a3b8" size={13} />
+            </div>
+            <span className="text-[10px] text-slate-400 dark:text-slate-500">
+              Sem dados
+            </span>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Divider between sections */}
+      {showForecast && hasSwotGauges && (
+        <div className="h-px bg-slate-200 dark:bg-slate-700" />
+      )}
+
+      {/* ── Forecast colormap legend ── */}
+      {showForecast && (
+        <div className="flex items-stretch gap-2 sm:gap-3">
+          <div className="flex min-w-0 items-center">
+            <div
+              className="hidden text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-600 sm:flex sm:text-[11px] dark:text-slate-400"
+              style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
+            >
+              {t('forecastDrawer.legendLabel')}
+            </div>
+          </div>
+
+          <div className="flex items-start gap-2">
+            <div className="flex flex-col items-center gap-1">
+              <div className="flex items-center gap-1 text-[10px] font-semibold text-sky-900 dark:text-sky-400 sm:text-xs">
+                <Waves className="h-3.5 w-3.5" />
+                <span>{t('forecastDrawer.legendTitle')}</span>
+              </div>
+
+              <div
+                className="relative h-28 w-2 rounded-full border border-white/70 shadow-inner sm:h-44 sm:w-4"
+                style={{ background: getGradient(overlay.legendColorMap) }}
+              >
+                {(() => {
+                  const max = Math.max(...LEGEND_VALUES);
+                  const min = Math.min(...LEGEND_VALUES);
+
+                  return LEGEND_VALUES.map((value) => {
+                    const position = ((max - value) / (max - min)) * 100;
+                    const isMajor = value === 1 || value % 5 === 0 || value === max;
+                    const showOnXs = value === 1 || value === max;
+
+                    return (
+                      <div
+                        key={value}
+                        className="absolute left-full ml-1.5 flex -translate-y-1/2 items-center gap-1"
+                        style={{ top: `${position}%` }}
+                      >
+                        <span className="h-px w-2 bg-slate-400" />
+                        <span
+                          className={`text-[9px] font-medium text-slate-700 dark:text-slate-300 sm:text-[11px] ${
+                            isMajor ? (showOnXs ? 'inline' : 'hidden sm:inline') : 'hidden'
+                          }`}
+                        >
+                          {String(value)}
+                        </span>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,0 +1,24 @@
+{
+  "kind": "singleType",
+  "collectionName": "swot_gauge_collections",
+  "info": {
+    "singularName": "swot-gauge-collection",
+    "pluralName": "swot-gauge-collections",
+    "displayName": "SWOT Gauge Collection",
+    "description": "GeoJSON FeatureCollection of the latest SWOT node/gauge readings rendered on the public map"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "featureCollection": {
+      "type": "json",
+      "required": true
+    }
+  }
+}

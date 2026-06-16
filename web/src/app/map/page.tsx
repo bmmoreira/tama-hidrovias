@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import useSWR from 'swr';
-import { getAppSettings, getStations, getUserPreferences } from '@/lib/strapi';
+import { getAppSettings, getStations, getSwotGaugeCollection, getUserPreferences } from '@/lib/strapi';
 import type { MapStylePreference } from '@/lib/strapi';
 import StationExplorerOverlay from '@/components/maps/StationExplorerOverlay';
 import ForecastDrawer from '@/components/maps/ForecastDrawer';
@@ -33,6 +33,9 @@ export default function MapPage() {
   const { data: appSettingsData } = useSWR('app-settings', () => getAppSettings(), {
     revalidateOnFocus: false,
   });
+  const { data: swotGaugeData } = useSWR('swot-gauge-collection', () => getSwotGaugeCollection(), {
+    revalidateOnFocus: false,
+  });
   const { data: preferencesData, isLoading: isPreferencesLoading } = useSWR(
     status === 'authenticated' ? 'user-preferences' : null,
     () => getUserPreferences(),
@@ -44,6 +47,7 @@ export default function MapPage() {
   const stations = stationsData?.data ?? [];
   const appSettings = appSettingsData?.data;
   const preferences = preferencesData?.data;
+  const swotGaugeFeatures = swotGaugeData?.data?.featureCollection?.features ?? [];
 
   const [flyTarget, setFlyTarget] = useState({
     longitude: -52,
@@ -100,11 +104,13 @@ export default function MapPage() {
             tileLayerOpacity={forecastOverlay?.tileLayerOpacity}
             tileLayerBounds={forecastOverlay?.tileLayerBounds}
             fitToTileLayerBounds={forecastOverlay?.fitToBounds}
+            swotGaugeFeatures={swotGaugeFeatures}
           >
             <StationExplorerOverlay controller={stationExplorer} />
             <ForecastLegend
               overlay={forecastOverlay}
               drawerOpen={forecastDrawerOpen}
+              hasSwotGauges={swotGaugeFeatures.length > 0}
             />
             <ForecastDrawer
               onTileLayerChange={setForecastOverlay}

@@ -121,10 +121,8 @@ export default function StationExplorerOverlay({
         <div className="absolute bottom-4 left-4 z-10 hidden rounded-xl bg-white/90 px-3 py-2 text-xs shadow-lg backdrop-blur md:block">
           <p className="mb-1 font-semibold text-gray-700">{t('map.source')}</p>
           {[
-            { label: 'ANA', color: '#2563eb' },
-            { label: 'HydroWeb', color: '#16a34a' },
-            { label: 'SNIRH', color: '#d97706' },
-            { label: 'Virtual', color: '#9333ea' },
+            { label: 'SWOT', color: '#2563eb' },
+          
           ].map(({ label, color }) => (
             <div key={label} className="flex items-center gap-1.5">
               <span

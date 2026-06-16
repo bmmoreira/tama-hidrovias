@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
-import useSWR from 'swr';
+import { useMemo } from 'react';
 import {
   Area,
   AreaChart,
@@ -21,6 +20,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import SwotChart from '@/components/SwotChart';
+import SwotMedianStdChart from '@/components/SwotMedianStdChart';
 import { useTranslation } from '@/lib/use-app-translation';
 import type { StationPopupData } from './StationPopup';
 
@@ -129,39 +130,6 @@ export default function StationDetailsModal({
     [data],
   );
 
-  const code = data?.code;
-  const { data: swotResponse } = useSWR(
-    open && code ? `/api/swot-measurements?filters[station_id][$eq]=${code}&sort[0]=datetime:asc&pagination[pageSize]=1000` : null,
-    (url: string) => fetch(url).then(r => r.json())
-  );
-
-  useEffect(() => {
-    if (open && code) {
-      console.log(`[SWOT API Check] Requesting SWOT data for station codigo: ${code}`);
-    }
-  }, [open, code]);
-
-  useEffect(() => {
-    if (swotResponse) {
-      const recordsCount = swotResponse.data?.length || 0;
-      console.log(`[SWOT API Check] Strapi returned ${recordsCount} SWOT records for codigo: ${code}`);
-    }
-  }, [swotResponse, code]);
-
-  const swotChartData = useMemo(() => {
-    if (!swotResponse?.data) return [];
-    return swotResponse.data.map((item: any) => {
-      const attrs = item.attributes;
-      return {
-        label: new Date(attrs.datetime).toLocaleDateString(),
-        median: attrs.median,
-        stdBandTop: attrs.median !== null && attrs.std !== null ? attrs.median + attrs.std : null,
-        stdBandBottom: attrs.median !== null && attrs.std !== null ? attrs.median - attrs.std : null,
-        std: attrs.std
-      };
-    });
-  }, [swotResponse]);
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[92vh] w-[calc(100%-1rem)] max-w-6xl overflow-y-auto rounded-[1.75rem] border border-gray-200 bg-white p-0 shadow-2xl dark:border-slate-800 dark:bg-slate-950 sm:w-[calc(100%-2rem)]">
@@ -198,180 +166,161 @@ export default function StationDetailsModal({
               </div>
             </DialogHeader>
 
-            <div className="grid gap-4 px-4 py-4 sm:px-6 sm:py-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
-              <div className="space-y-4">
-                <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                  <SummaryCard
-                    title={t('mapDetails.currentLevel')}
-                    value={typeof data.value === 'number' ? `${data.value.toFixed(2)} m` : '...'}
-                  />
-                  <SummaryCard
-                    title={t('mapDetails.currentChange')}
-                    value={typeof data.change === 'number' ? `${data.change >= 0 ? '+' : ''}${data.change.toFixed(2)} m` : '...'}
-                    tone={typeof data.change === 'number' ? (data.change >= 0 ? 'positive' : 'negative') : 'default'}
-                  />
-                  <SummaryCard
-                    title={t('mapDetails.currentAnomaly')}
-                    value={typeof data.anomaly === 'number' ? `${data.anomaly >= 0 ? '+' : ''}${data.anomaly.toFixed(1)}` : '...'}
-                    tone={typeof data.anomaly === 'number' ? (data.anomaly >= 0 ? 'positive' : 'negative') : 'default'}
-                  />
-                  <SummaryCard
-                    title={t('mapDetails.forecastWindow')}
-                    value={t('mapDetails.forecastWindowValue')}
-                  />
-                </section>
+            <div className="space-y-4 px-4 py-4 sm:px-6 sm:py-6">
+              <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <SummaryCard
+                  title={t('mapDetails.currentLevel')}
+                  value={typeof data.value === 'number' ? `${data.value.toFixed(2)} m` : '...'}
+                />
+                <SummaryCard
+                  title={t('mapDetails.currentChange')}
+                  value={typeof data.change === 'number' ? `${data.change >= 0 ? '+' : ''}${data.change.toFixed(2)} m` : '...'}
+                  tone={typeof data.change === 'number' ? (data.change >= 0 ? 'positive' : 'negative') : 'default'}
+                />
+                <SummaryCard
+                  title={t('mapDetails.currentAnomaly')}
+                  value={typeof data.anomaly === 'number' ? `${data.anomaly >= 0 ? '+' : ''}${data.anomaly.toFixed(1)}` : '...'}
+                  tone={typeof data.anomaly === 'number' ? (data.anomaly >= 0 ? 'positive' : 'negative') : 'default'}
+                />
+                <SummaryCard
+                  title={t('mapDetails.forecastWindow')}
+                  value={t('mapDetails.forecastWindowValue')}
+                />
+              </section>
 
-                                {swotChartData.length > 0 ? (
+  
+
+              {data.code ? (
+                <Card className="overflow-hidden border-gray-200/80 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-950/90">
+                  <CardContent className="p-4 sm:p-6">
+                    <SwotMedianStdChart stationId={data.code} />
+                  </CardContent>
+                </Card>
+              ) : null}
+
+              <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
+                <div className="space-y-4">
                   <Card className="overflow-hidden border-gray-200/80 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-950/90">
                     <CardHeader className="pb-2">
-                      <CardTitle>SWOT Measurements</CardTitle>
+                      <CardTitle>{t('mapDetails.measurementsTitle')}</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="h-64 w-full sm:h-72">
                         <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={swotChartData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+                          <LineChart data={measurementData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.22)" />
                             <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} />
-                            <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} domain={['auto', 'auto']} />
+                            <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} />
                             <Tooltip
                               contentStyle={{ borderRadius: 16, borderColor: '#cbd5e1' }}
                               formatter={(value: number, key: string) => [
                                 `${value.toFixed(2)} m`,
-                                key === 'median' ? 'Median' : key === 'stdBandTop' ? '+1 Std Dev' : '-1 Std Dev',
+                                key === 'measured' ? t('mapDetails.measuredSeries') : t('mapDetails.anomalyBand'),
                               ]}
                             />
-                            <Line type="monotone" dataKey="median" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 3 }} />
-                            <Line type="monotone" dataKey="stdBandTop" stroke="#c4b5fd" strokeWidth={1} dot={false} strokeDasharray="4 4" />
-                            <Line type="monotone" dataKey="stdBandBottom" stroke="#c4b5fd" strokeWidth={1} dot={false} strokeDasharray="4 4" />
+                            <Line type="monotone" dataKey="measured" stroke="#0284c7" strokeWidth={3} dot={false} />
+                            <Line type="monotone" dataKey="anomalyBand" stroke="#f97316" strokeWidth={2} dot={false} strokeDasharray="6 4" />
                           </LineChart>
                         </ResponsiveContainer>
                       </div>
                     </CardContent>
                   </Card>
-                ) : null}
 
-                <Card className="overflow-hidden border-gray-200/80 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-950/90">
-                  <CardHeader className="pb-2">
-                    <CardTitle>{t('mapDetails.measurementsTitle')}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-64 w-full sm:h-72">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={measurementData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.22)" />
-                          <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} />
-                          <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} />
-                          <Tooltip
-                            contentStyle={{ borderRadius: 16, borderColor: '#cbd5e1' }}
-                            formatter={(value: number, key: string) => [
-                              `${value.toFixed(2)} m`,
-                              key === 'measured' ? t('mapDetails.measuredSeries') : t('mapDetails.anomalyBand'),
-                            ]}
-                          />
-                          <Line type="monotone" dataKey="measured" stroke="#0284c7" strokeWidth={3} dot={false} />
-                          <Line type="monotone" dataKey="anomalyBand" stroke="#f97316" strokeWidth={2} dot={false} strokeDasharray="6 4" />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
+                  <Card className="overflow-hidden border-gray-200/80 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-950/90">
+                    <CardHeader className="pb-2">
+                      <CardTitle>{t('mapDetails.forecastTitle')}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-64 w-full sm:h-72">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={forecastData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+                            <defs>
+                              <linearGradient id="forecastFill" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.35} />
+                                <stop offset="95%" stopColor="#14b8a6" stopOpacity={0.04} />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.22)" />
+                            <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                            <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                            <Tooltip
+                              contentStyle={{ borderRadius: 16, borderColor: '#cbd5e1' }}
+                              formatter={(value: number, key: string) => [
+                                `${value.toFixed(2)} m`,
+                                key === 'baseline'
+                                  ? t('mapDetails.forecastBaseline')
+                                  : key === 'optimistic'
+                                    ? t('mapDetails.forecastOptimistic')
+                                    : t('mapDetails.forecastConservative'),
+                              ]}
+                            />
+                            <Area type="monotone" dataKey="baseline" stroke="#14b8a6" fill="url(#forecastFill)" strokeWidth={3} />
+                            <Line type="monotone" dataKey="optimistic" stroke="#22c55e" strokeWidth={2} dot={false} strokeDasharray="4 4" />
+                            <Line type="monotone" dataKey="conservative" stroke="#f97316" strokeWidth={2} dot={false} strokeDasharray="4 4" />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
 
-                <Card className="overflow-hidden border-gray-200/80 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-950/90">
-                  <CardHeader className="pb-2">
-                    <CardTitle>{t('mapDetails.forecastTitle')}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-64 w-full sm:h-72">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={forecastData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
-                          <defs>
-                            <linearGradient id="forecastFill" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.35} />
-                              <stop offset="95%" stopColor="#14b8a6" stopOpacity={0.04} />
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.22)" />
-                          <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} />
-                          <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} />
-                          <Tooltip
-                            contentStyle={{ borderRadius: 16, borderColor: '#cbd5e1' }}
-                            formatter={(value: number, key: string) => [
-                              `${value.toFixed(2)} m`,
-                              key === 'baseline'
-                                ? t('mapDetails.forecastBaseline')
-                                : key === 'optimistic'
-                                  ? t('mapDetails.forecastOptimistic')
-                                  : t('mapDetails.forecastConservative'),
-                            ]}
-                          />
-                          <Area type="monotone" dataKey="baseline" stroke="#14b8a6" fill="url(#forecastFill)" strokeWidth={3} />
-                          <Line type="monotone" dataKey="optimistic" stroke="#22c55e" strokeWidth={2} dot={false} strokeDasharray="4 4" />
-                          <Line type="monotone" dataKey="conservative" stroke="#f97316" strokeWidth={2} dot={false} strokeDasharray="4 4" />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
+                <div className="space-y-4">
+                  <Card className="border-gray-200/80 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-950/90">
+                    <CardHeader className="pb-2">
+                      <CardTitle>{t('mapDetails.baseInfoTitle')}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                      <div>
+                        <div className="text-xs font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-slate-400">FID</div>
+                        <div className="mt-1 text-sm text-slate-900 dark:text-slate-100">{data.fid ?? '...'}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-slate-400">{t('mapDetails.code')}</div>
+                        <div className="mt-1 text-sm text-slate-900 dark:text-slate-100">{data.code ?? t('mapPopup.noCode')}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-slate-400">{t('mapDetails.source')}</div>
+                        <div className="mt-1 text-sm text-slate-900 dark:text-slate-100">{data.source ?? '...'}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-slate-400">{t('mapDetails.river')}</div>
+                        <div className="mt-1 text-sm text-slate-900 dark:text-slate-100">{data.river ?? t('mapPopup.unknownRiver')}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-slate-400">{t('mapDetails.basin')}</div>
+                        <div className="mt-1 text-sm text-slate-900 dark:text-slate-100">{data.basin ?? '...'}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-slate-400">{t('mapPopup.latitude')}</div>
+                        <div className="mt-1 text-sm text-slate-900 dark:text-slate-100">{formatCoordinate(data.latitude)}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-slate-400">{t('mapPopup.longitude')}</div>
+                        <div className="mt-1 text-sm text-slate-900 dark:text-slate-100">{formatCoordinate(data.longitude)}</div>
+                      </div>
+                    </CardContent>
+                  </Card>
 
-
-              </div>
-
-              <div className="space-y-4">
-                <Card className="border-gray-200/80 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-950/90">
-                  <CardHeader className="pb-2">
-                    <CardTitle>{t('mapDetails.baseInfoTitle')}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                    <div>
-                      <div className="text-xs font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-slate-400">FID</div>
-                      <div className="mt-1 text-sm text-slate-900 dark:text-slate-100">{data.fid ?? '...'}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-slate-400">{t('mapDetails.code')}</div>
-                      <div className="mt-1 text-sm text-slate-900 dark:text-slate-100">{data.code ?? t('mapPopup.noCode')}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-slate-400">{t('mapDetails.source')}</div>
-                      <div className="mt-1 text-sm text-slate-900 dark:text-slate-100">{data.source ?? '...'}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-slate-400">{t('mapDetails.river')}</div>
-                      <div className="mt-1 text-sm text-slate-900 dark:text-slate-100">{data.river ?? t('mapPopup.unknownRiver')}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-slate-400">{t('mapDetails.basin')}</div>
-                      <div className="mt-1 text-sm text-slate-900 dark:text-slate-100">{data.basin ?? '...'}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-slate-400">{t('mapPopup.latitude')}</div>
-                      <div className="mt-1 text-sm text-slate-900 dark:text-slate-100">{formatCoordinate(data.latitude)}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-slate-400">{t('mapPopup.longitude')}</div>
-                      <div className="mt-1 text-sm text-slate-900 dark:text-slate-100">{formatCoordinate(data.longitude)}</div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-gray-200/80 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-950/90">
-                  <CardHeader className="pb-2">
-                    <CardTitle>{t('mapDetails.insightsTitle')}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
-                    <div className="rounded-2xl bg-sky-50 p-3 dark:bg-sky-950/30">
-                      <div className="font-medium text-slate-900 dark:text-slate-100">{t('mapDetails.insightOneTitle')}</div>
-                      <p className="mt-1">{t('mapDetails.insightOneDescription')}</p>
-                    </div>
-                    <div className="rounded-2xl bg-emerald-50 p-3 dark:bg-emerald-950/25">
-                      <div className="font-medium text-slate-900 dark:text-slate-100">{t('mapDetails.insightTwoTitle')}</div>
-                      <p className="mt-1">{t('mapDetails.insightTwoDescription')}</p>
-                    </div>
-                    <div className="rounded-2xl bg-orange-50 p-3 dark:bg-orange-950/20">
-                      <div className="font-medium text-slate-900 dark:text-slate-100">{t('mapDetails.insightThreeTitle')}</div>
-                      <p className="mt-1">{t('mapDetails.insightThreeDescription')}</p>
-                    </div>
-                  </CardContent>
-                </Card>
+                  <Card className="border-gray-200/80 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-950/90">
+                    <CardHeader className="pb-2">
+                      <CardTitle>{t('mapDetails.insightsTitle')}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
+                      <div className="rounded-2xl bg-sky-50 p-3 dark:bg-sky-950/30">
+                        <div className="font-medium text-slate-900 dark:text-slate-100">{t('mapDetails.insightOneTitle')}</div>
+                        <p className="mt-1">{t('mapDetails.insightOneDescription')}</p>
+                      </div>
+                      <div className="rounded-2xl bg-emerald-50 p-3 dark:bg-emerald-950/25">
+                        <div className="font-medium text-slate-900 dark:text-slate-100">{t('mapDetails.insightTwoTitle')}</div>
+                        <p className="mt-1">{t('mapDetails.insightTwoDescription')}</p>
+                      </div>
+                      <div className="rounded-2xl bg-orange-50 p-3 dark:bg-orange-950/20">
+                        <div className="font-medium text-slate-900 dark:text-slate-100">{t('mapDetails.insightThreeTitle')}</div>
+                        <p className="mt-1">{t('mapDetails.insightThreeDescription')}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
             </div>
           </div>

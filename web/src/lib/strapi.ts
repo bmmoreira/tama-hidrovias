@@ -371,6 +371,48 @@ export type MapFeatureCollectionUpdateInput = {
   featureCollection: MapFeatureCollection;
 };
 
+/** Properties of a single SWOT node/gauge feature on the public map. */
+export type SwotGaugeFeatureProperties = {
+  station_id: string;
+  Nome: string;
+  latitude: number;
+  longitude: number;
+  date: string | null;
+  median: number | null;
+  std: number | null;
+  previous_date: string | null;
+  previous_median: number | null;
+  previous_std: number | null;
+  Change: number | null;
+  Change_day: number | null;
+  delta_days: number | null;
+};
+
+/** Single GeoJSON feature for a SWOT node/gauge reading. */
+export type SwotGaugeFeature = {
+  type: 'Feature';
+  properties: SwotGaugeFeatureProperties;
+  geometry: MapFeatureCollectionPointGeometry;
+};
+
+/** GeoJSON FeatureCollection of the latest SWOT node/gauge readings. */
+export type SwotGaugeFeatureCollection = {
+  type: 'FeatureCollection';
+  name?: string;
+  crs?: MapFeatureCollection['crs'];
+  features: SwotGaugeFeature[];
+};
+
+/**
+ * Strapi record for the single SWOT gauge collection entry used by
+ * the public map.
+ */
+export type SwotGaugeCollectionRecord = {
+  id: number;
+  name: string;
+  featureCollection: SwotGaugeFeatureCollection;
+};
+
 /** Input payload for creating or updating a station from the UI. */
 export type StationMutationInput = {
   name: string;
@@ -533,6 +575,10 @@ function buildMapFeatureCollectionPath() {
   return '/api/map-feature-collections';
 }
 
+function buildSwotGaugeCollectionPath() {
+  return '/api/swot-gauge-collections';
+}
+
 export async function getStations(params?: Record<string, string>) {
   const path = buildStationsPath(params);
   return fetchJson(withBase(path));
@@ -653,6 +699,22 @@ export async function getMapFeatureCollection(): Promise<{
 
   if (isServer()) {
     return fetchJson(`${STRAPI_INTERNAL_URL}/api/map-feature-collections/public`);
+  }
+
+  return fetchJson(path);
+}
+
+/**
+ * Fetches the single SWOT gauge GeoJSON FeatureCollection (latest median,
+ * std, and change values per node/gauge) rendered on the public map.
+ */
+export async function getSwotGaugeCollection(): Promise<{
+  data: SwotGaugeCollectionRecord;
+}> {
+  const path = buildSwotGaugeCollectionPath();
+
+  if (isServer()) {
+    return fetchJson(`${STRAPI_INTERNAL_URL}/api/swot-gauge-collections/public`);
   }
 
   return fetchJson(path);
