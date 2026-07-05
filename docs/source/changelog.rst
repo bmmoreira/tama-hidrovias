@@ -4,6 +4,32 @@ Changelog
 Upcoming
 --------
 
+Map layers drawer, mock rain heatmap, and SWOT spatial filter
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Added a mobile-first "Camadas" drawer (``LayersDrawer.tsx``) to the public
+  ``/map`` route for toggling rivers and ANA sub-basins on/off and selecting
+  individual features, modeled on the existing SWOT filter drawer.
+- Moved ``rivers.geojson`` and ``subbacias.geojson`` to ``web/public/geojson/``
+  so they are served as static assets and fetched at runtime.
+- Added a deterministic mock rainfall choropleth for the basins layer
+  (``useMockRainHeatmap.ts``) as groundwork for a future real per-basin
+  rainfall data source.
+- Added hover highlighting and click popups for both the rivers and basins
+  Mapbox layers in ``MapboxMap.tsx``.
+- Added a "hide all stations" visibility switch to ``SwotFilterDrawer``.
+- Added a spatial filter to ``SwotFilterDrawer`` that restricts visible SWOT
+  gauge stations to those near the currently visible rivers, or inside the
+  currently visible basins, reusing the Camadas drawer's own selection
+  (``spatialFilter.ts``, dependency-free point-to-line and
+  point-in-polygon helpers).
+- Fixed a data race where sub-basins could load with an empty default
+  selection, a stale ``isStyleLoaded()`` check that could silently drop the
+  first render of river/basin data, a toggle-switch knob CSS overflow bug,
+  and a drawer-overlap bug between the Camadas and forecast ("Medições")
+  panels on desktop.
+- See ``map-layers.rst`` for the full technical writeup.
+
 Authentication and dashboard authorization
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

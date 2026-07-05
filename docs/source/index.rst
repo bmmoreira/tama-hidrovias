@@ -71,6 +71,7 @@ Contents
    public-map
    raster-layers
    mapview
+   map-layers
    changelog
    architecture
    api

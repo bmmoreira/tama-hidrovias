@@ -3,7 +3,9 @@
 import { useMemo } from 'react';
 import type { BasinFeature } from './LayersDrawer';
 
+/** Lower bound (mm) of the mock rainfall range used to build the choropleth. */
 export const MOCK_RAIN_MIN_MM = 0;
+/** Upper bound (mm) of the mock rainfall range used to build the choropleth. */
 export const MOCK_RAIN_MAX_MM = 300;
 
 /** Color ramp stops (mm → color) shared by the map fill expression and the drawer legend. */

@@ -5,6 +5,7 @@ import { Layers, X, Search, Waves, Map as MapIcon } from 'lucide-react';
 import clsx from 'clsx';
 import { MOCK_RAIN_MIN_MM, MOCK_RAIN_MAX_MM, RAIN_COLOR_STOPS } from './useMockRainHeatmap';
 
+/** Properties of a river feature loaded from `public/geojson/rivers.geojson`. */
 export interface RiverFeatureProperties {
   NAME: string;
   SYSTEM: string | null;
@@ -12,11 +13,13 @@ export interface RiverFeatureProperties {
   KILOMETERS: number;
 }
 
+/** A single river line (or multi-segment river) rendered on the map. */
 export type RiverFeature = GeoJSON.Feature<
   GeoJSON.LineString | GeoJSON.MultiLineString,
   RiverFeatureProperties
 >;
 
+/** Properties of a sub-basin polygon loaded from `public/geojson/subbacias.geojson`. */
 export interface BasinFeatureProperties {
   id: number;
   DNS_DNB_CD: number;
@@ -26,11 +29,13 @@ export interface BasinFeatureProperties {
   rainMm?: number;
 }
 
+/** A single sub-basin polygon rendered on the map. */
 export type BasinFeature = GeoJSON.Feature<
   GeoJSON.Polygon | GeoJSON.MultiPolygon,
   BasinFeatureProperties
 >;
 
+/** Which rivers/basins are currently toggled on and selected in the Camadas drawer. */
 export interface LayersFilter {
   riversVisible: boolean;
   /** River NAME values currently selected. */
@@ -40,6 +45,7 @@ export interface LayersFilter {
   selectedBasins: number[];
 }
 
+/** Initial state before river/basin GeoJSON has loaded — rivers on, basins off. */
 export const DEFAULT_LAYERS_FILTER: LayersFilter = {
   riversVisible: true,
   selectedRivers: [],
@@ -60,6 +66,7 @@ export function buildDefaultLayersFilter(
   };
 }
 
+/** Applies `filter`'s rivers on/off + selection to the full river feature list. */
 export function filterRiverFeatures(
   features: RiverFeature[],
   filter: LayersFilter,
@@ -69,6 +76,7 @@ export function filterRiverFeatures(
   return features.filter((f) => selected.has(f.properties.NAME));
 }
 
+/** Applies `filter`'s basins on/off + selection to the full basin feature list. */
 export function filterBasinFeatures(
   features: BasinFeature[],
   filter: LayersFilter,
@@ -90,6 +98,11 @@ interface LayersDrawerProps {
 const INPUT_CLASS =
   'w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 placeholder-slate-300 outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200';
 
+/**
+ * Mobile-first "Camadas" drawer for the public map. Lets visitors toggle the
+ * rivers and sub-basins GeoJSON layers on/off and pick individual features,
+ * and shows a mock rainfall choropleth legend for the basins layer.
+ */
 export default function LayersDrawer({
   riverFeatures,
   basinFeatures,
