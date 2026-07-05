@@ -4,8 +4,15 @@ import { useState } from 'react';
 import { SlidersHorizontal, X, Search, Eye, EyeOff } from 'lucide-react';
 import clsx from 'clsx';
 import type { SwotGaugeFeature } from '@/lib/strapi';
+import type { RiverFeature, BasinFeature } from './LayersDrawer';
+import { isNearAnyRiver, isInsideAnyBasin } from './spatialFilter';
 
+/** Water-level trend bucket derived from a gauge's `Change` reading. */
 export type SwotDirection = 'all' | 'rising' | 'falling' | 'nodata';
+
+/** 'none' shows all stations; the others match against whatever rivers/basins
+ *  are currently visible in the Camadas drawer (LayersDrawer). */
+export type SwotSpatialMode = 'none' | 'nearRivers' | 'insideBasins';
 
 export interface SwotGaugeFilter {
   /** Master switch — when false, no SWOT gauges are shown regardless of the other filters. */
@@ -16,8 +23,12 @@ export interface SwotGaugeFilter {
   nameSearch: string;
   dateFrom: string | null;
   dateTo: string | null;
+  spatialMode: SwotSpatialMode;
+  /** Max distance (km) to a visible river when spatialMode is 'nearRivers'. */
+  riverProximityKm: number;
 }
 
+/** All stations visible, no direction/range/spatial restrictions applied. */
 export const DEFAULT_SWOT_FILTER: SwotGaugeFilter = {
   visible: true,
   direction: 'all',
@@ -26,16 +37,31 @@ export const DEFAULT_SWOT_FILTER: SwotGaugeFilter = {
   nameSearch: '',
   dateFrom: null,
   dateTo: null,
+  spatialMode: 'none',
+  riverProximityKm: 20,
 };
 
+/** Rivers/basins currently visible in the Camadas drawer, used to match
+ *  nearby/contained stations for the spatial filter modes. */
+export interface SwotSpatialContext {
+  riverFeatures?: RiverFeature[];
+  basinFeatures?: BasinFeature[];
+}
+
+/**
+ * Applies every {@link SwotGaugeFilter} rule to `features`: the visibility
+ * switch, trend/range/name/date filters, and — when `spatial` is supplied —
+ * the "near visible rivers" / "inside visible basins" spatial modes.
+ */
 export function filterSwotFeatures(
   features: SwotGaugeFeature[],
   filter: SwotGaugeFilter,
+  spatial?: SwotSpatialContext,
 ): SwotGaugeFeature[] {
   if (!filter.visible) return [];
 
   return features.filter((f) => {
-    const { Change, Nome, date } = f.properties;
+    const { Change, Nome, date, longitude, latitude } = f.properties;
     const hasChange = typeof Change === 'number';
 
     if (
@@ -73,6 +99,18 @@ export function filterSwotFeatures(
     if (filter.dateTo && (!featureDay || featureDay > filter.dateTo))
       return false;
 
+    if (filter.spatialMode === 'nearRivers') {
+      const rivers = spatial?.riverFeatures ?? [];
+      if (rivers.length === 0) return false;
+      if (!isNearAnyRiver([longitude, latitude], rivers, filter.riverProximityKm)) return false;
+    }
+
+    if (filter.spatialMode === 'insideBasins') {
+      const basins = spatial?.basinFeatures ?? [];
+      if (basins.length === 0) return false;
+      if (!isInsideAnyBasin([longitude, latitude], basins)) return false;
+    }
+
     return true;
   });
 }
@@ -85,7 +123,19 @@ interface SwotFilterDrawerProps {
    *  so the filter button shifts right to avoid overlapping the panel. */
   searchPanelOpen?: boolean;
   forecastDrawerOpen?: boolean;
+  /** Rivers currently visible/selected in the Camadas drawer — powers the
+   *  "near rivers" spatial filter. */
+  riverFeatures?: RiverFeature[];
+  /** Basins currently visible/selected in the Camadas drawer — powers the
+   *  "inside basins" spatial filter. */
+  basinFeatures?: BasinFeature[];
 }
+
+const SPATIAL_MODE_OPTIONS: { value: SwotSpatialMode; label: string }[] = [
+  { value: 'none', label: 'Todas as estações' },
+  { value: 'nearRivers', label: 'Perto dos rios visíveis' },
+  { value: 'insideBasins', label: 'Dentro das bacias visíveis' },
+];
 
 const DIRECTION_OPTIONS: {
   value: SwotDirection;
@@ -112,15 +162,24 @@ const DIRECTION_OPTIONS: {
 const INPUT_CLASS =
   'w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 placeholder-slate-300 outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200';
 
+/**
+ * Mobile-first drawer for filtering the SWOT gauge triangles on the public
+ * map: visibility, trend, change range, date range, name search, and a
+ * spatial filter that reuses whatever rivers/basins are currently visible
+ * in the Camadas drawer (see `LayersDrawer.tsx`).
+ */
 export default function SwotFilterDrawer({
   features,
   filter,
   onFilterChange,
   searchPanelOpen = false,
+  riverFeatures = [],
+  basinFeatures = [],
 }: SwotFilterDrawerProps) {
   const [isOpen, setIsOpen] = useState(false);
 
-  const filteredCount = filterSwotFeatures(features, filter).length;
+  const spatialContext: SwotSpatialContext = { riverFeatures, basinFeatures };
+  const filteredCount = filterSwotFeatures(features, filter, spatialContext).length;
   const totalCount = features.length;
 
   const isFilterActive =
@@ -130,7 +189,8 @@ export default function SwotFilterDrawer({
     filter.changeMax !== null ||
     filter.nameSearch !== '' ||
     filter.dateFrom !== null ||
-    filter.dateTo !== null;
+    filter.dateTo !== null ||
+    filter.spatialMode !== 'none';
 
   const activeFilterCount = [
     !filter.visible,
@@ -138,6 +198,7 @@ export default function SwotFilterDrawer({
     filter.changeMin !== null || filter.changeMax !== null,
     filter.nameSearch !== '',
     filter.dateFrom !== null || filter.dateTo !== null,
+    filter.spatialMode !== 'none',
   ].filter(Boolean).length;
 
   function reset() {
@@ -407,6 +468,81 @@ export default function SwotFilterDrawer({
                   className={clsx(INPUT_CLASS, 'pl-8')}
                 />
               </div>
+            </div>
+
+            {/* Spatial filter — matches against whatever rivers/basins are
+                currently visible in the Camadas drawer. */}
+            <div>
+              <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500">
+                Filtro espacial
+              </p>
+              <div className="flex flex-col gap-1.5">
+                {SPATIAL_MODE_OPTIONS.map(({ value, label }) => {
+                  const disabled =
+                    (value === 'nearRivers' && riverFeatures.length === 0) ||
+                    (value === 'insideBasins' && basinFeatures.length === 0);
+
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      disabled={disabled}
+                      onClick={() => update({ spatialMode: value })}
+                      className={clsx(
+                        'flex items-center justify-between rounded-xl border px-3 py-2 text-xs font-medium transition',
+                        disabled
+                          ? 'cursor-not-allowed border-slate-100 bg-slate-50 text-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-600'
+                          : filter.spatialMode === value
+                            ? 'border-sky-400 bg-sky-50 text-sky-700 dark:border-sky-500 dark:bg-sky-950/40 dark:text-sky-300'
+                            : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600',
+                      )}
+                    >
+                      <span>{label}</span>
+                      {value === 'nearRivers' && (
+                        <span className="text-[10px] text-slate-400">
+                          {riverFeatures.length} visíveis
+                        </span>
+                      )}
+                      {value === 'insideBasins' && (
+                        <span className="text-[10px] text-slate-400">
+                          {basinFeatures.length} visíveis
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {filter.spatialMode === 'nearRivers' &&
+                (riverFeatures.length > 0 ? (
+                  <div className="mt-2.5 flex flex-col gap-1">
+                    <div className="flex items-center justify-between text-[10px] text-slate-400">
+                      <span>Distância máxima</span>
+                      <span className="font-semibold text-sky-600 dark:text-sky-400">
+                        {filter.riverProximityKm} km
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min={5}
+                      max={100}
+                      step={5}
+                      value={filter.riverProximityKm}
+                      onChange={(e) => update({ riverProximityKm: Number(e.target.value) })}
+                      className="w-full accent-sky-500"
+                    />
+                  </div>
+                ) : (
+                  <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400">
+                    Ative a camada de Rios no menu Camadas para usar este filtro.
+                  </p>
+                ))}
+
+              {filter.spatialMode === 'insideBasins' && basinFeatures.length === 0 && (
+                <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400">
+                  Ative a camada de Bacias no menu Camadas para usar este filtro.
+                </p>
+              )}
             </div>
           </div>
         </div>

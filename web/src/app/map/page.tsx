@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import useSWR from 'swr';
 import { getAppSettings, getStations, getSwotGaugeCollection, getUserPreferences } from '@/lib/strapi';
@@ -75,9 +75,6 @@ export default function MapPage() {
   const preferences = preferencesData?.data;
   const swotGaugeFeatures = swotGaugeData?.data?.featureCollection?.features ?? [];
 
-  const [swotFilter, setSwotFilter] = useState<SwotGaugeFilter>(DEFAULT_SWOT_FILTER);
-  const filteredSwotGaugeFeatures = filterSwotFeatures(swotGaugeFeatures, swotFilter);
-
   const riverFeatures = (riversGeojson?.features ?? []) as RiverFeature[];
   const basinFeatures = (basinsGeojson?.features ?? []) as BasinFeature[];
 
@@ -99,6 +96,19 @@ export default function MapPage() {
 
   const filteredRiverFeatures = filterRiverFeatures(riverFeatures, layersFilter);
   const filteredBasinFeatures = filterBasinFeatures(basinFeaturesWithRain, layersFilter);
+
+  const [swotFilter, setSwotFilter] = useState<SwotGaugeFilter>(DEFAULT_SWOT_FILTER);
+  // Spatial filter modes ("near rivers" / "inside basins") match against
+  // whichever rivers/basins are currently visible in the Camadas drawer.
+  // Memoized since the spatial checks are heavier than the other filters.
+  const filteredSwotGaugeFeatures = useMemo(
+    () =>
+      filterSwotFeatures(swotGaugeFeatures, swotFilter, {
+        riverFeatures: filteredRiverFeatures,
+        basinFeatures: filteredBasinFeatures,
+      }),
+    [swotGaugeFeatures, swotFilter, filteredRiverFeatures, filteredBasinFeatures],
+  );
 
   const [flyTarget, setFlyTarget] = useState({
     longitude: -52,
@@ -178,6 +188,8 @@ export default function MapPage() {
                 onFilterChange={setSwotFilter}
                 searchPanelOpen={stationExplorer.panelOpen}
                 forecastDrawerOpen={forecastDrawerOpen}
+                riverFeatures={filteredRiverFeatures}
+                basinFeatures={filteredBasinFeatures}
               />
             )}
             {(riverFeatures.length > 0 || basinFeatures.length > 0) && (
