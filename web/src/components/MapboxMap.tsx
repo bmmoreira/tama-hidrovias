@@ -6,6 +6,8 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import type { MapStylePreference, Station, SwotGaugeFeature } from '@/lib/strapi';
 import StationDetailsModal from '@/components/maps/StationDetailsModal';
 import type { StationPopupData } from '@/components/maps/StationPopup';
+import type { RiverFeature, BasinFeature } from '@/components/maps/LayersDrawer';
+import { RAIN_COLOR_STOPS } from '@/components/maps/useMockRainHeatmap';
 
 export interface ViewState {
   longitude: number;
@@ -36,6 +38,10 @@ export interface MapboxMapProps {
   fitToTileLayerBounds?: boolean;
   /** Latest SWOT node/gauge readings rendered as colorized triangles. */
   swotGaugeFeatures?: SwotGaugeFeature[];
+  /** Rivers to render as line features, already filtered by the layers drawer. */
+  riverFeatures?: RiverFeature[];
+  /** Sub-basins to render as filled polygons, already filtered by the layers drawer. */
+  basinFeatures?: BasinFeature[];
   children?: ReactNode;
 }
 
@@ -43,6 +49,11 @@ const SOURCE_ID = 'stations-source';
 const LAYER_ID = 'stations-layer';
 const TILE_SOURCE_ID = 'raster-tile-source';
 const TILE_LAYER_ID = 'raster-tile-layer';
+const RIVERS_SOURCE_ID = 'rivers-source';
+const RIVERS_LAYER_ID = 'rivers-layer';
+const BASINS_SOURCE_ID = 'basins-source';
+const BASINS_FILL_LAYER_ID = 'basins-fill-layer';
+const BASINS_LINE_LAYER_ID = 'basins-line-layer';
 
 // Magnitude (in the same unit as `Change`) at which the color spectrum
 // reaches its most saturated value.
@@ -155,6 +166,8 @@ export default function MapboxMap({
   tileLayerBounds,
   fitToTileLayerBounds = false,
   swotGaugeFeatures = [],
+  riverFeatures = [],
+  basinFeatures = [],
   children,
 }: MapboxMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -163,6 +176,12 @@ export default function MapboxMap({
   const onDoubleClickRef = useRef(onStationDoubleClick);
   const [gaugePopup, setGaugePopup] = useState<GaugePopupState | null>(null);
   const [gaugeModal, setGaugeModal] = useState<StationPopupData | null>(null);
+  // Tracks the map's 'load' event as React state (rather than only checking
+  // map.isStyleLoaded() imperatively) so effects that push river/basin data
+  // into their sources re-run once the style finishes loading, even if the
+  // props they depend on last changed before that point (e.g. rivers/basins
+  // starting hidden and only becoming visible much later via a user toggle).
+  const [mapLoaded, setMapLoaded] = useState(false);
 
   const validTileLayerBounds = useMemo(() => {
     if (!tileLayerBounds || tileLayerBounds.length < 4) return undefined;
@@ -209,6 +228,120 @@ export default function MapboxMap({
     );
 
     map.on('load', () => {
+      // Sub-basin polygons — drawn first so rivers and stations render above them.
+      map.addSource(BASINS_SOURCE_ID, {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+        promoteId: 'id',
+      });
+      map.addLayer({
+        id: BASINS_FILL_LAYER_ID,
+        type: 'fill',
+        source: BASINS_SOURCE_ID,
+        paint: {
+          // Mock rain choropleth — mirrors RAIN_COLOR_STOPS in useMockRainHeatmap.ts.
+          'fill-color': [
+            'interpolate',
+            ['linear'],
+            ['coalesce', ['get', 'rainMm'], 0],
+            ...RAIN_COLOR_STOPS.flat(),
+          ] as unknown as mapboxgl.ExpressionSpecification,
+          'fill-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.85, 0.65],
+        },
+      });
+      map.addLayer({
+        id: BASINS_LINE_LAYER_ID,
+        type: 'line',
+        source: BASINS_SOURCE_ID,
+        paint: {
+          'line-color': '#0c4a6e',
+          'line-width': ['case', ['boolean', ['feature-state', 'hover'], false], 2.5, 1.25],
+        },
+      });
+
+      // Rivers GeoJSON source
+      map.addSource(RIVERS_SOURCE_ID, {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      });
+      map.addLayer({
+        id: RIVERS_LAYER_ID,
+        type: 'line',
+        source: RIVERS_SOURCE_ID,
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: {
+          'line-color': '#2196F3',
+          'line-width': ['interpolate', ['linear'], ['zoom'], 4, 1.5, 10, 3.5],
+        },
+      });
+
+      let hoveredBasinId: string | number | undefined;
+
+      map.on('mousemove', BASINS_FILL_LAYER_ID, (e) => {
+        if (!e.features?.length) return;
+        map.getCanvas().style.cursor = 'pointer';
+
+        const id = e.features[0].id;
+        if (id === undefined) return;
+
+        if (hoveredBasinId !== undefined && hoveredBasinId !== id) {
+          map.setFeatureState({ source: BASINS_SOURCE_ID, id: hoveredBasinId }, { hover: false });
+        }
+        hoveredBasinId = id;
+        map.setFeatureState({ source: BASINS_SOURCE_ID, id: hoveredBasinId }, { hover: true });
+      });
+
+      map.on('mouseleave', BASINS_FILL_LAYER_ID, () => {
+        map.getCanvas().style.cursor = '';
+        if (hoveredBasinId !== undefined) {
+          map.setFeatureState({ source: BASINS_SOURCE_ID, id: hoveredBasinId }, { hover: false });
+        }
+        hoveredBasinId = undefined;
+      });
+
+      map.on('click', BASINS_FILL_LAYER_ID, (e) => {
+        if (!e.features?.length) return;
+        const props = e.features[0].properties as {
+          DNS_NM: string;
+          DNS_NU_SUB?: number;
+          rainMm?: number;
+        };
+
+        popupRef.current?.remove();
+        popupRef.current = new mapboxgl.Popup({ offset: 8 })
+          .setLngLat(e.lngLat)
+          .setHTML(
+            `<div class="p-2 text-sm">
+              <strong class="block text-gray-900">${props.DNS_NM}</strong>
+              ${props.DNS_NU_SUB !== undefined ? `<span class="block text-gray-500">Sub-bacia ANA ${props.DNS_NU_SUB}</span>` : ''}
+              ${typeof props.rainMm === 'number' ? `<span class="mt-1 block font-medium text-sky-600">Chuva (mock): ${props.rainMm} mm</span>` : ''}
+            </div>`,
+          )
+          .addTo(map);
+      });
+
+      map.on('mouseenter', RIVERS_LAYER_ID, () => {
+        map.getCanvas().style.cursor = 'pointer';
+      });
+      map.on('mouseleave', RIVERS_LAYER_ID, () => {
+        map.getCanvas().style.cursor = '';
+      });
+      map.on('click', RIVERS_LAYER_ID, (e) => {
+        if (!e.features?.length) return;
+        const props = e.features[0].properties as { NAME: string; KILOMETERS?: number };
+
+        popupRef.current?.remove();
+        popupRef.current = new mapboxgl.Popup({ offset: 8 })
+          .setLngLat(e.lngLat)
+          .setHTML(
+            `<div class="p-2 text-sm">
+              <strong class="block text-gray-900">${props.NAME}</strong>
+              ${typeof props.KILOMETERS === 'number' ? `<span class="text-gray-500">${Math.round(props.KILOMETERS)} km</span>` : ''}
+            </div>`,
+          )
+          .addTo(map);
+      });
+
       // Stations GeoJSON source
       map.addSource(SOURCE_ID, {
         type: 'geojson',
@@ -289,6 +422,7 @@ export default function MapboxMap({
         map.getCanvas().style.cursor = '';
       });
 
+      setMapLoaded(true);
     });
 
     mapRef.current = map;
@@ -328,6 +462,28 @@ export default function MapboxMap({
       })),
     });
   }, [stations]);
+
+  // Update rivers GeoJSON when the layers drawer selection changes.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+
+    const source = map.getSource(RIVERS_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
+    if (!source) return;
+
+    source.setData({ type: 'FeatureCollection', features: riverFeatures });
+  }, [riverFeatures, mapLoaded]);
+
+  // Update sub-basin GeoJSON when the layers drawer selection changes.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+
+    const source = map.getSource(BASINS_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
+    if (!source) return;
+
+    source.setData({ type: 'FeatureCollection', features: basinFeatures });
+  }, [basinFeatures, mapLoaded]);
 
   // Manage SWOT gauge DOM markers. Markers are independent of style-load
   // timing, so this effect runs as soon as the map is constructed and

@@ -14,6 +14,25 @@ import HomeButton from '@/components/ui/HomeButton';
 import DashboardButton from '@/components/ui/DashboardButton';
 import { useStationExplorer } from '@/components/maps/useStationExplorer';
 import WelcomeModal from '@/components/maps/WelcomeModal';
+import SwotFilterDrawer, {
+  DEFAULT_SWOT_FILTER,
+  filterSwotFeatures,
+  type SwotGaugeFilter,
+} from '@/components/maps/SwotFilterDrawer';
+import LayersDrawer, {
+  DEFAULT_LAYERS_FILTER,
+  buildDefaultLayersFilter,
+  filterRiverFeatures,
+  filterBasinFeatures,
+  type LayersFilter,
+  type RiverFeature,
+  type RiverFeatureProperties,
+  type BasinFeature,
+  type BasinFeatureProperties,
+} from '@/components/maps/LayersDrawer';
+import { useMockRainHeatmap } from '@/components/maps/useMockRainHeatmap';
+
+const geojsonFetcher = (url: string) => fetch(url).then((res) => res.json());
 
 // Dynamic import to avoid SSR issues with mapbox-gl
 const MapboxMap = dynamic(() => import('@/components/MapboxMap'), {
@@ -37,6 +56,12 @@ export default function MapPage() {
   const { data: swotGaugeData } = useSWR('swot-gauge-collection', () => getSwotGaugeCollection(), {
     revalidateOnFocus: false,
   });
+  const { data: riversGeojson } = useSWR<
+    GeoJSON.FeatureCollection<GeoJSON.MultiLineString, RiverFeatureProperties>
+  >('/geojson/rivers.geojson', geojsonFetcher, { revalidateOnFocus: false });
+  const { data: basinsGeojson } = useSWR<
+    GeoJSON.FeatureCollection<GeoJSON.Polygon, BasinFeatureProperties>
+  >('/geojson/subbacias.geojson', geojsonFetcher, { revalidateOnFocus: false });
   const { data: preferencesData, isLoading: isPreferencesLoading } = useSWR(
     status === 'authenticated' ? 'user-preferences' : null,
     () => getUserPreferences(),
@@ -49,6 +74,31 @@ export default function MapPage() {
   const appSettings = appSettingsData?.data;
   const preferences = preferencesData?.data;
   const swotGaugeFeatures = swotGaugeData?.data?.featureCollection?.features ?? [];
+
+  const [swotFilter, setSwotFilter] = useState<SwotGaugeFilter>(DEFAULT_SWOT_FILTER);
+  const filteredSwotGaugeFeatures = filterSwotFeatures(swotGaugeFeatures, swotFilter);
+
+  const riverFeatures = (riversGeojson?.features ?? []) as RiverFeature[];
+  const basinFeatures = (basinsGeojson?.features ?? []) as BasinFeature[];
+
+  const [layersFilter, setLayersFilter] = useState<LayersFilter>(DEFAULT_LAYERS_FILTER);
+  const [layersFilterInitialized, setLayersFilterInitialized] = useState(false);
+
+  useEffect(() => {
+    if (layersFilterInitialized) return;
+    // Wait for both GeoJSON files to arrive — subbacias.geojson is much larger
+    // than rivers.geojson and resolves later, so gating on "either loaded" would
+    // lock in an empty selectedBasins before the basin data ever showed up.
+    if (!riversGeojson || !basinsGeojson) return;
+
+    setLayersFilter(buildDefaultLayersFilter(riverFeatures, basinFeatures));
+    setLayersFilterInitialized(true);
+  }, [riversGeojson, basinsGeojson, riverFeatures, basinFeatures, layersFilterInitialized]);
+
+  const basinFeaturesWithRain = useMockRainHeatmap(basinFeatures);
+
+  const filteredRiverFeatures = filterRiverFeatures(riverFeatures, layersFilter);
+  const filteredBasinFeatures = filterBasinFeatures(basinFeaturesWithRain, layersFilter);
 
   const [flyTarget, setFlyTarget] = useState({
     longitude: -52,
@@ -106,7 +156,9 @@ export default function MapPage() {
             tileLayerOpacity={forecastOverlay?.tileLayerOpacity}
             tileLayerBounds={forecastOverlay?.tileLayerBounds}
             fitToTileLayerBounds={forecastOverlay?.fitToBounds}
-            swotGaugeFeatures={swotGaugeFeatures}
+            swotGaugeFeatures={filteredSwotGaugeFeatures}
+            riverFeatures={filteredRiverFeatures}
+            basinFeatures={filteredBasinFeatures}
           >
             <StationExplorerOverlay controller={stationExplorer} />
             <ForecastLegend
@@ -119,6 +171,24 @@ export default function MapPage() {
               onOpenChange={setForecastDrawerOpen}
               appSettings={appSettings}
             />
+            {swotGaugeFeatures.length > 0 && (
+              <SwotFilterDrawer
+                features={swotGaugeFeatures}
+                filter={swotFilter}
+                onFilterChange={setSwotFilter}
+                searchPanelOpen={stationExplorer.panelOpen}
+                forecastDrawerOpen={forecastDrawerOpen}
+              />
+            )}
+            {(riverFeatures.length > 0 || basinFeatures.length > 0) && (
+              <LayersDrawer
+                riverFeatures={riverFeatures}
+                basinFeatures={basinFeatures}
+                filter={layersFilter}
+                onFilterChange={setLayersFilter}
+                forecastDrawerOpen={forecastDrawerOpen}
+              />
+            )}
             {status === 'authenticated' ? <DashboardButton /> : <HomeButton />}
           </MapboxMap>
         ) : (
