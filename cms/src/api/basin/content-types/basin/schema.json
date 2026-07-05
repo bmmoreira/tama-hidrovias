@@ -1,0 +1,27 @@
+{
+  "kind": "collectionType",
+  "collectionName": "basins",
+  "info": {
+    "singularName": "basin",
+    "pluralName": "basins",
+    "displayName": "Basins"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "basin_id": {
+      "type": "integer"
+    },
+    "name": {
+      "type": "string"
+    },
+    "area": {
+      "type": "json"
+    },
+    "level": {
+      "type": "integer"
+    }
+  }
+}

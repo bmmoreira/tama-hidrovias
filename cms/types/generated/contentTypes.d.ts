@@ -398,6 +398,39 @@ export interface ApiAppSettingAppSetting extends Schema.CollectionType {
   };
 }
 
+export interface ApiBasinBasin extends Schema.CollectionType {
+  collectionName: 'basins';
+  info: {
+    displayName: 'Basins';
+    pluralName: 'basins';
+    singularName: 'basin';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    area: Attribute.JSON;
+    basin_id: Attribute.Integer;
+    createdAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::basin.basin',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    level: Attribute.Integer;
+    name: Attribute.String;
+    publishedAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    updatedBy: Attribute.Relation<
+      'api::basin.basin',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
 export interface ApiClimateLayerClimateLayer extends Schema.CollectionType {
   collectionName: 'climate_layers';
   info: {
@@ -1223,6 +1256,7 @@ declare module '@strapi/types' {
       'admin::transfer-token-permission': AdminTransferTokenPermission;
       'admin::user': AdminUser;
       'api::app-setting.app-setting': ApiAppSettingAppSetting;
+      'api::basin.basin': ApiBasinBasin;
       'api::climate-layer.climate-layer': ApiClimateLayerClimateLayer;
       'api::forecast.forecast': ApiForecastForecast;
       'api::map-feature-collection.map-feature-collection': ApiMapFeatureCollectionMapFeatureCollection;
