@@ -37,7 +37,9 @@ Station and SWOT gauge clustering
   aggregates: **Change** (variação, default), **std** (desvio padrão), or
   **median** (mediana). Cluster aggregation is always by median regardless
   of which metric is selected. The same signed color scale (red↔green,
-  down/up triangle) is reused for all three metrics.
+  down/up triangle) is reused for all three metrics. The selector is off
+  by default (``NEXT_PUBLIC_SWOT_METRIC_SELECTOR_ENABLED=false``); while
+  off, the metric stays fixed at Change with no UI to change it.
 - Cluster radius is independently configurable for each layer via
   ``NEXT_PUBLIC_STATION_CLUSTER_RADIUS`` and
   ``NEXT_PUBLIC_SWOT_CLUSTER_RADIUS`` (both default ``65``), wired through

@@ -28,6 +28,15 @@ export const SWOT_METRIC_OPTIONS: { value: SwotMetric; label: string }[] = [
   { value: 'median', label: 'Mediana' },
 ];
 
+/**
+ * Whether the "Métrica visualizada" selector is shown in the drawer at all.
+ * Off by default (`NEXT_PUBLIC_SWOT_METRIC_SELECTOR_ENABLED` unset or not
+ * `'true'`) — while off, `filter.metric` stays at its `DEFAULT_SWOT_FILTER`
+ * value (`'Change'`) with no UI to change it.
+ */
+export const SWOT_METRIC_SELECTOR_ENABLED =
+  process.env.NEXT_PUBLIC_SWOT_METRIC_SELECTOR_ENABLED === 'true';
+
 export interface SwotGaugeFilter {
   /** Master switch — when false, no SWOT gauges are shown regardless of the other filters. */
   visible: boolean;
@@ -359,32 +368,37 @@ export default function SwotFilterDrawer({
               !filter.visible && 'pointer-events-none opacity-40',
             )}
           >
-            {/* Metric visualized (gauges + cluster aggregates, by median) */}
-            <div>
-              <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500">
-                Métrica visualizada
-              </p>
-              <div className="grid grid-cols-3 gap-1.5">
-                {SWOT_METRIC_OPTIONS.map(({ value, label }) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => update({ metric: value })}
-                    className={clsx(
-                      'rounded-xl border px-2 py-2 text-xs font-medium transition',
-                      filter.metric === value
-                        ? 'border-sky-400 bg-sky-50 text-sky-700 dark:border-sky-500 dark:bg-sky-950/40 dark:text-sky-300'
-                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600',
-                    )}
-                  >
-                    {label}
-                  </button>
-                ))}
+            {/* Metric visualized (gauges + cluster aggregates, by median) --
+                hidden entirely behind SWOT_METRIC_SELECTOR_ENABLED (off by
+                default); filter.metric just stays 'Change' with no UI to
+                change it while this is off. */}
+            {SWOT_METRIC_SELECTOR_ENABLED && (
+              <div>
+                <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500">
+                  Métrica visualizada
+                </p>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {SWOT_METRIC_OPTIONS.map(({ value, label }) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => update({ metric: value })}
+                      className={clsx(
+                        'rounded-xl border px-2 py-2 text-xs font-medium transition',
+                        filter.metric === value
+                          ? 'border-sky-400 bg-sky-50 text-sky-700 dark:border-sky-500 dark:bg-sky-950/40 dark:text-sky-300'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600',
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-1.5 text-[10px] text-slate-400 dark:text-slate-500">
+                  Clusters agregam pela mediana dos pontos, não pela média.
+                </p>
               </div>
-              <p className="mt-1.5 text-[10px] text-slate-400 dark:text-slate-500">
-                Clusters agregam pela mediana dos pontos, não pela média.
-              </p>
-            </div>
+            )}
 
             {/* Direction */}
             <div>

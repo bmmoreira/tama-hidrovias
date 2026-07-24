@@ -141,6 +141,10 @@ mostly render as green upward triangles varying only in saturation/size
 by magnitude. This was a deliberate simplification over building a second
 color scale for magnitude-only metrics.
 
+The selector itself is gated behind
+``NEXT_PUBLIC_SWOT_METRIC_SELECTOR_ENABLED`` (off/``false`` by default) --
+see `Toggling the Metric Selector On/Off`_.
+
 Rendering pipeline
 ~~~~~~~~~~~~~~~~~~
 
@@ -228,6 +232,32 @@ wired through the same four places:
 If either variable is missing entirely, the corresponding constant falls
 back to ``65`` in code, so a misconfigured deployment degrades gracefully
 rather than breaking.
+
+Toggling the Metric Selector On/Off
+------------------------------------
+
+``NEXT_PUBLIC_SWOT_METRIC_SELECTOR_ENABLED`` (default ``false``/off) gates
+the "Métrica visualizada" selector described in `Selectable metric`_
+entirely. While off:
+
+- ``SwotFilterDrawer.tsx`` doesn't render the selector section at all --
+  there's no UI to change the metric.
+- ``filter.metric`` stays at ``DEFAULT_SWOT_FILTER``'s value (``'Change'``)
+  for every session, so gauges and cluster medians always visualize
+  Change, matching the pre-selector behavior.
+
+``SwotFilterDrawer.tsx`` exports ``SWOT_METRIC_SELECTOR_ENABLED =
+process.env.NEXT_PUBLIC_SWOT_METRIC_SELECTOR_ENABLED === 'true'`` -- the
+same "boolean flag as a plain exported const, checked at the top of the
+component" pattern used for ``SHOW_STATION_MARKERS`` below, just without a
+second read site (no fetch to gate here, only a render). It's wired
+through the same three places as the cluster-radius variables above
+(``web/.env.example``, ``web/Dockerfile``, ``docker-compose.yml``'s
+``web.build.args``, plus ``scripts/google-env-production.template`` for
+the google host) since it's also a ``NEXT_PUBLIC_`` build-time variable.
+
+To enable: set ``NEXT_PUBLIC_SWOT_METRIC_SELECTOR_ENABLED=true`` in the
+relevant env file and redeploy. No code changes are needed.
 
 Toggling Station Markers On/Off
 --------------------------------
