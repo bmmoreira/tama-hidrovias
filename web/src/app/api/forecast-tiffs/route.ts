@@ -7,7 +7,26 @@ import path from 'node:path';
 
 const TILES_DIR = '/forecast-tiles';
 
+// Deployments without direct access to the GeoTIFF volume (e.g. the google
+// host, which runs the frontend separately from TiTiler's storage) proxy
+// these requests to a deployment that does have local access, via a stable
+// URL that isn't affected by where the main app hostname points.
+const REMOTE_URL = process.env.FORECAST_TIFFS_API_URL;
+
+async function proxyToRemote(suffix: string, init?: RequestInit) {
+  const response = await fetch(`${REMOTE_URL}${suffix}`, { ...init, cache: 'no-store' });
+  const body = await response.text();
+  return new NextResponse(body, {
+    status: response.status,
+    headers: { 'Content-Type': response.headers.get('content-type') ?? 'application/json' },
+  });
+}
+
 export async function GET() {
+  if (REMOTE_URL) {
+    return proxyToRemote('');
+  }
+
   try {
     const entries = await fs.readdir(TILES_DIR, { withFileTypes: true });
     const directories = entries.filter((e) => e.isDirectory());
@@ -37,9 +56,14 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
-  
+
   if (!isAnalystRole(session?.user?.role)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  }
+
+  if (REMOTE_URL) {
+    const formData = await request.formData();
+    return proxyToRemote('', { method: 'POST', body: formData });
   }
 
   try {
@@ -80,9 +104,14 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   const session = await getServerSession(authOptions);
-  
+
   if (!isAnalystRole(session?.user?.role)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  }
+
+  if (REMOTE_URL) {
+    const { search } = new URL(request.url);
+    return proxyToRemote(search, { method: 'DELETE' });
   }
 
   try {

@@ -19,7 +19,11 @@ services:
     build: ./cms
     user: "${HOST_UID:?Set HOST_UID to your host uid}:${HOST_GID:?Set HOST_GID to your host gid}"
     ports:
-      - "1337:1337"
+      # Overridable in case host port 1337 is already taken by something
+      # else on the host -- must match docker-compose.yml's default/pattern
+      # exactly so the two files' merged port list resolves identically
+      # regardless of override.
+      - "${STRAPI_HOST_PORT:-1337}:1337"
     command: npm run develop
     env_file:
       - .env

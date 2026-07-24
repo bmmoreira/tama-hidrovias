@@ -184,6 +184,56 @@ O stack inclui um ``pgAdmin`` acessível pelo navegador em
 - Na primeira conexão ao servidor, informe a senha do banco PostgreSQL
   (por padrão, ``POSTGRES_PASSWORD``).
 
+Acesso ao Painel Administrativo do Strapi (CMS)
+-------------------------------------------------
+
+O painel administrativo do Strapi (onde se gerencia content types,
+usuários, mídia e conteúdo pela interface) fica em
+``http://localhost:1337/admin``, com o serviço ``strapi`` do stack em
+execução.
+
+- Se o banco de dados já tem um administrador (por exemplo, restaurado de
+  um dump existente), basta fazer login com essa conta.
+- Se o banco estiver **vazio** (primeira vez rodando o projeto, volume novo
+  do Postgres), o próprio Strapi mostra automaticamente o formulário
+  "Create your first administrator" no primeiro acesso -- não é preciso
+  nenhum passo manual extra.
+- Para criar um novo administrador manualmente pela linha de comando (por
+  exemplo, se a senha existente foi perdida, ou para adicionar outra
+  conta), rode:
+
+  .. code-block:: bash
+
+      docker compose -f docker-compose.yml -f docker-compose.dev.yml exec strapi \
+        npx strapi admin:create-user \
+          --firstname=Nome --lastname=Sobrenome \
+          --email=voce@exemplo.com --password=SenhaForte123
+
+.. important::
+   Esse painel administrativo (``admin_users``) é um sistema de login
+   **separado** das contas ``dev-analyst`` / ``dev-viewer`` descritas
+   abaixo -- aquelas autenticam no dashboard Next.js da aplicação (plugin
+   Users & Permissions do Strapi, tabela ``up_users``), não no painel de
+   gerenciamento do CMS.
+
+Se a porta ``1337`` do host já estiver em uso por outra coisa (ex.: outra
+ferramenta local, uma VPN, um ambiente remoto/VS Code com essa porta
+reservada por algo não relacionado ao projeto), o sintoma típico é a
+página do Strapi carregar em branco ou não corresponder ao Strapi de
+verdade -- a porta responde, mas não é o container. Nesse caso, publique o
+``strapi`` em outra porta do host via ``STRAPI_HOST_PORT``:
+
+.. code-block:: bash
+
+    HOST_UID=$(id -u) HOST_GID=$(id -g) STRAPI_HOST_PORT=1338 \
+    docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build \
+      postgres pgadmin titiler strapi web
+
+O painel fica então em ``http://localhost:1338/admin`` (ou a porta
+escolhida). Isso só muda a porta *do host*; dentro da rede Docker, o
+``web`` continua falando com o Strapi por ``http://strapi:1337`` como
+sempre.
+
 Configuração para Desenvolvimento
 -----------------------------------
 

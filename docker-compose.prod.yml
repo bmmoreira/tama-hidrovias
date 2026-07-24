@@ -1,38 +1,59 @@
 version: "3.9"
 
-# Example production-oriented override file.
+# Production-oriented override file, currently tuned for the netuno test
+# deployment (base domain brunomoreira.dev). Usage:
 #
-# This file is intentionally minimal and is meant as a starting point. It
-# assumes that the base docker-compose.yml defines the core services
-# (postgres, strapi, web, titiler, nginx). You can extend or override those
-# definitions here for a production deployment.
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# TLS is terminated by the host's existing Nginx Proxy Manager (NPM), not by
+# this stack's own `nginx` service. NPM reaches this project's `nginx`
+# container directly over the external `frontend` Docker network (the same
+# network NPM's own container is attached to) and forwards plain HTTP to it,
+# so `nginx/nginx.conf` itself needs no SSL configuration. The host port this
+# stack's nginx publishes (NGINX_HOST_PORT, see docker-compose.yml) is only
+# used for direct debugging -- NPM never goes through it.
+#
+# One-time setup required in the NPM admin UI (not managed by this file):
+# create a Proxy Host for each of the four hostnames below, forwarding to
+# "tama-nginx" port 80 over the `frontend` network.
 
 services:
-  web:
+  strapi:
     environment:
+      NODE_ENV: production
+
+  web:
+    build:
+      # NEXT_PUBLIC_* vars are inlined into the client bundle at build time,
+      # so the production hostnames must be passed here too, not just via
+      # `environment:` below (which only affects the already-built runtime).
+      args:
+        NEXT_PUBLIC_STRAPI_URL: https://db.brunomoreira.dev
+        NEXT_PUBLIC_TILESERVER_URL: https://tiles.brunomoreira.dev
+    environment:
+      NODE_ENV: production
       # Public URL of the app in production (used by NextAuth, links, etc.)
-      NEXTAUTH_URL: https://app.example.com
+      NEXTAUTH_URL: https://tama-hidrovias.brunomoreira.dev
       # Browser-facing URL for Strapi, matching the gateway hostname.
-      NEXT_PUBLIC_STRAPI_URL: https://db.example.com
+      NEXT_PUBLIC_STRAPI_URL: https://db.brunomoreira.dev
 
   nginx:
-    # In production you will typically want to expose only HTTPS here, either
-    # by terminating TLS in Nginx directly or by putting it behind a
-    # cloud/load-balancer that handles TLS and forwards to this container.
-    #
-    # Example (if terminating TLS directly in Nginx):
-    #
-    # ports:
-    #   - "443:443"
-    # volumes:
-    #   - ./nginx/ssl/fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro
-    #   - ./nginx/ssl/privkey.pem:/etc/nginx/ssl/privkey.pem:ro
-    #
-    # and update nginx/nginx.conf to listen on 443 with ssl directives.
+    # Fixed name so it's easy to reference as the "Forward Hostname" when
+    # configuring Proxy Hosts in Nginx Proxy Manager.
+    container_name: tama-nginx
+    networks:
+      - tama-network
+      - frontend
     environment:
-      # Optionally surface the effective public hosts as env vars for
-      # templated configs or monitoring.
-      APP_PUBLIC_URL: https://app.example.com
-      STRAPI_PUBLIC_URL: https://db.example.com
-      ASSETS_PUBLIC_URL: https://assets.example.com
-      TITILER_PUBLIC_URL: https://tiles.example.com
+      # Not read by nginx.conf directly (no envsubst templating is used) --
+      # kept here for operator reference / monitoring only.
+      APP_PUBLIC_URL: https://tama-hidrovias.brunomoreira.dev
+      STRAPI_PUBLIC_URL: https://db.brunomoreira.dev
+      ASSETS_PUBLIC_URL: https://assets.brunomoreira.dev
+      TITILER_PUBLIC_URL: https://tiles.brunomoreira.dev
+
+networks:
+  # Pre-existing network created by/for the host's Nginx Proxy Manager
+  # install; must already exist on the host (docker network ls).
+  frontend:
+    external: true

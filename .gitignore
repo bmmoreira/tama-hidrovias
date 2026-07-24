@@ -135,6 +135,11 @@ venv.bak/
 .vscode
 .env.example
 
+# Contains the production Mapbox token for the google deployment
+scripts/google-env-production.template
+# Contains the Strapi DB password and app secrets for the google deployment
+scripts/google-strapi-env-production.template
+
 # Spyder project settings
 .spyderproject
 .spyproject

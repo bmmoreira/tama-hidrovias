@@ -1,6 +1,12 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+// Deployments without direct access to the GeoTIFF volume (e.g. the google
+// host, which runs the frontend separately from TiTiler's storage) proxy the
+// frame listing to a deployment that does have local access, via a stable
+// URL that isn't affected by where the main app hostname points.
+const REMOTE_URL = process.env.FORECAST_TILES_API_URL;
+
 /** Parsed forecast raster frame derived from a GeoTIFF filename. */
 export type ForecastTileFrame = {
   area: string;
@@ -110,6 +116,13 @@ async function resolveForecastTilesDirectory() {
 export async function resolveForecastTileSource(
   slug: string,
 ): Promise<ForecastTileSource | null> {
+  if (REMOTE_URL) {
+    // No local file to check against -- trust the slug (it only ever comes
+    // from a listing already proxied through the same remote deployment)
+    // and let TiTiler's own 404 handling cover files that don't exist.
+    return { fileName: `${slug}.tif`, absolutePath: '' };
+  }
+
   const directory = await resolveForecastTilesDirectory();
   const candidates = [`${slug}.tif`, `${slug}.tiff`];
 
@@ -161,8 +174,29 @@ async function getFilesRecursively(
  * the forecast drawer can animate them in sequence.
  */
 export async function listForecastTileGroups(): Promise<ForecastTileGroup[]> {
+  if (REMOTE_URL) {
+    const response = await fetch(REMOTE_URL, { cache: 'no-store' });
+    const body = (await response.json()) as { data?: ForecastTileGroup[] };
+
+    // Strip the remote's own tileUrl/metadataUrl/sourceUrl (relative to its
+    // deployment) -- the route handler regenerates those relative to this
+    // deployment's own hostname.
+    return (body.data ?? []).map((group) => ({
+      area: group.area,
+      frames: group.frames.map(({ area, slug, fileName, date, time, timestamp, label }) => ({
+        area,
+        slug,
+        fileName,
+        date,
+        time,
+        timestamp,
+        label,
+      })),
+    }));
+  }
+
   const directory = await resolveForecastTilesDirectory();
-  
+
   let allFiles: { name: string; relativePath: string; subfolder: string }[] = [];
   try {
     allFiles = await getFilesRecursively(directory);
