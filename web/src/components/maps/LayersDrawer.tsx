@@ -194,10 +194,11 @@ export default function LayersDrawer({
       )}
 
       {/* Toggle button — stacked below the Home/Dashboard button on the right,
-          shifted left when the forecast drawer's full-height panel is open. */}
+          with a small gap so it doesn't sit flush against it, and shifted
+          left when the forecast drawer's full-height panel is open. */}
       <div
         className={clsx(
-          'pointer-events-none absolute right-4 top-[3.75rem] z-30',
+          'pointer-events-none absolute right-4 top-[4.0rem] z-30',
           forecastDrawerOpen && 'md:right-[27.5rem]',
         )}
       >

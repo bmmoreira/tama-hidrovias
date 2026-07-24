@@ -95,22 +95,17 @@ function serializeRasterLayer(entry) {
 
 module.exports = createCoreController(RASTER_LAYER_UID, () => ({
 	async list(ctx) {
+		// Publicly readable (the forecast/raster overlay is shown on the public
+		// map), but a logged-in dashboard user with a recognized role also sees
+		// unpublished (draft) entries for review purposes.
 		const authUser = await getAuthenticatedUserFromRequest(ctx);
-
-		if (!authUser) {
-			return ctx.unauthorized('Authentication required.');
-		}
-
 		const normalizedRole = normalizeRole(
-			authUser.role?.name ?? authUser.role?.type,
+			authUser?.role?.name ?? authUser?.role?.type,
 		);
-
-		if (!ALLOWED_READER_ROLES.has(normalizedRole)) {
-			return ctx.forbidden('Dashboard access required.');
-		}
+		const isDashboardUser = Boolean(authUser) && ALLOWED_READER_ROLES.has(normalizedRole);
 
 		const entries = await strapi.entityService.findMany(RASTER_LAYER_UID, {
-			publicationState: 'preview',
+			publicationState: isDashboardUser ? 'preview' : 'live',
 			sort: {
 				display_name: 'asc',
 			},

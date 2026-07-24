@@ -131,9 +131,9 @@ export const resources = {
         source: 'Fonte',
       },
       forecastDrawer: {
-        button: 'Medições',
+        button: 'Hidrovias',
         title: 'Camadas de previsão',
-        subtitle: 'Selecione uma área e percorra a sequência temporal do alagamento.',
+        subtitle: 'Selecione uma área, clique em um dos quadros abaixo e percorra a sequência temporal.',
         activeLayer: 'Camada ativa',
         noActiveLayer: 'Nenhuma camada ativa.',
         play: 'Animar',
