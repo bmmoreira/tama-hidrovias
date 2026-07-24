@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import useSWR from 'swr';
 import { getAppSettings, getStations, getSwotGaugeCollection, getUserPreferences } from '@/lib/strapi';
 import type { MapStylePreference } from '@/lib/strapi';
+import { SHOW_STATION_MARKERS } from '@/components/maps/stationClusterLayer';
 import StationExplorerOverlay from '@/components/maps/StationExplorerOverlay';
 import ForecastDrawer from '@/components/maps/ForecastDrawer';
 import ForecastLegend from '@/components/maps/ForecastLegend';
@@ -47,9 +48,13 @@ const MapboxMap = dynamic(() => import('@/components/MapboxMap'), {
 export default function MapPage() {
   const { data: session, status } = useSession();
 
-  const { data: stationsData } = useSWR('map-stations', () => getStations(), {
-    revalidateOnFocus: false,
-  });
+  // Station markers are off by default (mock data, see stationClusterLayer.ts)
+  // -- skip the fetch entirely rather than fetching data that won't render.
+  const { data: stationsData } = useSWR(
+    SHOW_STATION_MARKERS ? 'map-stations' : null,
+    () => getStations(),
+    { revalidateOnFocus: false },
+  );
   const { data: appSettingsData } = useSWR('app-settings', () => getAppSettings(), {
     revalidateOnFocus: false,
   });
@@ -167,6 +172,7 @@ export default function MapPage() {
             tileLayerBounds={forecastOverlay?.tileLayerBounds}
             fitToTileLayerBounds={forecastOverlay?.fitToBounds}
             swotGaugeFeatures={filteredSwotGaugeFeatures}
+            swotMetric={swotFilter.metric}
             riverFeatures={filteredRiverFeatures}
             basinFeatures={filteredBasinFeatures}
           >

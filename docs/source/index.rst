@@ -72,6 +72,7 @@ Contents
    raster-layers
    mapview
    map-layers
+   station-clustering
    changelog
    architecture
    api

@@ -14,6 +14,20 @@ export type SwotDirection = 'all' | 'rising' | 'falling' | 'nodata';
  *  are currently visible in the Camadas drawer (LayersDrawer). */
 export type SwotSpatialMode = 'none' | 'nearRivers' | 'insideBasins';
 
+/**
+ * Which `SwotGaugeFeatureProperties` field drives gauge/cluster color, shape,
+ * and label on the map. Clusters aggregate whichever one is selected by
+ * **median** (not mean) across their points, since a mean is skewed by
+ * outliers in a way a median isn't — see `swotGaugeClusterLayer.ts`.
+ */
+export type SwotMetric = 'Change' | 'std' | 'median';
+
+export const SWOT_METRIC_OPTIONS: { value: SwotMetric; label: string }[] = [
+  { value: 'Change', label: 'Variação' },
+  { value: 'std', label: 'Desvio padrão' },
+  { value: 'median', label: 'Mediana' },
+];
+
 export interface SwotGaugeFilter {
   /** Master switch — when false, no SWOT gauges are shown regardless of the other filters. */
   visible: boolean;
@@ -26,6 +40,8 @@ export interface SwotGaugeFilter {
   spatialMode: SwotSpatialMode;
   /** Max distance (km) to a visible river when spatialMode is 'nearRivers'. */
   riverProximityKm: number;
+  /** Property visualized on the map (individual gauges and cluster aggregates alike). */
+  metric: SwotMetric;
 }
 
 /** All stations visible, no direction/range/spatial restrictions applied. */
@@ -39,6 +55,7 @@ export const DEFAULT_SWOT_FILTER: SwotGaugeFilter = {
   dateTo: null,
   spatialMode: 'none',
   riverProximityKm: 20,
+  metric: 'Change',
 };
 
 /** Rivers/basins currently visible in the Camadas drawer, used to match
@@ -230,7 +247,7 @@ export default function SwotFilterDrawer({
       */}
       <div
         className={clsx(
-          'pointer-events-none absolute left-4 top-[3.75rem] z-30',
+          'pointer-events-none absolute left-4 top-[4.0rem] z-30',
           searchPanelOpen && 'md:left-[21rem] md:top-4',
         )}
       >
@@ -342,6 +359,33 @@ export default function SwotFilterDrawer({
               !filter.visible && 'pointer-events-none opacity-40',
             )}
           >
+            {/* Metric visualized (gauges + cluster aggregates, by median) */}
+            <div>
+              <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500">
+                Métrica visualizada
+              </p>
+              <div className="grid grid-cols-3 gap-1.5">
+                {SWOT_METRIC_OPTIONS.map(({ value, label }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => update({ metric: value })}
+                    className={clsx(
+                      'rounded-xl border px-2 py-2 text-xs font-medium transition',
+                      filter.metric === value
+                        ? 'border-sky-400 bg-sky-50 text-sky-700 dark:border-sky-500 dark:bg-sky-950/40 dark:text-sky-300'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600',
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1.5 text-[10px] text-slate-400 dark:text-slate-500">
+                Clusters agregam pela mediana dos pontos, não pela média.
+              </p>
+            </div>
+
             {/* Direction */}
             <div>
               <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500">

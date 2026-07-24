@@ -4,6 +4,62 @@ Changelog
 Upcoming
 --------
 
+Station and SWOT gauge clustering
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Added Mapbox GL clustering for the public map's station points, extracted
+  into a new ``web/src/components/maps/stationClusterLayer.ts`` module
+  (source, layers, and interactions) so ``MapboxMap.tsx`` no longer manages
+  station rendering inline.
+- Added the same clustering approach for SWOT gauges
+  (``web/src/components/maps/swotGaugeClusterLayer.ts``), replacing the
+  previous DOM-marker-based rendering (which could only be hidden below a
+  fixed zoom level, not clustered) with a real clustered layer. A single
+  symbol layer handles both clusters and individual gauges: two SDF
+  triangle images generated once on an offscreen canvas, tinted per-feature
+  to reproduce the original SVG marker's color scale exactly. A cluster
+  renders as the same triangle as an individual gauge, sized up for bigger
+  clusters.
+- Reworked SWOT gauge clustering to drive a ``supercluster`` index
+  directly (``SwotGaugeClusterLayer`` class) instead of Mapbox's native
+  ``cluster: true``/``clusterProperties``, and to aggregate cluster values
+  by **median** rather than average -- extreme outlier gauges no longer
+  skew a cluster's displayed value. This was necessary because
+  ``clusterProperties`` can only express incrementally-combinable
+  aggregates (sum/max/min); an exact median needs the cluster's full set
+  of raw values, which ``supercluster``'s ``getLeaves()`` provides.
+  Color/shape/label are now precomputed per feature in plain JS rather
+  than as Mapbox style expressions, which also removed the need for the
+  old "no-data sentinel number" workaround around Mapbox's expression
+  type-checker.
+- Added a "Métrica visualizada" selector to ``SwotFilterDrawer`` letting
+  users pick which property drives both individual gauges and cluster
+  aggregates: **Change** (variação, default), **std** (desvio padrão), or
+  **median** (mediana). Cluster aggregation is always by median regardless
+  of which metric is selected. The same signed color scale (red↔green,
+  down/up triangle) is reused for all three metrics.
+- Cluster radius is independently configurable for each layer via
+  ``NEXT_PUBLIC_STATION_CLUSTER_RADIUS`` and
+  ``NEXT_PUBLIC_SWOT_CLUSTER_RADIUS`` (both default ``65``), wired through
+  ``.env``, ``web/Dockerfile``, ``docker-compose.yml`` build args, and the
+  google deployment's env template.
+- Fixed a pre-existing stale-closure bug in the station double-click
+  handler (it read the ``stations`` prop from mount time instead of the
+  latest value) while extracting the handler into the new module.
+- Fixed a pre-existing bug where stations could fail to render at *any*
+  zoom level: the effect pushing station data into the Mapbox source
+  checked ``map.isStyleLoaded()`` with no retry (the same bug class
+  already fixed for rivers/basins/the raster overlay), so data arriving
+  before the map's ``'load'`` event fired was silently dropped. Fixed by
+  depending on the reactive ``mapLoaded`` state instead; confirmed via an
+  actual headless-browser render.
+- Station point circles/clusters are now off by default
+  (``NEXT_PUBLIC_SHOW_STATION_MARKERS=false``), since the underlying
+  ``Station`` records are currently mock/placeholder data, unlike SWOT
+  gauges (real data, always on). The stations fetch itself is skipped
+  entirely on the client when the flag is off, not just its rendering.
+- See ``station-clustering.rst`` for the full technical writeup.
+
 Map layers drawer, mock rain heatmap, and SWOT spatial filter
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

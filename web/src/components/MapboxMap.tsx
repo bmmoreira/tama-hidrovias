@@ -8,6 +8,14 @@ import StationDetailsModal from '@/components/maps/StationDetailsModal';
 import type { StationPopupData } from '@/components/maps/StationPopup';
 import type { RiverFeature, BasinFeature } from '@/components/maps/LayersDrawer';
 import { RAIN_COLOR_STOPS } from '@/components/maps/useMockRainHeatmap';
+import {
+  addStationLayers,
+  attachStationLayerInteractions,
+  updateStationLayerData,
+  STATION_CLUSTERS_LAYER_ID,
+} from '@/components/maps/stationClusterLayer';
+import { SwotGaugeClusterLayer } from '@/components/maps/swotGaugeClusterLayer';
+import type { SwotMetric } from '@/components/maps/SwotFilterDrawer';
 
 export interface ViewState {
   longitude: number;
@@ -38,6 +46,8 @@ export interface MapboxMapProps {
   fitToTileLayerBounds?: boolean;
   /** Latest SWOT node/gauge readings rendered as colorized triangles. */
   swotGaugeFeatures?: SwotGaugeFeature[];
+  /** Which property drives gauge/cluster color, shape, and label — see SwotFilterDrawer. */
+  swotMetric?: SwotMetric;
   /** Rivers to render as line features, already filtered by the layers drawer. */
   riverFeatures?: RiverFeature[];
   /** Sub-basins to render as filled polygons, already filtered by the layers drawer. */
@@ -45,8 +55,6 @@ export interface MapboxMapProps {
   children?: ReactNode;
 }
 
-const SOURCE_ID = 'stations-source';
-const LAYER_ID = 'stations-layer';
 const TILE_SOURCE_ID = 'raster-tile-source';
 const TILE_LAYER_ID = 'raster-tile-layer';
 const RIVERS_SOURCE_ID = 'rivers-source';
@@ -55,95 +63,6 @@ const BASINS_SOURCE_ID = 'basins-source';
 const BASINS_FILL_LAYER_ID = 'basins-fill-layer';
 const BASINS_LINE_LAYER_ID = 'basins-line-layer';
 
-// Magnitude (in the same unit as `Change`) at which the color spectrum
-// reaches its most saturated value.
-const SWOT_GAUGE_CHANGE_SCALE_MAX = 5;
-
-function hexToRgb(hex: string): [number, number, number] {
-  const normalized = hex.replace('#', '');
-  return [
-    parseInt(normalized.substring(0, 2), 16),
-    parseInt(normalized.substring(2, 4), 16),
-    parseInt(normalized.substring(4, 6), 16),
-  ];
-}
-
-function interpolateColor(from: string, to: string, t: number): string {
-  const clamped = Math.min(1, Math.max(0, t));
-  const [r1, g1, b1] = hexToRgb(from);
-  const [r2, g2, b2] = hexToRgb(to);
-
-  const r = Math.round(r1 + (r2 - r1) * clamped);
-  const g = Math.round(g1 + (g2 - g1) * clamped);
-  const b = Math.round(b1 + (b2 - b1) * clamped);
-
-  return `rgb(${r}, ${g}, ${b})`;
-}
-
-// No data → neutral gray. Otherwise, positive change ramps through a green
-// spectrum and negative change (rendered as an inverted triangle) ramps
-// through an orange/red spectrum, both scaled by magnitude.
-function getSwotGaugeColor(change: number | null): string {
-  if (typeof change !== 'number' || !Number.isFinite(change)) {
-    return '#94a3b8';
-  }
-
-  const t = Math.abs(change) / SWOT_GAUGE_CHANGE_SCALE_MAX;
-
-  return change < 0
-    ? interpolateColor('#fed7aa', '#b91c1c', t)
-    : interpolateColor('#bbf7d0', '#15803d', t);
-}
-
-// Builds an SVG triangle marker so the Change value can be rendered inside.
-// A negative change uses a downward-pointing triangle (inverted) on an
-// orange/red spectrum; positive uses upward on a green spectrum.
-function createSwotGaugeElement(change: number | null): HTMLDivElement {
-  const color = getSwotGaugeColor(change);
-  const inverted = typeof change === 'number' && change < 0;
-
-  const size = 58;
-  const pad = 3;
-  const mid = size / 2;
-  const bottom = size - pad;
-
-  // Upward triangle: apex top-centre, base at bottom.
-  // Downward triangle: base at top, apex bottom-centre.
-  const points = inverted
-    ? `${pad},${pad} ${bottom},${pad} ${mid},${bottom}`
-    : `${mid},${pad} ${pad},${bottom} ${bottom},${bottom}`;
-
-  // Place the label in the widest part of the triangle (near the base).
-  const textY = inverted ? Math.round(size * 0.28) : Math.round(size * 0.80);
-
-  const label =
-    typeof change === 'number'
-      ? `${change >= 0 ? '+' : ''}${change.toFixed(1)}`
-      : '–';
-
-  const el = document.createElement('div');
-  el.style.cursor = 'pointer';
-  el.style.filter = 'drop-shadow(0 1px 2px rgba(0,0,0,0.45))';
-  el.innerHTML = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
-    <polygon points="${points}" fill="${color}" />
-    <text
-      x="${mid}"
-      y="${textY}"
-      text-anchor="middle"
-      dominant-baseline="middle"
-      font-size="12"
-      font-weight="700"
-      font-family="system-ui,-apple-system,sans-serif"
-      fill="white"
-      stroke="rgba(0,0,0,0.25)"
-      stroke-width="2"
-      paint-order="stroke"
-      stroke-linejoin="round"
-    >${label}</text>
-  </svg>`;
-
-  return el;
-}
 
 const MAPBOX_STYLE_URLS: Record<MapStylePreference, string> = {
   outdoors: 'mapbox://styles/mapbox/outdoors-v12',
@@ -166,6 +85,7 @@ export default function MapboxMap({
   tileLayerBounds,
   fitToTileLayerBounds = false,
   swotGaugeFeatures = [],
+  swotMetric = 'Change',
   riverFeatures = [],
   basinFeatures = [],
   children,
@@ -173,7 +93,12 @@ export default function MapboxMap({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const popupRef = useRef<mapboxgl.Popup | null>(null);
+  const swotLayerRef = useRef<SwotGaugeClusterLayer | null>(null);
   const onDoubleClickRef = useRef(onStationDoubleClick);
+  // Read from the double-click handler registered once on map load, so it
+  // always sees the latest stations prop instead of closing over the array
+  // from mount time.
+  const stationsRef = useRef(stations);
   const [gaugePopup, setGaugePopup] = useState<GaugePopupState | null>(null);
   const [gaugeModal, setGaugeModal] = useState<StationPopupData | null>(null);
   // Tracks the map's 'load' event as React state (rather than only checking
@@ -200,6 +125,10 @@ export default function MapboxMap({
   useEffect(() => {
     onDoubleClickRef.current = onStationDoubleClick;
   }, [onStationDoubleClick]);
+
+  useEffect(() => {
+    stationsRef.current = stations;
+  }, [stations]);
 
   const flyTo = useCallback((vs: ViewState) => {
     mapRef.current?.flyTo({ center: [vs.longitude, vs.latitude], zoom: vs.zoom });
@@ -342,84 +271,25 @@ export default function MapboxMap({
           .addTo(map);
       });
 
-      // Stations GeoJSON source
-      map.addSource(SOURCE_ID, {
-        type: 'geojson',
-        data: { type: 'FeatureCollection', features: [] },
-      });
-
-      map.addLayer({
-        id: LAYER_ID,
-        type: 'circle',
-        source: SOURCE_ID,
-        paint: {
-          'circle-radius': [
-            'interpolate',
-            ['linear'],
-            ['zoom'],
-            4, 5,
-            10, 10,
-          ],
-          'circle-color': [
-            'match',
-            ['get', 'source'],
-            'ANA', '#2563eb',
-            'HydroWeb', '#16a34a',
-            'SNIRH', '#d97706',
-            'Virtual', '#9333ea',
-            '#6b7280',
-          ],
-          'circle-stroke-width': 2,
-          'circle-stroke-color': '#ffffff',
-          'circle-opacity': 0.9,
+      // Stations: clustered source + cluster/point layers (see
+      // stationClusterLayer.ts for why clustering exists and how it's tuned).
+      addStationLayers(map);
+      attachStationLayerInteractions(map, {
+        popupRef,
+        onStationDoubleClick: (stationId) => {
+          const station = stationsRef.current.find((s) => s.id === stationId);
+          if (station) onDoubleClickRef.current?.(station);
         },
       });
 
-      // Click → show popup
-      map.on('click', LAYER_ID, (e) => {
-        if (!e.features?.length) return;
-        const feature = e.features[0];
-        const coords = (feature.geometry as GeoJSON.Point).coordinates as [
-          number,
-          number,
-        ];
-        const props = feature.properties as {
-          name: string;
-          code: string;
-          source: string;
-          basin: string;
-        };
-
-        popupRef.current?.remove();
-        popupRef.current = new mapboxgl.Popup({ offset: 12 })
-          .setLngLat(coords)
-          .setHTML(
-            `<div class="p-2 text-sm">
-              <strong class="block text-gray-900">${props.name}</strong>
-              <span class="text-gray-500">${props.code} · ${props.source}</span>
-              <br/><span class="text-gray-500">Bacia: ${props.basin}</span>
-              <p class="mt-1 text-xs text-blue-600">Duplo-clique para ver medições</p>
-            </div>`,
-          )
-          .addTo(map);
-      });
-
-      // Double-click → callback
-      map.on('dblclick', LAYER_ID, (e) => {
-        e.preventDefault();
-        if (!e.features?.length) return;
-        const feature = e.features[0];
-        const stationId = Number(feature.properties?.id);
-        const station = stations.find((s) => s.id === stationId);
-        if (station) onDoubleClickRef.current?.(station);
-      });
-
-      // Cursor changes
-      map.on('mouseenter', LAYER_ID, () => {
-        map.getCanvas().style.cursor = 'pointer';
-      });
-      map.on('mouseleave', LAYER_ID, () => {
-        map.getCanvas().style.cursor = '';
+      // SWOT gauges: same spatial clustering approach as stations, but
+      // driven manually via `supercluster` directly (see
+      // swotGaugeClusterLayer.ts) so cluster values can be an exact
+      // median instead of a Mapbox-native incremental sum/mean.
+      swotLayerRef.current = new SwotGaugeClusterLayer(map, {
+        onGaugeClick: (feature) => {
+          setGaugePopup({ feature });
+        },
       });
 
       setMapLoaded(true);
@@ -429,6 +299,8 @@ export default function MapboxMap({
 
     return () => {
       popupRef.current?.remove();
+      swotLayerRef.current?.destroy();
+      swotLayerRef.current = null;
       map.remove();
       mapRef.current = null;
     };
@@ -436,32 +308,18 @@ export default function MapboxMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Update GeoJSON when stations change
+  // Update GeoJSON when stations change. Depends on `mapLoaded` (React
+  // state set once on the map's 'load' event) rather than checking
+  // `map.isStyleLoaded()` imperatively -- that check has no retry, so if
+  // `stations` resolved before the style finished loading, the source
+  // would silently stay empty forever. See the equivalent river/basin/
+  // raster fixes elsewhere in this file for the same bug class.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded()) return;
+    if (!map || !mapLoaded) return;
 
-    const source = map.getSource(SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
-    if (!source) return;
-
-    source.setData({
-      type: 'FeatureCollection',
-      features: stations.map((s) => ({
-        type: 'Feature',
-        geometry: {
-          type: 'Point',
-          coordinates: [s.attributes.longitude, s.attributes.latitude],
-        },
-        properties: {
-          id: s.id,
-          name: s.attributes.name,
-          code: s.attributes.code,
-          source: s.attributes.source,
-          basin: s.attributes.basin,
-        },
-      })),
-    });
-  }, [stations]);
+    updateStationLayerData(map, stations);
+  }, [stations, mapLoaded]);
 
   // Update rivers GeoJSON when the layers drawer selection changes.
   useEffect(() => {
@@ -485,38 +343,25 @@ export default function MapboxMap({
     source.setData({ type: 'FeatureCollection', features: basinFeatures });
   }, [basinFeatures, mapLoaded]);
 
-  // Manage SWOT gauge DOM markers. Markers are independent of style-load
-  // timing, so this effect runs as soon as the map is constructed and
-  // feature data is available — no isStyleLoaded() gate needed.
+  // Update SWOT gauge data when features change (see the mapLoaded comment
+  // above the equivalent station effect for why this depends on mapLoaded
+  // rather than checking map.isStyleLoaded() imperatively).
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
+    if (!mapLoaded) return;
+    swotLayerRef.current?.setFeatures(swotGaugeFeatures);
+  }, [swotGaugeFeatures, mapLoaded]);
 
-    const markers = swotGaugeFeatures.map((feature) => {
-      const { Change } = feature.properties;
-      const el = createSwotGaugeElement(Change);
-
-      const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
-        .setLngLat(feature.geometry.coordinates)
-        .addTo(map);
-
-      el.addEventListener('click', (e) => {
-        e.stopPropagation();
-        setGaugePopup({ feature });
-      });
-
-      return marker;
-    });
-
-    return () => {
-      markers.forEach((marker) => marker.remove());
-    };
-  }, [swotGaugeFeatures]);
+  // Switching the visualized metric doesn't need to reload the spatial
+  // index, just recompute displayed values -- see setMetric's own comment.
+  useEffect(() => {
+    if (!mapLoaded) return;
+    swotLayerRef.current?.setMetric(swotMetric);
+  }, [swotMetric, mapLoaded]);
 
   // Rebuild the raster source only when the URL template or bounds change.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded()) return;
+    if (!map || !mapLoaded) return;
 
     if (!tileLayerUrl) {
       if (map.getLayer(TILE_LAYER_ID)) {
@@ -551,15 +396,17 @@ export default function MapboxMap({
         source: TILE_SOURCE_ID,
         paint: { 'raster-opacity': tileLayerOpacity },
       },
-      LAYER_ID,
+      // Insert below the station layers (cluster circles are the first of
+      // the three) so stations always render above the raster overlay.
+      STATION_CLUSTERS_LAYER_ID,
     );
-  }, [validTileLayerBounds, tileLayerUrl]);
+  }, [validTileLayerBounds, tileLayerUrl, mapLoaded]);
 
   // Opacity-only changes can be applied in place without re-requesting tiles.
   useEffect(() => {
     const map = mapRef.current;
 
-    if (!map || !map.isStyleLoaded() || !map.getLayer(TILE_LAYER_ID)) {
+    if (!map || !mapLoaded || !map.getLayer(TILE_LAYER_ID)) {
       return;
     }
 
@@ -568,7 +415,7 @@ export default function MapboxMap({
       'raster-opacity',
       tileLayerOpacity,
     );
-  }, [tileLayerOpacity]);
+  }, [tileLayerOpacity, mapLoaded]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -601,11 +448,19 @@ export default function MapboxMap({
   return (
     <div className="relative h-full w-full">
       <div ref={containerRef} className="map-container h-full w-full" />
-      {/* Add a style block to pad the mapboxgl-ctrl-top-right container */}
+      {/* Push the zoom/compass control down clear of the stacked Home/Dashboard
+          and Camadas buttons, with a small gap on top of that so they don't
+          sit flush against each other. A bit more breathing room on desktop. */}
       <style>{`
         .mapboxgl-ctrl-top-right {
-          top: 88px !important;
-          right: 8px !important;
+          top: 8.5rem !important;
+          right: 1rem !important;
+        }
+        @media (min-width: 768px) {
+          .mapboxgl-ctrl-top-right {
+            top: 9rem !important;
+            right: 1.25rem !important;
+          }
         }
       `}</style>
       {children}
