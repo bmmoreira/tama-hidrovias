@@ -41,3 +41,4 @@ When the ``onViewDetails`` callback is triggered, the parent component (``MapBas
 
     architecture/station_search_flow
     architecture/forecast_drawer_flow
+    architecture/swot_gauge_clustering_flow
