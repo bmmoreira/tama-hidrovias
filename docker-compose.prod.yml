@@ -22,14 +22,6 @@ services:
     environment:
       NODE_ENV: production
 
-  titiler:
-    # Published directly (bypassing tama-nginx) so the Cloudflare Tunnel's
-    # "tiles.brunomoreira.dev" public hostname can point straight at this
-    # container as its origin service (http://localhost:8002), instead of
-    # going through tama-nginx's own published port.
-    ports:
-      - "8002:8080"
-
   web:
     build:
       # NEXT_PUBLIC_* vars are inlined into the client bundle at build time,

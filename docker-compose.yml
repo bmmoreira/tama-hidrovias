@@ -20,7 +20,9 @@ services:
     image: dpage/pgadmin4:9.14
     restart: unless-stopped
     ports:
-      - "5050:80"
+      # Overridable in case host port 5050 is already taken by something
+      # else on the host -- same reasoning as STRAPI_HOST_PORT/NGINX_HOST_PORT.
+      - "${PGADMIN_HOST_PORT:-5050}:80"
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@tama-hidrovias.com}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-change_this_pgadmin_password}
@@ -62,8 +64,15 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      - ./cms:/srv/app
-      - /srv/app/node_modules
+      # Only the uploads directory persists on the host -- NOT the whole
+      # ./cms tree. Bind-mounting the full source over /srv/app would shadow
+      # the image's own compiled admin panel (Dockerfile's `RUN npm run
+      # build`, which writes to /srv/app/build) with whatever's on the host,
+      # which is empty on a fresh checkout since `cms/build/` is gitignored
+      # -- breaking the admin panel with an ENOENT on a clean deploy. Local
+      # hot-reload dev still gets the full bind mount, added back in
+      # docker-compose.dev.yml only.
+      - ./cms/public/uploads:/srv/app/public/uploads
     networks:
       - tama-network
 
@@ -102,6 +111,13 @@ services:
     image: ghcr.io/developmentseed/titiler:latest
     restart: unless-stopped
     command: uvicorn titiler.application.main:app --host 0.0.0.0 --port 8080 --workers 1
+    ports:
+      # Overridable, same reasoning as STRAPI_HOST_PORT/NGINX_HOST_PORT.
+      # Published directly (not only reachable via nginx) so a Cloudflare
+      # Tunnel or another reverse proxy can target this container's own
+      # port as an origin service, e.g. for a secondary/backup titiler
+      # instance.
+      - "${TITILER_HOST_PORT:-8002}:8080"
     volumes:
       - ./assets/tiff:/data/geotiffs
     networks:
