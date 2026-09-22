@@ -180,7 +180,7 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
                       </div>
                     ) : chartData.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
-                        {/* top: 44 -- not just 8 -- leaves headroom above the
+                        {/* top: 52 -- not just 8 -- leaves headroom above the
                             y=0 line for the boat icon (see below) to render
                             fully. The plot area is clipped to the chart's own
                             SVG canvas, and since the Y domain is pinned to
@@ -191,8 +191,11 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
                             visible. This margin doesn't touch the Y domain/
                             scale, so the profile itself isn't compressed --
                             it's blank chrome space, like margin.bottom below
-                            already is for the x-axis label. */}
-                        <AreaChart data={chartData} margin={{ top: 44, right: 8, left: -8, bottom: 0 }}>
+                            already is for the x-axis label. 52px covers the
+                            icon's 42px offset plus its own up-to-4px lift and
+                            a few px of rotation swing at the animation's
+                            extremes. */}
+                        <AreaChart data={chartData} margin={{ top: 52, right: 8, left: -8, bottom: 0 }}>
                           <defs>
                             <linearGradient id="crossSectionFill" x1="0" y1="0" x2="0" y2="1">
                               <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.08} />
@@ -245,12 +248,17 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
                               const cy = viewBox.y;
                               return (
                                 <g transform={`translate(${cx}, ${cy})`}>
-                                  {/* Anchored by its bottom edge, not its center,
-                                      so the hull rests on the line instead of
-                                      being bisected by it -- the bob animation
-                                      only ever lifts it further up from here,
-                                      never pushes it below the water line. */}
-                                  <g className="cross-section-ship-bob" transform="translate(-18, -36)">
+                                  {/* Anchored by its bottom edge (not center) so
+                                      the hull rests on the line instead of being
+                                      bisected by it, with a few extra px of
+                                      clearance (36px icon, 42px offset) as a
+                                      safety buffer: the bob animation's ±3deg
+                                      rotation swings around the icon's own
+                                      center, so a bottom corner can dip a
+                                      couple px below the translateY-only rest
+                                      position at some points in the cycle --
+                                      exact tangency isn't safe against that. */}
+                                  <g className="cross-section-ship-bob" transform="translate(-18, -42)">
                                     <Ship width={36} height={36} color="#0284c7" strokeWidth={1.75} />
                                   </g>
                                 </g>
