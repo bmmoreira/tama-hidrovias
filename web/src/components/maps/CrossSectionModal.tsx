@@ -180,7 +180,19 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
                       </div>
                     ) : chartData.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={chartData} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
+                        {/* top: 44 -- not just 8 -- leaves headroom above the
+                            y=0 line for the boat icon (see below) to render
+                            fully. The plot area is clipped to the chart's own
+                            SVG canvas, and since the Y domain is pinned to
+                            start exactly at 0 with no padding, an icon
+                            positioned above that line would otherwise extend
+                            past the canvas's own top edge and get clipped,
+                            leaving only its submerged-looking bottom half
+                            visible. This margin doesn't touch the Y domain/
+                            scale, so the profile itself isn't compressed --
+                            it's blank chrome space, like margin.bottom below
+                            already is for the x-axis label. */}
+                        <AreaChart data={chartData} margin={{ top: 44, right: 8, left: -8, bottom: 0 }}>
                           <defs>
                             <linearGradient id="crossSectionFill" x1="0" y1="0" x2="0" y2="1">
                               <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.08} />
