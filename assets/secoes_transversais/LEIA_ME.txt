@@ -1,0 +1,16 @@
+TXT: duas colunas sem cabecalho, separadas por tabulacao.
+1: distancia euclidiana em metros ao centro do pixel mais a leste.
+2: valor original armazenado no raster (nao converte cota em profundidade).
+NoData: nan. Sem interpolacao, inversao de sinal ou escala/offset.
+Origem entre TODOS os pixels tocados, incluindo NoData; empate: maior Y.
+Ordenacao por distancia crescente; distancia nao e acumulada pela linha.
+Pixels selecionados com all_touched=True. Um registro por pixel tocado.
+sword_dist_out: truncado para inteiro no nome. Nomes repetidos recebem _fidID.
+resumo.csv: contagens, coordenadas da origem, status e erros por linha.
+Raster: C:\hec_madeira\mosaic_P2aP2bAnadChI_70.mosaic7_P2A_P2B_anadem_chi (1).tif
+Linhas: C:\hec_madeira\cross_sections_madeira_sword.gpkg
+Camada: cross_sections_madeira
+Banda: 1
+CRS: EPSG:31980
+Escala metadata: 1.0
+Offset metadata: 0.0
