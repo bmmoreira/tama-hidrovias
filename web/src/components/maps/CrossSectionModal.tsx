@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import useSWR from 'swr';
 import { Ship } from 'lucide-react';
 import {
@@ -30,12 +30,10 @@ export interface CrossSectionModalProps {
 }
 
 /**
- * Pixel distance from the chart container's top edge to the water-surface
- * (depth 0) line. Passed as the chart's own `margin.top` *and* used directly
- * to position the boat overlay -- see the comments at each usage site for
- * why sharing this one constant, instead of deriving either from the other,
- * is what makes the boat's position exact and independent of any SVG/
- * Recharts layout computation.
+ * Blank space (px) above the chart's plot area, so the Y-axis's topmost
+ * tick label doesn't get clipped by the container's own edge. NOT where
+ * the water-surface line renders -- see `useLayoutEffect` below for why
+ * that has to be measured instead of assumed.
  */
 const CHART_TOP_MARGIN = 24;
 
@@ -105,6 +103,35 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
       meanDepth: depths.reduce((sum, d) => sum + d, 0) / depths.length,
       width: chartData[chartData.length - 1]?.distance ?? undefined,
     };
+  }, [chartData]);
+
+  // Where the water-surface (depth 0) line actually renders, in px from the
+  // chart wrapper's top edge. This can't be assumed from a constant: the Y
+  // domain is only *suggested* to start at 0 (Recharts' default
+  // allowDataOverflow=false still expands it to fit the real data), so on a
+  // section with terrain rising above the water (negative depth values), 0
+  // ends up partway down the chart instead of at the very top. Read back
+  // Recharts' own computed position after each render instead of trying to
+  // replicate its layout math (axis label reservation, etc.) by hand.
+  const chartWrapperRef = useRef<HTMLDivElement>(null);
+  const [waterLineTop, setWaterLineTop] = useState<number | null>(null);
+
+  useLayoutEffect(() => {
+    const wrapper = chartWrapperRef.current;
+    if (!wrapper) return;
+
+    const measure = () => {
+      const line = wrapper.querySelector('.recharts-reference-line-line');
+      const y1 = line?.getAttribute('y1');
+      if (y1 !== null && y1 !== undefined) {
+        setWaterLineTop(Number(y1));
+      }
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(wrapper);
+    return () => observer.disconnect();
   }, [chartData]);
 
   const props = feature?.properties;
@@ -181,7 +208,7 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
                       animation: cross-section-ship-bob 3.2s ease-in-out infinite;
                     }
                   `}</style>
-                  <div className="relative h-72 w-full sm:h-80">
+                  <div ref={chartWrapperRef} className="relative h-72 w-full sm:h-80">
                     {isLoading ? (
                       <div className="flex h-full w-full items-center justify-center">
                         <div className="h-8 w-8 animate-spin rounded-full border-4 border-amber-200 border-t-amber-600" />
@@ -189,22 +216,23 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
                     ) : chartData.length > 0 ? (
                       <>
                         {/* Boat, positioned as a plain HTML overlay -- deliberately
-                            NOT inside the chart's SVG. CHART_TOP_MARGIN (below) is
-                            a literal constant we pass to the chart ourselves, and
-                            since the Y domain is pinned to start exactly at 0, the
-                            water-surface line always renders at exactly that many
-                            pixels from the container's top, by construction -- no
-                            need to read anything back from Recharts. `top` anchors
-                            this box's bottom edge there; translate(-50%, -100%)
-                            centers it horizontally and flips it to sit fully above
-                            that anchor. Being a plain div (not a nested SVG <g>),
-                            rotating it around "center" needs no transform-box:
-                            fill-box and has no cross-browser pivot ambiguity --
-                            same technique already proven correct on the welcome
-                            screen, just repositioned here. */}
+                            NOT inside the chart's SVG, so rotating it around its
+                            own center needs no transform-box: fill-box (no
+                            cross-browser pivot ambiguity, unlike an SVG-nested
+                            element would have) -- same technique already proven
+                            correct on the welcome screen, just repositioned here.
+                            `top` uses waterLineTop (read back from Recharts' own
+                            rendered line, see the useLayoutEffect above) rather
+                            than a fixed constant, since the water line isn't
+                            always at the same offset -- it depends on whether
+                            this particular section has terrain above 0.
+                            translate(-50%, -100%) centers it horizontally and
+                            flips it to sit fully above that anchor. Falls back to
+                            CHART_TOP_MARGIN before the first measurement lands,
+                            to avoid rendering at (0,0) for one frame. */}
                         <div
                           className="pointer-events-none absolute left-1/2 z-10 -translate-x-1/2 -translate-y-full"
-                          style={{ top: CHART_TOP_MARGIN }}
+                          style={{ top: waterLineTop ?? CHART_TOP_MARGIN }}
                           aria-hidden="true"
                         >
                           <div className="cross-section-ship-bob">
@@ -212,11 +240,13 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
                           </div>
                         </div>
                         <ResponsiveContainer width="100%" height="100%">
-                          {/* top must equal CHART_TOP_MARGIN above -- see that
-                              comment for why. It's blank chrome space (doesn't
-                              touch the Y domain/scale), so the profile itself
-                              isn't compressed, exactly like margin.bottom below
-                              already is for the x-axis label. */}
+                          {/* margin.top is blank chrome space above the plot
+                              area (doesn't touch the Y domain/scale, so the
+                              profile itself isn't compressed) -- just enough
+                              for the topmost axis tick label not to clip,
+                              exactly like margin.bottom below already is for
+                              the x-axis label. Unrelated to where the boat
+                              renders; see waterLineTop above for that. */}
                           <AreaChart data={chartData} margin={{ top: CHART_TOP_MARGIN, right: 8, left: -8, bottom: 0 }}>
                             <defs>
                               <linearGradient id="crossSectionFill" x1="0" y1="0" x2="0" y2="1">
@@ -252,9 +282,12 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
                               strokeWidth={2}
                               connectNulls={false}
                             />
-                            {/* Water surface (depth 0), purely decorative -- the
-                                boat above is positioned independently (see the
-                                CHART_TOP_MARGIN comment), not derived from this. */}
+                            {/* Water surface (depth 0). Rendered with the stable
+                                "recharts-reference-line-line" class the
+                                useLayoutEffect above reads back from -- the
+                                boat's position is DERIVED from wherever this
+                                line actually ends up, not the other way
+                                around. */}
                             <ReferenceLine y={0} stroke="#0284c7" strokeDasharray="6 4" strokeWidth={1.5} />
                           </AreaChart>
                         </ResponsiveContainer>
