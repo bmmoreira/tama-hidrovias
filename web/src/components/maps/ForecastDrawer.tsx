@@ -7,6 +7,7 @@ import { CloudRain, Loader2, Pause, Play, RefreshCw, X, Ship } from 'lucide-reac
 import { DEFAULT_FORECAST_LAYER_SETTINGS, getRasterLayers, type AppSettings, type RasterLayer } from '@/lib/strapi';
 import { getRasterLayerFileBaseName } from '@/lib/raster-layer-filename';
 import { useTranslation } from '@/lib/use-app-translation';
+import MapThemeToggleButton from '@/components/maps/MapThemeToggleButton';
 
 type ForecastFrame = {
   area: string;
@@ -432,7 +433,7 @@ export default function ForecastDrawer({
         />
       )}
 
-      <div className="pointer-events-none absolute left-1/2 top-4 z-30 -translate-x-1/2">
+      <div className="pointer-events-none absolute left-1/2 top-4 z-30 flex -translate-x-1/2 items-center gap-2">
         <button
           type="button"
           onClick={toggleDrawer}
@@ -448,6 +449,7 @@ export default function ForecastDrawer({
             </span>
           ) : null}
         </button>
+        <MapThemeToggleButton />
       </div>
 
       <aside

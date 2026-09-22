@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import useSWR from 'swr';
+import { Ship } from 'lucide-react';
 import {
   Area,
   AreaChart,
@@ -160,49 +161,70 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
                   <CardTitle>Perfil da seção (distância × profundidade)</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-72 w-full sm:h-80">
+                  <style>{`
+                    @keyframes cross-section-ship-bob {
+                      0%, 100% { transform: translate(-50%, 0) rotate(-3deg); }
+                      50%       { transform: translate(-50%, -6px) rotate(3deg); }
+                    }
+                    .cross-section-ship-bob { animation: cross-section-ship-bob 3.2s ease-in-out infinite; }
+                  `}</style>
+                  <div className="relative h-72 w-full sm:h-80">
                     {isLoading ? (
                       <div className="flex h-full w-full items-center justify-center">
                         <div className="h-8 w-8 animate-spin rounded-full border-4 border-amber-200 border-t-amber-600" />
                       </div>
                     ) : chartData.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={chartData} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
-                          <defs>
-                            <linearGradient id="crossSectionFill" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.08} />
-                              <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.55} />
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.22)" />
-                          <XAxis
-                            dataKey="distance"
-                            type="number"
-                            tick={{ fontSize: 11, fill: '#94a3b8' }}
-                            tickFormatter={(value: number) => `${value.toFixed(0)} m`}
-                            label={{ value: 'Distância (m)', position: 'insideBottom', offset: -2, fontSize: 11, fill: '#94a3b8' }}
-                          />
-                          <YAxis
-                            reversed
-                            tick={{ fontSize: 11, fill: '#94a3b8' }}
-                            tickFormatter={(value: number) => `${value.toFixed(0)} m`}
-                            label={{ value: 'Profundidade (m)', angle: -90, position: 'insideLeft', fontSize: 11, fill: '#94a3b8' }}
-                          />
-                          <Tooltip
-                            contentStyle={{ borderRadius: 16, borderColor: '#cbd5e1' }}
-                            formatter={(value: number) => [`${value.toFixed(2)} m`, 'Profundidade']}
-                            labelFormatter={(value: number) => `Distância: ${value.toFixed(1)} m`}
-                          />
-                          <Area
-                            type="monotone"
-                            dataKey="depth"
-                            stroke="#b45309"
-                            fill="url(#crossSectionFill)"
-                            strokeWidth={2}
-                            connectNulls={false}
-                          />
-                        </AreaChart>
-                      </ResponsiveContainer>
+                      <>
+                        {/* Boat floating at depth 0 (the water surface) -- same
+                            icon/bobbing animation as the welcome screen. Domain
+                            is pinned to start at 0 below so this lines up with
+                            the chart's top edge regardless of the data's own
+                            min depth. */}
+                        <div
+                          className="cross-section-ship-bob pointer-events-none absolute left-1/2 top-2 z-10"
+                          aria-hidden="true"
+                        >
+                          <Ship className="h-6 w-6 text-sky-600 drop-shadow dark:text-sky-400" strokeWidth={1.75} />
+                        </div>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={chartData} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
+                            <defs>
+                              <linearGradient id="crossSectionFill" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.08} />
+                                <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.55} />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.22)" />
+                            <XAxis
+                              dataKey="distance"
+                              type="number"
+                              tick={{ fontSize: 11, fill: '#94a3b8' }}
+                              tickFormatter={(value: number) => `${value.toFixed(0)} m`}
+                              label={{ value: 'Distância (m)', position: 'insideBottom', offset: -2, fontSize: 11, fill: '#94a3b8' }}
+                            />
+                            <YAxis
+                              reversed
+                              domain={[0, 'auto']}
+                              tick={{ fontSize: 11, fill: '#94a3b8' }}
+                              tickFormatter={(value: number) => `${value.toFixed(0)} m`}
+                              label={{ value: 'Profundidade (m)', angle: -90, position: 'insideLeft', fontSize: 11, fill: '#94a3b8' }}
+                            />
+                            <Tooltip
+                              contentStyle={{ borderRadius: 16, borderColor: '#cbd5e1' }}
+                              formatter={(value: number) => [`${value.toFixed(2)} m`, 'Profundidade']}
+                              labelFormatter={(value: number) => `Distância: ${value.toFixed(1)} m`}
+                            />
+                            <Area
+                              type="monotone"
+                              dataKey="depth"
+                              stroke="#b45309"
+                              fill="url(#crossSectionFill)"
+                              strokeWidth={2}
+                              connectNulls={false}
+                            />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </>
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-sm text-slate-400">
                         Sem dados de perfil disponíveis para esta seção.
