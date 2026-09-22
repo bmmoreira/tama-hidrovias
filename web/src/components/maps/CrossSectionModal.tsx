@@ -236,7 +236,7 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
                           aria-hidden="true"
                         >
                           <div className="cross-section-ship-bob">
-                            <Ship className="h-9 w-9 text-sky-600 drop-shadow dark:text-sky-400" strokeWidth={1.75} />
+                            <Ship className="h-[72px] w-[72px] text-sky-600 drop-shadow dark:text-sky-400" strokeWidth={1.75} />
                           </div>
                         </div>
                         <ResponsiveContainer width="100%" height="100%">
