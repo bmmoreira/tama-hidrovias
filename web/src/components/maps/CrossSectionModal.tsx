@@ -163,14 +163,22 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
                 </CardHeader>
                 <CardContent>
                   <style>{`
+                    /* translateY only, no rotate() -- unlike the welcome
+                       screen's boat (a plain HTML div, where CSS rotation
+                       around "center" is unambiguous), this one is a nested
+                       SVG <g>. Rotating an SVG element around its own center
+                       needs transform-box: fill-box, which has inconsistent
+                       cross-browser support -- a browser that ignores it
+                       rotates around the wrong pivot (the outer SVG
+                       viewport's origin instead of the icon itself), which
+                       can swing the icon well past any fixed clearance
+                       buffer. translateY has no such ambiguity anywhere. */
                     @keyframes cross-section-ship-bob {
-                      0%, 100% { transform: translateY(0) rotate(-3deg); }
-                      50%       { transform: translateY(-4px) rotate(3deg); }
+                      0%, 100% { transform: translateY(0); }
+                      50%       { transform: translateY(-5px); }
                     }
                     .cross-section-ship-bob {
                       animation: cross-section-ship-bob 3.2s ease-in-out infinite;
-                      transform-box: fill-box;
-                      transform-origin: center;
                     }
                   `}</style>
                   <div className="relative h-72 w-full sm:h-80">
