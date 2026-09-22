@@ -233,7 +233,12 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
                               const cy = viewBox.y;
                               return (
                                 <g transform={`translate(${cx}, ${cy})`}>
-                                  <g className="cross-section-ship-bob" transform="translate(-18, -18)">
+                                  {/* Anchored by its bottom edge, not its center,
+                                      so the hull rests on the line instead of
+                                      being bisected by it -- the bob animation
+                                      only ever lifts it further up from here,
+                                      never pushes it below the water line. */}
+                                  <g className="cross-section-ship-bob" transform="translate(-18, -36)">
                                     <Ship width={36} height={36} color="#0284c7" strokeWidth={1.75} />
                                   </g>
                                 </g>
