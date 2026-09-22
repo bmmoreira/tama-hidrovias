@@ -32,6 +32,7 @@ import LayersDrawer, {
   type BasinFeatureProperties,
 } from '@/components/maps/LayersDrawer';
 import { useMockRainHeatmap } from '@/components/maps/useMockRainHeatmap';
+import type { CrossSectionFeature } from '@/components/maps/crossSectionClusterLayer';
 
 const geojsonFetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -67,6 +68,9 @@ export default function MapPage() {
   const { data: basinsGeojson } = useSWR<
     GeoJSON.FeatureCollection<GeoJSON.Polygon, BasinFeatureProperties>
   >('/geojson/subbacias.geojson', geojsonFetcher, { revalidateOnFocus: false });
+  const { data: crossSectionsGeojson } = useSWR<
+    GeoJSON.FeatureCollection<GeoJSON.Point, CrossSectionFeature['properties']>
+  >('/geojson/secoes_madeira_ponto.geojson', geojsonFetcher, { revalidateOnFocus: false });
   const { data: preferencesData, isLoading: isPreferencesLoading } = useSWR(
     status === 'authenticated' ? 'user-preferences' : null,
     () => getUserPreferences(),
@@ -82,6 +86,7 @@ export default function MapPage() {
 
   const riverFeatures = (riversGeojson?.features ?? []) as RiverFeature[];
   const basinFeatures = (basinsGeojson?.features ?? []) as BasinFeature[];
+  const crossSectionFeatures = (crossSectionsGeojson?.features ?? []) as CrossSectionFeature[];
 
   const [layersFilter, setLayersFilter] = useState<LayersFilter>(DEFAULT_LAYERS_FILTER);
   const [layersFilterInitialized, setLayersFilterInitialized] = useState(false);
@@ -175,6 +180,7 @@ export default function MapPage() {
             swotMetric={swotFilter.metric}
             riverFeatures={filteredRiverFeatures}
             basinFeatures={filteredBasinFeatures}
+            crossSectionFeatures={crossSectionFeatures}
           >
             <StationExplorerOverlay controller={stationExplorer} />
             <ForecastLegend

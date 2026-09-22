@@ -4,6 +4,27 @@ Changelog
 Upcoming
 --------
 
+River cross-section (transversal section) points
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Added a third clustered point layer to the public map:
+  ``crossSectionClusterLayer.ts``, showing 377 SWORD-derived river
+  cross-section points along the Madeira basin (mirrors
+  ``stationClusterLayer.ts``'s plain Mapbox-native clustering -- no
+  per-cluster aggregate is needed, just a point count).
+- Source data (``secoes_madeira_ponto.geojson`` +
+  ``secoes_transversais/*.txt`` depth profiles) is static reference data
+  served from ``web/public/geojson/``, the same convention already used
+  for rivers/basins.
+- Clicking an individual point shows a popup styled like the SWOT gauge
+  popup, with a "Ver perfil da seção" button opening the new
+  ``CrossSectionModal``: a lazily-fetched, reversed-Y-axis depth profile
+  chart (water surface at top, channel bed dipping down) for that point's
+  transversal section, plus max/mean depth and measured-width summary
+  stats.
+- See ``station-clustering.rst`` and the new
+  ``architecture/cross_section_flow.rst`` diagrams for details.
+
 Station and SWOT gauge clustering
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

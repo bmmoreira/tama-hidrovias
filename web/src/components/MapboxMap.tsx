@@ -16,6 +16,13 @@ import {
 } from '@/components/maps/stationClusterLayer';
 import { SwotGaugeClusterLayer } from '@/components/maps/swotGaugeClusterLayer';
 import type { SwotMetric } from '@/components/maps/SwotFilterDrawer';
+import {
+  addCrossSectionLayers,
+  attachCrossSectionLayerInteractions,
+  updateCrossSectionLayerData,
+} from '@/components/maps/crossSectionClusterLayer';
+import type { CrossSectionFeature } from '@/components/maps/crossSectionClusterLayer';
+import CrossSectionModal from '@/components/maps/CrossSectionModal';
 
 export interface ViewState {
   longitude: number;
@@ -52,6 +59,8 @@ export interface MapboxMapProps {
   riverFeatures?: RiverFeature[];
   /** Sub-basins to render as filled polygons, already filtered by the layers drawer. */
   basinFeatures?: BasinFeature[];
+  /** River cross-section (transversal section) points, see crossSectionClusterLayer.ts. */
+  crossSectionFeatures?: CrossSectionFeature[];
   children?: ReactNode;
 }
 
@@ -75,6 +84,10 @@ interface GaugePopupState {
   feature: SwotGaugeFeature;
 }
 
+interface CrossSectionPopupState {
+  feature: CrossSectionFeature;
+}
+
 export default function MapboxMap({
   initialViewState = { longitude: -52, latitude: -15, zoom: 4 },
   mapStyle = 'outdoors',
@@ -88,6 +101,7 @@ export default function MapboxMap({
   swotMetric = 'Change',
   riverFeatures = [],
   basinFeatures = [],
+  crossSectionFeatures = [],
   children,
 }: MapboxMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -101,6 +115,8 @@ export default function MapboxMap({
   const stationsRef = useRef(stations);
   const [gaugePopup, setGaugePopup] = useState<GaugePopupState | null>(null);
   const [gaugeModal, setGaugeModal] = useState<StationPopupData | null>(null);
+  const [crossSectionPopup, setCrossSectionPopup] = useState<CrossSectionPopupState | null>(null);
+  const [crossSectionModalFeature, setCrossSectionModalFeature] = useState<CrossSectionFeature | null>(null);
   // Tracks the map's 'load' event as React state (rather than only checking
   // map.isStyleLoaded() imperatively) so effects that push river/basin data
   // into their sources re-run once the style finishes loading, even if the
@@ -292,6 +308,17 @@ export default function MapboxMap({
         },
       });
 
+      // River cross-section points (transversal sections): same native
+      // Mapbox clustering as stations (see crossSectionClusterLayer.ts) --
+      // no aggregate value is displayed per cluster, just a count, so the
+      // simpler cluster: true approach fits, unlike the SWOT gauge layer.
+      addCrossSectionLayers(map);
+      attachCrossSectionLayerInteractions(map, {
+        onSectionClick: (feature) => {
+          setCrossSectionPopup({ feature });
+        },
+      });
+
       setMapLoaded(true);
     });
 
@@ -320,6 +347,14 @@ export default function MapboxMap({
 
     updateStationLayerData(map, stations);
   }, [stations, mapLoaded]);
+
+  // Update cross-section points when the source data changes.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+
+    updateCrossSectionLayerData(map, crossSectionFeatures);
+  }, [crossSectionFeatures, mapLoaded]);
 
   // Update rivers GeoJSON when the layers drawer selection changes.
   useEffect(() => {
@@ -564,10 +599,81 @@ export default function MapboxMap({
         );
       })()}
 
+      {crossSectionPopup !== null && (() => {
+        const p = crossSectionPopup.feature.properties;
+
+        return (
+          <div
+            className="absolute inset-0 z-50 flex items-center justify-center p-4"
+            onClick={() => setCrossSectionPopup(null)}
+          >
+            <div
+              className="pointer-events-auto w-72 max-w-full overflow-hidden rounded-2xl border border-white/20 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-md dark:border-slate-700/60 dark:bg-slate-900/95"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="relative bg-gradient-to-br from-amber-500 to-orange-600 px-4 pb-3 pt-4">
+                <button
+                  onClick={() => setCrossSectionPopup(null)}
+                  className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-white/80 transition hover:bg-white/35 hover:text-white"
+                  aria-label="Fechar"
+                >
+                  <svg viewBox="0 0 10 10" className="h-2.5 w-2.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                    <path d="M2 2l6 6M8 2l-6 6" />
+                  </svg>
+                </button>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/70">Seção transversal</p>
+                <h3 className="mt-0.5 pr-6 text-sm font-bold leading-tight text-white">Nó SWORD {p.sword_node_id}</h3>
+                <p className="mt-1 text-[11px] text-white/60">FID: {p.fid}</p>
+              </div>
+
+              {/* Data rows */}
+              <div className="divide-y divide-gray-100 dark:divide-slate-800">
+                <div className="flex items-center justify-between px-4 py-2">
+                  <span className="text-xs text-gray-500 dark:text-slate-400">Largura (SWORD)</span>
+                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                    {p.sword_width.toFixed(0)} m
+                  </span>
+                </div>
+                <div className="flex items-center justify-between px-4 py-2">
+                  <span className="text-xs text-gray-500 dark:text-slate-400">Distância da foz</span>
+                  <span className="text-xs text-slate-600 dark:text-slate-300">
+                    {(p.sword_dist_out / 1000).toFixed(1)} km
+                  </span>
+                </div>
+                <div className="flex items-center justify-between px-4 py-2">
+                  <span className="text-xs text-gray-500 dark:text-slate-400">Reach SWORD</span>
+                  <span className="text-xs text-slate-600 dark:text-slate-300">{p.sword_reach_id}</span>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="bg-gray-50 px-4 py-3 dark:bg-slate-800/50">
+                <button
+                  onClick={() => {
+                    setCrossSectionModalFeature(crossSectionPopup.feature);
+                    setCrossSectionPopup(null);
+                  }}
+                  className="w-full rounded-xl bg-amber-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-amber-700 active:scale-[0.98] dark:bg-amber-500 dark:hover:bg-amber-400"
+                >
+                  Ver perfil da seção →
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       <StationDetailsModal
         open={gaugeModal !== null}
         onOpenChange={(open) => { if (!open) setGaugeModal(null); }}
         data={gaugeModal}
+      />
+
+      <CrossSectionModal
+        open={crossSectionModalFeature !== null}
+        onOpenChange={(open) => { if (!open) setCrossSectionModalFeature(null); }}
+        feature={crossSectionModalFeature}
       />
     </div>
   );

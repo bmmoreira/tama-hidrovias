@@ -316,20 +316,61 @@ Known Issues Fixed
   This bug predates clustering but was easiest to fix while this code was
   already being extracted into its own module.
 
+River Cross-Section Points
+----------------------------
+
+A third clustered point layer, added for the Madeira basin's river
+cross-section (transversal section) data: 377 SWORD-derived points, each
+with an associated bathymetric depth profile. See
+:doc:`architecture/cross_section_flow` for the full diagrams; this
+section covers just what differs from the station/SWOT layers above.
+
+Unlike stations and SWOT gauges, this layer's source data is **not**
+fetched from Strapi -- it's static reference data checked into the repo
+and served as plain files under ``web/public/geojson/`` (the same
+convention already used for ``rivers.geojson``/``subbacias.geojson``):
+
+- ``secoes_madeira_ponto.geojson`` -- the point ``FeatureCollection``,
+  copied from ``assets/secoes_madeira_ponto.geojson``.
+- ``secoes_transversais/<file>`` -- one profile per point (distance,
+  depth pairs), copied from ``assets/secoes_transversais/``.
+
+``crossSectionClusterLayer.ts`` mirrors ``stationClusterLayer.ts``
+exactly (plain Mapbox-native ``cluster: true``, not the ``supercluster``
+approach SWOT gauges use) since no per-cluster aggregate value is
+displayed -- clusters just show a point count, same as stations.
+``NEXT_PUBLIC_CROSS_SECTION_CLUSTER_RADIUS`` (default ``50``) tunes the
+cluster radius, following the same pattern as
+``NEXT_PUBLIC_STATION_CLUSTER_RADIUS``/``NEXT_PUBLIC_SWOT_CLUSTER_RADIUS``
+-- but it's not yet wired through the Docker build-arg plumbing those two
+are (``web/Dockerfile``, ``docker-compose.yml``), since the default has
+been sufficient so far; add it there the same way if that changes.
+
+Clicking an individual (unclustered) point shows a popup styled like the
+SWOT gauge popup (name/id header, a few data rows, a call-to-action
+button) instead of the plain HTML ``mapboxgl.Popup`` stations/rivers/
+basins use. Its "Ver perfil da seção" button opens ``CrossSectionModal``,
+which lazily fetches that point's specific ``secoes_transversais/<file>``
+profile only when opened (via SWR, keyed by the file path so repeat opens
+are cached) and renders it as a Recharts ``AreaChart`` with a **reversed**
+Y axis -- depth increases downward, matching how a cross-section profile
+reads visually, with the water surface at the top and the channel bed
+dipping below it.
+
 Development Checklist
 ----------------------
 
 When changing this feature:
 
-1. Keep ``stationClusterLayer.ts`` and ``swotGaugeClusterLayer.ts`` free of
-   React/Next.js-specific concerns (hooks, props) -- they should stay
-   plain Mapbox GL modules that any component could call into, mirroring
-   ``useMockRainHeatmap.ts`` and ``spatialFilter.ts``'s existing separation
-   of concerns.
-2. If the station or gauge popup content changes, update it in
-   ``attachStationLayerInteractions`` / the ``MapboxMap.tsx`` gauge popup
-   JSX respectively -- there is a single builder for each, not one per
-   call site.
+1. Keep ``stationClusterLayer.ts``, ``swotGaugeClusterLayer.ts``, and
+   ``crossSectionClusterLayer.ts`` free of React/Next.js-specific concerns
+   (hooks, props) -- they should stay plain Mapbox GL modules that any
+   component could call into, mirroring ``useMockRainHeatmap.ts`` and
+   ``spatialFilter.ts``'s existing separation of concerns.
+2. If the station, gauge, or cross-section popup content changes, update
+   it in ``attachStationLayerInteractions`` / the ``MapboxMap.tsx`` gauge
+   popup JSX / the ``MapboxMap.tsx`` cross-section popup JSX respectively
+   -- there is a single builder for each, not one per call site.
 3. If you add a new point layer, insert it with an explicit ``beforeId``
    if it needs to render below/above the existing station or SWOT layers
    (see the raster overlay layer in ``MapboxMap.tsx`` for the existing
@@ -364,4 +405,5 @@ Related Documentation
 - ``public-map.rst`` for the forecast overlay drawer on the same ``/map``
   route.
 - ``web/typedoc`` (generated) for the full type reference:
-  ``stationClusterLayer``, ``swotGaugeClusterLayer``.
+  ``stationClusterLayer``, ``swotGaugeClusterLayer``,
+  ``crossSectionClusterLayer``.
