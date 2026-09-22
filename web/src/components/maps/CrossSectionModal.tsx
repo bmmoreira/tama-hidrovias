@@ -146,7 +146,7 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
                 Seção transversal · nó {props.sword_node_id}
               </DialogTitle>
               <DialogDescription className="mt-2 max-w-3xl text-sm text-slate-600 dark:text-slate-300">
-                Perfil de profundidade medido ao longo da seção do rio neste ponto (dados derivados do SWORD).
+                Perfil de cota do leito medido ao longo da seção do rio neste ponto (dados derivados do SWORD).
               </DialogDescription>
               <div className="mt-4 flex flex-wrap gap-2 text-xs font-medium text-slate-600 dark:text-slate-300">
                 <span className="rounded-full border border-slate-200 bg-white/90 px-3 py-1 dark:border-slate-700 dark:bg-slate-900/80">
@@ -169,7 +169,7 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
                 <section className="grid gap-3 sm:grid-cols-3">
                   <div className="rounded-2xl border border-gray-200 bg-white/80 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
                     <div className="text-xs font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-slate-400">
-                      Profundidade máxima
+                      Cota do leito máxima
                     </div>
                     <div className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
                       {formatMeters(stats.maxDepth)}
@@ -177,7 +177,7 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
                   </div>
                   <div className="rounded-2xl border border-gray-200 bg-white/80 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
                     <div className="text-xs font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-slate-400">
-                      Profundidade média
+                      Cota do leito média
                     </div>
                     <div className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
                       {formatMeters(stats.meanDepth)}
@@ -196,7 +196,7 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
 
               <Card className="overflow-hidden border-gray-200/80 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-950/90">
                 <CardHeader className="pb-2">
-                  <CardTitle>Perfil da seção (distância × profundidade)</CardTitle>
+                  <CardTitle>Perfil da seção (distância × cota do leito)</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <style>{`
@@ -267,11 +267,11 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
                               domain={[0, 'auto']}
                               tick={{ fontSize: 11, fill: '#94a3b8' }}
                               tickFormatter={(value: number) => `${value.toFixed(0)} m`}
-                              label={{ value: 'Profundidade (m)', angle: -90, position: 'insideLeft', fontSize: 11, fill: '#94a3b8' }}
+                              label={{ value: 'Cota do leito (m)', angle: -90, position: 'insideLeft', fontSize: 11, fill: '#94a3b8' }}
                             />
                             <Tooltip
                               contentStyle={{ borderRadius: 16, borderColor: '#cbd5e1' }}
-                              formatter={(value: number) => [`${value.toFixed(2)} m`, 'Profundidade']}
+                              formatter={(value: number) => [`${value.toFixed(2)} m`, 'Cota do leito']}
                               labelFormatter={(value: number) => `Distância: ${value.toFixed(1)} m`}
                             />
                             <Area
