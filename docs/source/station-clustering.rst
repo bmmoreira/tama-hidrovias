@@ -380,6 +380,17 @@ SVG, specifically so its own bob-and-rotate animation doesn't depend on
 cross-browser support on SVG elements that caused real, hard-to-diagnose
 positioning drift in earlier iterations of this feature.
 
+The chart fills two separate ``Area`` series, not one: ``depth`` (the
+terrain, amber, filled from the axis bottom up -- the riverbed/bank
+material, regardless of ``water_level``) and ``waterBand`` (blue, layered
+on top). ``waterBand`` is a derived per-point field, computed in a
+``useMemo`` alongside ``chartData`` from the raw profile plus
+``water_level``: ``[depth, water_level]`` wherever the terrain is below
+the water level (Recharts fills *between* the two numbers when a
+``dataKey`` resolves to a 2-tuple, rather than from the axis baseline),
+and ``null`` wherever it's exposed -- ``connectNulls={false}`` keeps that
+a real gap in the water fill instead of bridging across dry land.
+
 Development Checklist
 ----------------------
 

@@ -44,6 +44,16 @@ interface ProfilePoint {
   depth: number | null;
 }
 
+interface ChartPoint extends ProfilePoint {
+  /**
+   * [terrain, water_level] band for the water fill, wherever the channel
+   * bed is actually submerged (terrain below water_level) -- null where
+   * it's exposed (terrain at or above water_level), which leaves a real
+   * gap in that Area rather than drawing water above dry land.
+   */
+  waterBand: [number, number] | null;
+}
+
 /**
  * Parses a `secoes_transversais/*.txt` profile: two tab-separated columns,
  * no header -- distance (m), depth (m). "nan" rows (NoData pixels, see
@@ -93,7 +103,17 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
     { revalidateOnFocus: false },
   );
 
-  const chartData = useMemo(() => profile ?? [], [profile]);
+  const waterLevel = feature?.properties.water_level;
+
+  const chartData: ChartPoint[] = useMemo(() => {
+    return (profile ?? []).map((point) => ({
+      ...point,
+      waterBand:
+        point.depth !== null && typeof waterLevel === 'number' && point.depth < waterLevel
+          ? [point.depth, waterLevel]
+          : null,
+    }));
+  }, [profile, waterLevel]);
 
   const stats = useMemo(() => {
     const depths = chartData.map((p) => p.depth).filter((d): d is number => d !== null);
@@ -252,6 +272,10 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
                                 <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.08} />
                                 <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.55} />
                               </linearGradient>
+                              <linearGradient id="crossSectionWaterFill" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.35} />
+                                <stop offset="95%" stopColor="#0284c7" stopOpacity={0.65} />
+                              </linearGradient>
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.22)" />
                             {/* domain={['dataMin', 'dataMax']} for the same
@@ -291,15 +315,39 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
                             />
                             <Tooltip
                               contentStyle={{ borderRadius: 16, borderColor: '#cbd5e1' }}
-                              formatter={(value: number) => [`${value.toFixed(2)} m`, 'Cota do leito']}
+                              formatter={(value: number | [number, number], name: string) => {
+                                if (name === 'waterBand' && Array.isArray(value)) {
+                                  return [`${(value[1] - value[0]).toFixed(2)} m`, 'Lâmina d\'água'];
+                                }
+                                return [`${(value as number).toFixed(2)} m`, 'Cota do leito'];
+                              }}
                               labelFormatter={(value: number) => `Distância: ${value.toFixed(1)} m`}
                             />
+                            {/* Ground: filled from this profile's own bottom
+                                (dataMin) up to the terrain line, always --
+                                the riverbed/bank material regardless of
+                                water_level. */}
                             <Area
                               type="monotone"
                               dataKey="depth"
                               stroke="#b45309"
                               fill="url(#crossSectionFill)"
                               strokeWidth={2}
+                              connectNulls={false}
+                            />
+                            {/* Water: filled only between the terrain and
+                                water_level, and only where the terrain is
+                                actually below it (waterBand is null on
+                                exposed banks -- connectNulls={false} keeps
+                                that a real gap, not a bridge). Rendered
+                                after the ground Area so it layers blue on
+                                top of the brown wherever the channel is
+                                submerged. */}
+                            <Area
+                              type="monotone"
+                              dataKey="waterBand"
+                              stroke="none"
+                              fill="url(#crossSectionWaterFill)"
                               connectNulls={false}
                             />
                             {/* Water surface, at this station's actual measured

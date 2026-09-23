@@ -19,12 +19,17 @@ River cross-section (transversal section) points
 - Clicking an individual point shows a popup styled like the SWOT gauge
   popup, with a "Ver perfil da seção" button opening the new
   ``CrossSectionModal``: a lazily-fetched elevation profile chart for that
-  point's transversal section (Y axis auto-scales from the profile's own
-  min to max, no forced zero -- the lowest, deepest point of the channel
-  correctly sits at the bottom), a water-surface reference line drawn at
-  the station's actual measured ``water_level`` (not a constant), a boat
-  floating on that line, and max/mean elevation ("cota do leito") plus
-  measured-width summary stats.
+  point's transversal section. Both axes use ``domain={['dataMin',
+  'dataMax']}`` -- Recharts' own implicit default still pads a numeric
+  axis even with no ``domain`` prop at all, so this was needed to get
+  true tight bounds: no forced zero on the Y axis (the deepest channel
+  point correctly sits at the bottom) and no gap after the last point on
+  the X axis. A water-surface reference line is drawn at the station's
+  actual measured ``water_level`` (not a constant), with a boat floating
+  on it, and the area under the profile is filled in two colors -- amber
+  for the riverbed/banks, blue layered on top wherever the channel is
+  actually submerged (terrain below ``water_level``) -- plus max/mean
+  elevation ("cota do leito") and measured-width summary stats.
 - See ``station-clustering.rst`` and the new
   ``architecture/cross_section_flow.rst`` diagrams for details.
 
