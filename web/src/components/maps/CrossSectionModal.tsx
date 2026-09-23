@@ -254,9 +254,17 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
                               </linearGradient>
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.22)" />
+                            {/* domain={['dataMin', 'dataMax']} for the same
+                                reason as the YAxis below: Recharts' own
+                                implicit default for a numeric axis pads past
+                                the real data range (here, leaving a visible
+                                gap after the last point instead of ending
+                                the chart exactly at the section's actual
+                                measured width). */}
                             <XAxis
                               dataKey="distance"
                               type="number"
+                              domain={['dataMin', 'dataMax']}
                               tick={{ fontSize: 11, fill: '#94a3b8' }}
                               tickFormatter={(value: number) => `${value.toFixed(0)} m`}
                               label={{ value: 'Distância (m)', position: 'insideBottom', offset: -2, fontSize: 11, fill: '#94a3b8' }}
