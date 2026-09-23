@@ -134,6 +134,11 @@ Este fluxo corresponde ao ``Quick Start`` descrito na documentação técnica.
     # pgAdmin:     http://localhost:5050
     # TiTiler:     http://localhost:8080
 
+Para um guia mais detalhado focado só em subir/derrubar o stack local
+(modo dev, troubleshooting de porta ocupada, verificação pós-boot), veja
+``README_LOCAL_STACK.rst``. Para o processo de deploy para os ambientes
+remotos (netuno, google, cronos-vm1), veja ``README_DEPLOY.rst``.
+
 Serviços
 --------
 

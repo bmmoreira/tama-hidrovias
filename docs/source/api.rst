@@ -140,6 +140,29 @@ The current payload contract is split into three concerns:
 
 This flow is documented in more detail in ``public-map.rst``.
 
+Cross-Section (Transversal Section) Profile Endpoints
+------------------------------------------------------
+
+The public ``/map`` route's river cross-section layer has **no backend
+at all** -- unlike every other endpoint on this page, there is no
+Next.js API route, no Strapi content type, and no database involved.
+
+Runtime shape:
+
+- Static file: ``GET /geojson/output_points_water_level.geojson``
+- Static file: ``GET /geojson/secoes_transversais/<file>``
+- Web page route: ``/map``
+
+Both are served directly by Next.js's built-in static file handling
+from ``web/public/geojson/`` -- plain ``fetch()`` calls (via SWR), not
+``proxyStrapiRequest`` or any other server-side helper. The point list
+is fetched once when ``/map`` loads; each transversal profile is
+fetched lazily, only when its ``CrossSectionModal`` actually opens.
+Updating this data means replacing the files under
+``web/public/geojson/`` and redeploying ``web`` -- there's no CMS entry
+or migration involved. This flow is documented in more detail in
+``architecture/cross_section_flow.rst``.
+
 Python package layout
 ---------------------
 
