@@ -1,6 +1,6 @@
 'use client';
 
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import useSWR from 'swr';
 import { Ship } from 'lucide-react';
 import {
@@ -88,6 +88,28 @@ function formatMeters(value: number | undefined, digits = 1) {
 }
 
 /**
+ * Below Tailwind's `sm` breakpoint (640px), used to drop the chart's
+ * rotated Y-axis label -- there isn't room for it next to the tick
+ * numbers on a narrow screen, and the card title already states the
+ * units for both axes. Recharts' `label` is an SVG prop, not a DOM
+ * element, so this can't be done with a `hidden sm:block` class; it has
+ * to be a JS media-query check instead.
+ */
+function useIsNarrowScreen(): boolean {
+  const [isNarrow, setIsNarrow] = useState(false);
+
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 639px)');
+    setIsNarrow(query.matches);
+    const onChange = (e: MediaQueryListEvent) => setIsNarrow(e.matches);
+    query.addEventListener('change', onChange);
+    return () => query.removeEventListener('change', onChange);
+  }, []);
+
+  return isNarrow;
+}
+
+/**
  * Modal showing a river cross-section (transversal section) profile for a
  * `crossSectionClusterLayer` point: distance across the section vs. depth,
  * loaded lazily from its `secoes_transversais/<file>` profile on open.
@@ -95,6 +117,7 @@ function formatMeters(value: number | undefined, digits = 1) {
  * static geometric profile rather than a time series.
  */
 export default function CrossSectionModal({ open, onOpenChange, feature }: CrossSectionModalProps) {
+  const isNarrowScreen = useIsNarrowScreen();
   const file = feature?.properties.file;
 
   const { data: profile, isLoading } = useSWR(
@@ -215,7 +238,7 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
 
               <Card className="overflow-hidden border-gray-200/80 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-950/90">
                 <CardHeader className="pb-2">
-                  <CardTitle>Perfil da seção (distância × cota do leito)</CardTitle>
+                  <CardTitle>Perfil da seção -- distância (m) × cota do leito (m)</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <style>{`
@@ -311,7 +334,11 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
                               domain={['dataMin', 'dataMax']}
                               tick={{ fontSize: 11, fill: '#94a3b8' }}
                               tickFormatter={(value: number) => `${value.toFixed(0)} m`}
-                              label={{ value: 'Cota do leito (m)', angle: -90, position: 'insideLeft', fontSize: 11, fill: '#94a3b8' }}
+                              label={
+                                isNarrowScreen
+                                  ? undefined
+                                  : { value: 'Cota do leito (m)', angle: -90, position: 'insideLeft', fontSize: 11, fill: '#94a3b8' }
+                              }
                             />
                             <Tooltip
                               contentStyle={{ borderRadius: 16, borderColor: '#cbd5e1' }}
