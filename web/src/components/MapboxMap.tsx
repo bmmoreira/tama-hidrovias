@@ -624,7 +624,7 @@ export default function MapboxMap({
                 </button>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/70">Seção transversal</p>
                 <h3 className="mt-0.5 pr-6 text-sm font-bold leading-tight text-white">Nó SWORD {p.sword_node_id}</h3>
-                <p className="mt-1 text-[11px] text-white/60">FID: {p.fid}</p>
+                <p className="mt-1 text-[11px] text-white/60">Nível d&apos;água: {p.water_level.toFixed(2)} m</p>
               </div>
 
               {/* Data rows */}

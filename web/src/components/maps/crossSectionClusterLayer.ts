@@ -18,13 +18,12 @@ export const CROSS_SECTION_UNCLUSTERED_LAYER_ID = 'cross-sections-unclustered-po
 
 /**
  * GeoJSON feature properties carried by each cross-section point, as loaded
- * from `public/geojson/secoes_madeira_ponto.geojson`. `file` names the
+ * from `public/geojson/output_points_water_level.geojson`. `file` names the
  * matching transversal profile under `public/geojson/secoes_transversais/`
  * (two columns, tab-separated, no header: distance along the section in
  * meters, then the raster elevation value at that point).
  */
 export interface CrossSectionFeatureProperties {
-  fid: number;
   sword_node_id: number;
   sword_reach_id: number;
   /** River width at this node, in meters (SWORD). */
@@ -32,6 +31,9 @@ export interface CrossSectionFeatureProperties {
   /** Distance from the river outlet, in meters (SWORD). */
   sword_dist_out: number;
   file: string;
+  /** Measured water-surface elevation at this station, in meters -- drawn
+   *  as the reference line in CrossSectionModal's profile chart. */
+  water_level: number;
 }
 
 export type CrossSectionFeature = GeoJSON.Feature<GeoJSON.Point, CrossSectionFeatureProperties>;
@@ -149,7 +151,7 @@ export function attachCrossSectionLayerInteractions(
 
 /**
  * Pushes `features` (already GeoJSON, loaded straight from
- * `secoes_madeira_ponto.geojson`) into the source registered in
+ * `output_points_water_level.geojson`) into the source registered in
  * {@link addCrossSectionLayers}.
  */
 export function updateCrossSectionLayerData(map: mapboxgl.Map, features: CrossSectionFeature[]): void {

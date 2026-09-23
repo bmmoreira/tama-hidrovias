@@ -105,14 +105,13 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
     };
   }, [chartData]);
 
-  // Where the water-surface (depth 0) line actually renders, in px from the
-  // chart wrapper's top edge. This can't be assumed from a constant: the Y
-  // domain is only *suggested* to start at 0 (Recharts' default
-  // allowDataOverflow=false still expands it to fit the real data), so on a
-  // section with terrain rising above the water (negative depth values), 0
-  // ends up partway down the chart instead of at the very top. Read back
-  // Recharts' own computed position after each render instead of trying to
-  // replicate its layout math (axis label reservation, etc.) by hand.
+  // Where the water-surface (water_level) line actually renders, in px from
+  // the chart wrapper's top edge. This can't be computed by hand: the axis
+  // domain auto-scales to each profile's own min/max (no fixed domain at
+  // all, see the YAxis comment below), so the same water_level value lands
+  // at a different pixel row on every section. Read back Recharts' own
+  // computed position after each render instead of replicating its layout
+  // math (axis label reservation, scale, etc.) ourselves.
   const chartWrapperRef = useRef<HTMLDivElement>(null);
   const [waterLineTop, setWaterLineTop] = useState<number | null>(null);
 
@@ -150,7 +149,7 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
               </DialogDescription>
               <div className="mt-4 flex flex-wrap gap-2 text-xs font-medium text-slate-600 dark:text-slate-300">
                 <span className="rounded-full border border-slate-200 bg-white/90 px-3 py-1 dark:border-slate-700 dark:bg-slate-900/80">
-                  FID: {props.fid}
+                  Nível d&apos;água: {formatMeters(props.water_level, 2)}
                 </span>
                 <span className="rounded-full border border-slate-200 bg-white/90 px-3 py-1 dark:border-slate-700 dark:bg-slate-900/80">
                   Reach SWORD: {props.sword_reach_id}
@@ -262,9 +261,22 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
                               tickFormatter={(value: number) => `${value.toFixed(0)} m`}
                               label={{ value: 'Distância (m)', position: 'insideBottom', offset: -2, fontSize: 11, fill: '#94a3b8' }}
                             />
+                            {/* domain={['dataMin', 'dataMax']} -- not left
+                                unset -- is what actually removes the
+                                artificial zero: Recharts' own implicit
+                                default for a numeric axis still pads/nices
+                                the domain to include 0 even with no explicit
+                                `domain` prop at all. These two special
+                                strings force the exact tight bounds instead,
+                                so the axis starts at this profile's own
+                                lowest value (bottom of chart) and ends at
+                                its highest (top) -- the natural, non-reversed
+                                reading for raw elevation data: the deepest
+                                channel point really is the lowest number,
+                                and belongs at the bottom, like a real
+                                physical cross-section would draw it. */}
                             <YAxis
-                              reversed
-                              domain={[0, 'auto']}
+                              domain={['dataMin', 'dataMax']}
                               tick={{ fontSize: 11, fill: '#94a3b8' }}
                               tickFormatter={(value: number) => `${value.toFixed(0)} m`}
                               label={{ value: 'Cota do leito (m)', angle: -90, position: 'insideLeft', fontSize: 11, fill: '#94a3b8' }}
@@ -282,13 +294,15 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
                               strokeWidth={2}
                               connectNulls={false}
                             />
-                            {/* Water surface (depth 0). Rendered with the stable
+                            {/* Water surface, at this station's actual measured
+                                water_level (not a constant -- see the geojson's
+                                own field). Rendered with the stable
                                 "recharts-reference-line-line" class the
                                 useLayoutEffect above reads back from -- the
                                 boat's position is DERIVED from wherever this
                                 line actually ends up, not the other way
                                 around. */}
-                            <ReferenceLine y={0} stroke="#0284c7" strokeDasharray="6 4" strokeWidth={1.5} />
+                            <ReferenceLine y={props.water_level} stroke="#0284c7" strokeDasharray="6 4" strokeWidth={1.5} />
                           </AreaChart>
                         </ResponsiveContainer>
                       </>

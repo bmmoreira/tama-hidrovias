@@ -14,16 +14,17 @@ is static reference data checked into the repo and served as plain files
 under ``web/public/geojson/``, the same convention already used for
 ``rivers.geojson``/``subbacias.geojson``:
 
-- ``secoes_madeira_ponto.geojson`` -- 377 SWORD-derived point features
-  along the Madeira basin. Each feature's properties carry ``fid``,
+- ``output_points_water_level.geojson`` -- 377 SWORD-derived point
+  features along the Madeira basin. Each feature's properties carry
   ``sword_node_id``, ``sword_reach_id``, ``sword_width``,
-  ``sword_dist_out``, and a ``file`` name.
+  ``sword_dist_out``, a ``file`` name, and ``water_level`` -- the
+  station's measured water-surface elevation, in meters.
 - ``secoes_transversais/<file>`` -- one profile per point: two
   tab-separated columns, no header (distance along the section in
-  meters, then the depth in meters at that point). ``nan`` marks a
+  meters, then the elevation in meters at that point). ``nan`` marks a
   NoData pixel and becomes a gap in the chart rather than a false zero.
 
-Source data lives in ``assets/secoes_madeira_ponto.geojson`` and
+Source data lives in ``assets/output_points_water_level.geojson`` and
 ``assets/secoes_transversais/`` (see ``LEIA_ME.txt`` there for the exact
 raster/processing provenance); the ``web/public/geojson/`` copies are
 what the browser actually fetches.
@@ -35,7 +36,7 @@ Architecture Diagram
 
     graph TD
         subgraph Data ["Static files (web/public/geojson/)"]
-            Points[secoes_madeira_ponto.geojson]
+            Points[output_points_water_level.geojson]
             Profiles[secoes_transversais/*.txt]
         end
 
@@ -75,7 +76,7 @@ Sequence Diagram
         participant Popup as Cross-section popup
         participant Modal as CrossSectionModal
 
-        Page->>Page: SWR fetch secoes_madeira_ponto.geojson
+        Page->>Page: SWR fetch output_points_water_level.geojson
         Page->>MB: crossSectionFeatures prop
         MB->>Layer: addCrossSectionLayers(map)
         MB->>Layer: attachCrossSectionLayerInteractions(map, handlers)
@@ -90,12 +91,12 @@ Sequence Diagram
             User->>Layer: click on point
             Layer->>MB: handlers.onSectionClick(feature)
             MB->>Popup: setCrossSectionPopup({feature})
-            Popup-->>User: Shows FID/node/width/distance card
+            Popup-->>User: Shows node/water_level/width/distance card
 
             User->>Popup: Clicks "Ver perfil da seção"
             Popup->>MB: setCrossSectionModalFeature(feature)
             MB->>Modal: open=true, feature
             Modal->>Modal: SWR fetch secoes_transversais/<file>
-            Modal->>Modal: parseProfile (distance, depth pairs)
-            Modal-->>User: Renders reversed-axis depth profile chart
-        end
+            Modal->>Modal: parseProfile (distance, elevation pairs)
+            Modal->>Modal: useLayoutEffect reads rendered y=water_level pixel
+            Modal-->>User: Renders auto-scaled elevation chart + boat on the water line

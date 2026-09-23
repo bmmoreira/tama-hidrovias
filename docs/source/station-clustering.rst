@@ -330,10 +330,12 @@ fetched from Strapi -- it's static reference data checked into the repo
 and served as plain files under ``web/public/geojson/`` (the same
 convention already used for ``rivers.geojson``/``subbacias.geojson``):
 
-- ``secoes_madeira_ponto.geojson`` -- the point ``FeatureCollection``,
-  copied from ``assets/secoes_madeira_ponto.geojson``.
+- ``output_points_water_level.geojson`` -- the point ``FeatureCollection``,
+  copied from ``assets/output_points_water_level.geojson``. Each feature
+  carries a ``water_level`` field -- the station's measured water-surface
+  elevation, drawn as the reference line in the profile chart (see below).
 - ``secoes_transversais/<file>`` -- one profile per point (distance,
-  depth pairs), copied from ``assets/secoes_transversais/``.
+  elevation pairs), copied from ``assets/secoes_transversais/``.
 
 ``crossSectionClusterLayer.ts`` mirrors ``stationClusterLayer.ts``
 exactly (plain Mapbox-native ``cluster: true``, not the ``supercluster``
@@ -352,10 +354,31 @@ button) instead of the plain HTML ``mapboxgl.Popup`` stations/rivers/
 basins use. Its "Ver perfil da seção" button opens ``CrossSectionModal``,
 which lazily fetches that point's specific ``secoes_transversais/<file>``
 profile only when opened (via SWR, keyed by the file path so repeat opens
-are cached) and renders it as a Recharts ``AreaChart`` with a **reversed**
-Y axis -- depth increases downward, matching how a cross-section profile
-reads visually, with the water surface at the top and the channel bed
-dipping below it.
+are cached) and renders it as a Recharts ``AreaChart``. The Y axis uses
+``domain={['dataMin', 'dataMax']}`` -- not left unset -- so it auto-scales
+from this profile's own lowest value (bottom of chart) to its highest
+(top), with no artificial zero: Recharts' own implicit default for a
+numeric axis still pads/nices the domain to include 0 even with no
+``domain`` prop at all, so leaving it unset doesn't actually get you tight
+bounds. This is also the physically correct, non-reversed reading for raw
+elevation data: the deepest channel point genuinely is the lowest number,
+and belongs at the bottom, exactly like a real physical cross-section
+would draw it.
+
+The water-surface line is a Recharts ``ReferenceLine`` drawn at
+``y={feature.properties.water_level}`` -- the station's own measured
+value, not a constant -- with a "boat" (the same icon/bob animation as
+the welcome screen) floating on it. Since a given ``water_level`` value
+lands at a different pixel row on every section (the axis domain differs
+per profile), the boat can't be positioned from a fixed offset: a
+``useLayoutEffect`` reads back Recharts' own rendered line position
+(via the stable ``recharts-reference-line-line`` CSS class) after every
+render and a ``ResizeObserver`` keeps it correct across window resizes.
+The boat itself is a plain HTML overlay, not nested inside the chart's
+SVG, specifically so its own bob-and-rotate animation doesn't depend on
+``transform-box: fill-box`` -- a CSS property with inconsistent
+cross-browser support on SVG elements that caused real, hard-to-diagnose
+positioning drift in earlier iterations of this feature.
 
 Development Checklist
 ----------------------

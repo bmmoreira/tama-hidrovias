@@ -70,7 +70,7 @@ export default function MapPage() {
   >('/geojson/subbacias.geojson', geojsonFetcher, { revalidateOnFocus: false });
   const { data: crossSectionsGeojson } = useSWR<
     GeoJSON.FeatureCollection<GeoJSON.Point, CrossSectionFeature['properties']>
-  >('/geojson/secoes_madeira_ponto.geojson', geojsonFetcher, { revalidateOnFocus: false });
+  >('/geojson/output_points_water_level.geojson', geojsonFetcher, { revalidateOnFocus: false });
   const { data: preferencesData, isLoading: isPreferencesLoading } = useSWR(
     status === 'authenticated' ? 'user-preferences' : null,
     () => getUserPreferences(),

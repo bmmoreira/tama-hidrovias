@@ -12,16 +12,19 @@ River cross-section (transversal section) points
   cross-section points along the Madeira basin (mirrors
   ``stationClusterLayer.ts``'s plain Mapbox-native clustering -- no
   per-cluster aggregate is needed, just a point count).
-- Source data (``secoes_madeira_ponto.geojson`` +
-  ``secoes_transversais/*.txt`` depth profiles) is static reference data
-  served from ``web/public/geojson/``, the same convention already used
-  for rivers/basins.
+- Source data (``output_points_water_level.geojson`` +
+  ``secoes_transversais/*.txt`` elevation profiles) is static reference
+  data served from ``web/public/geojson/``, the same convention already
+  used for rivers/basins.
 - Clicking an individual point shows a popup styled like the SWOT gauge
   popup, with a "Ver perfil da seção" button opening the new
-  ``CrossSectionModal``: a lazily-fetched, reversed-Y-axis depth profile
-  chart (water surface at top, channel bed dipping down) for that point's
-  transversal section, plus max/mean depth and measured-width summary
-  stats.
+  ``CrossSectionModal``: a lazily-fetched elevation profile chart for that
+  point's transversal section (Y axis auto-scales from the profile's own
+  min to max, no forced zero -- the lowest, deepest point of the channel
+  correctly sits at the bottom), a water-surface reference line drawn at
+  the station's actual measured ``water_level`` (not a constant), a boat
+  floating on that line, and max/mean elevation ("cota do leito") plus
+  measured-width summary stats.
 - See ``station-clustering.rst`` and the new
   ``architecture/cross_section_flow.rst`` diagrams for details.
 
