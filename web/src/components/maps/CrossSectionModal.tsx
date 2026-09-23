@@ -21,6 +21,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import type { CrossSectionFeature } from './crossSectionClusterLayer';
 
 export interface CrossSectionModalProps {
@@ -180,9 +181,18 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] w-[calc(100%-1rem)] max-w-4xl overflow-y-auto rounded-[1.75rem] border border-gray-200 bg-white p-0 shadow-2xl dark:border-slate-800 dark:bg-slate-950 sm:w-[calc(100%-2rem)]">
+      <DialogContent
+        className={cn(
+          // Fullscreen on mobile -- no margins/rounding, so the chart gets
+          // the entire viewport width/height instead of sharing it with a
+          // card border and side gutters. Reverts to the original centered,
+          // rounded card at `sm` and up, where there's room to spare.
+          'left-0 top-0 flex h-[100dvh] max-h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 flex-col overflow-y-auto rounded-none border-0 bg-white p-0 shadow-2xl dark:bg-slate-950',
+          'sm:left-1/2 sm:top-1/2 sm:h-auto sm:max-h-[92vh] sm:w-[calc(100%-2rem)] sm:max-w-4xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[1.75rem] sm:border sm:border-gray-200 dark:sm:border-slate-800',
+        )}
+      >
         {props ? (
-          <div className="flex flex-col">
+          <div className="flex flex-1 flex-col">
             <DialogHeader className="border-b border-gray-200 bg-gradient-to-br from-amber-50 via-white to-orange-50 px-4 py-5 dark:border-slate-800 dark:from-amber-950/30 dark:via-slate-950 dark:to-orange-950/10 sm:px-6 sm:py-6">
               <DialogTitle className="pr-12 text-lg font-semibold text-slate-900 dark:text-slate-100 sm:text-2xl">
                 Seção transversal · nó {props.sword_node_id}
@@ -206,7 +216,7 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
               </div>
             </DialogHeader>
 
-            <div className="space-y-4 px-4 py-4 sm:px-6 sm:py-6">
+            <div className="flex flex-1 flex-col gap-4 px-3 py-3 sm:px-6 sm:py-6">
               {stats && (
                 <section className="grid gap-3 sm:grid-cols-3">
                   <div className="rounded-2xl border border-gray-200 bg-white/80 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
@@ -236,11 +246,11 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
                 </section>
               )}
 
-              <Card className="overflow-hidden border-gray-200/80 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-950/90">
-                <CardHeader className="pb-2">
+              <Card className="flex flex-1 flex-col overflow-hidden border-gray-200/80 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-950/90">
+                <CardHeader className="px-3 pb-2 pt-4 sm:px-5 sm:pt-5">
                   <CardTitle>Perfil da seção -- distância (m) × cota do leito (m)</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="flex flex-1 flex-col px-1 pb-2 pt-0 sm:p-5 sm:pt-0">
                   <style>{`
                     @keyframes cross-section-ship-bob {
                       0%, 100% { transform: translateY(0) rotate(-3deg); }
@@ -250,7 +260,7 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
                       animation: cross-section-ship-bob 3.2s ease-in-out infinite;
                     }
                   `}</style>
-                  <div ref={chartWrapperRef} className="relative h-72 w-full sm:h-80">
+                  <div ref={chartWrapperRef} className="relative h-full min-h-[18rem] w-full flex-1 sm:h-80 sm:min-h-0 sm:flex-none">
                     {isLoading ? (
                       <div className="flex h-full w-full items-center justify-center">
                         <div className="h-8 w-8 animate-spin rounded-full border-4 border-amber-200 border-t-amber-600" />
@@ -289,7 +299,21 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
                               exactly like margin.bottom below already is for
                               the x-axis label. Unrelated to where the boat
                               renders; see waterLineTop above for that. */}
-                          <AreaChart data={chartData} margin={{ top: CHART_TOP_MARGIN, right: 8, left: -8, bottom: 0 }}>
+                          <AreaChart
+                            data={chartData}
+                            margin={{
+                              top: CHART_TOP_MARGIN,
+                              // No Y-axis label to clear on narrow screens
+                              // (see useIsNarrowScreen above), so pull the
+                              // plot area further into the freed-up space on
+                              // both sides -- the chart is the whole point of
+                              // the fullscreen mobile modal, it should use
+                              // all the width it can get.
+                              right: isNarrowScreen ? 0 : 8,
+                              left: isNarrowScreen ? -20 : -8,
+                              bottom: 0,
+                            }}
+                          >
                             <defs>
                               <linearGradient id="crossSectionFill" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.08} />
