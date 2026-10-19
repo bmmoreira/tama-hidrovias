@@ -149,25 +149,49 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
     };
   }, [chartData]);
 
-  // Where the water-surface (water_level) line actually renders, in px from
-  // the chart wrapper's top edge. This can't be computed by hand: the axis
-  // domain auto-scales to each profile's own min/max (no fixed domain at
-  // all, see the YAxis comment below), so the same water_level value lands
-  // at a different pixel row on every section. Read back Recharts' own
-  // computed position after each render instead of replicating its layout
-  // math (axis label reservation, scale, etc.) ourselves.
+  // Distance (x-axis value) of the deepest point in the profile -- the
+  // boat anchors there instead of the chart's horizontal center, so it
+  // sits over the actual channel instead of floating over a riverbank on
+  // lopsided sections. Lowest `depth` = deepest, per the YAxis domain
+  // comment below (this is bed elevation, not a positive-down depth).
+  const deepestDistance = useMemo(() => {
+    let best: ChartPoint | null = null;
+    for (const point of chartData) {
+      if (point.depth !== null && (best === null || point.depth < best.depth!)) {
+        best = point;
+      }
+    }
+    return best?.distance ?? null;
+  }, [chartData]);
+
+  // Where the water-surface line (top from its y1) and the deepest-point
+  // marker (left from its x1) actually render, in px within the chart
+  // wrapper. Neither can be computed by hand: the axis domains auto-scale
+  // to each profile's own min/max (see the XAxis/YAxis comments below), so
+  // the same data value lands at a different pixel on every section. Read
+  // back Recharts' own computed positions after each render instead of
+  // replicating its layout math (axis label reservation, scale, etc.)
+  // ourselves. Each ReferenceLine gets its own className so these two
+  // queries can't accidentally pick up each other's line.
   const chartWrapperRef = useRef<HTMLDivElement>(null);
   const [waterLineTop, setWaterLineTop] = useState<number | null>(null);
+  const [deepestLeft, setDeepestLeft] = useState<number | null>(null);
 
   useLayoutEffect(() => {
     const wrapper = chartWrapperRef.current;
     if (!wrapper) return;
 
     const measure = () => {
-      const line = wrapper.querySelector('.recharts-reference-line-line');
-      const y1 = line?.getAttribute('y1');
+      const waterLine = wrapper.querySelector('.cross-section-water-line .recharts-reference-line-line');
+      const y1 = waterLine?.getAttribute('y1');
       if (y1 !== null && y1 !== undefined) {
         setWaterLineTop(Number(y1));
+      }
+
+      const deepestLine = wrapper.querySelector('.cross-section-deepest-line .recharts-reference-line-line');
+      const x1 = deepestLine?.getAttribute('x1');
+      if (x1 !== null && x1 !== undefined) {
+        setDeepestLeft(Number(x1));
       }
     };
 
@@ -273,18 +297,26 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
                             cross-browser pivot ambiguity, unlike an SVG-nested
                             element would have) -- same technique already proven
                             correct on the welcome screen, just repositioned here.
-                            `top` uses waterLineTop (read back from Recharts' own
-                            rendered line, see the useLayoutEffect above) rather
-                            than a fixed constant, since the water line isn't
-                            always at the same offset -- it depends on whether
-                            this particular section has terrain above 0.
-                            translate(-50%, -100%) centers it horizontally and
-                            flips it to sit fully above that anchor. Falls back to
-                            CHART_TOP_MARGIN before the first measurement lands,
-                            to avoid rendering at (0,0) for one frame. */}
+                            `top` uses waterLineTop and `left` uses deepestLeft
+                            (both read back from Recharts' own rendered
+                            reference lines, see the useLayoutEffect above)
+                            rather than fixed constants -- the water line's
+                            height depends on whether this section has terrain
+                            above 0, and the deepest point's horizontal
+                            position depends on this section's own profile
+                            shape, so the boat sits over the actual channel
+                            instead of always floating dead-center.
+                            translate(-50%, -100%) centers it on that x
+                            position and flips it to sit fully above the
+                            anchor. Falls back to chart center/CHART_TOP_MARGIN
+                            before the first measurement lands, to avoid
+                            rendering at (0,0) for one frame. */}
                         <div
-                          className="pointer-events-none absolute left-1/2 z-10 -translate-x-1/2 -translate-y-full"
-                          style={{ top: waterLineTop ?? CHART_TOP_MARGIN }}
+                          className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full"
+                          style={{
+                            top: waterLineTop ?? CHART_TOP_MARGIN,
+                            left: deepestLeft ?? '50%',
+                          }}
                           aria-hidden="true"
                         >
                           <div className="cross-section-ship-bob">
@@ -403,13 +435,32 @@ export default function CrossSectionModal({ open, onOpenChange, feature }: Cross
                             />
                             {/* Water surface, at this station's actual measured
                                 water_level (not a constant -- see the geojson's
-                                own field). Rendered with the stable
-                                "recharts-reference-line-line" class the
-                                useLayoutEffect above reads back from -- the
-                                boat's position is DERIVED from wherever this
+                                own field). className scopes the useLayoutEffect
+                                above's query to just this line -- the boat's
+                                vertical position is DERIVED from wherever this
                                 line actually ends up, not the other way
                                 around. */}
-                            <ReferenceLine y={props.water_level} stroke="#0284c7" strokeDasharray="6 4" strokeWidth={1.5} />
+                            <ReferenceLine
+                              y={props.water_level}
+                              stroke="#0284c7"
+                              strokeDasharray="6 4"
+                              strokeWidth={1.5}
+                              className="cross-section-water-line"
+                            />
+                            {/* Invisible vertical line at the deepest point's
+                                distance -- not drawn, just a hook for the
+                                useLayoutEffect above to read back where that
+                                x value actually renders (same reasoning as
+                                the water line), so the boat's horizontal
+                                position is DERIVED from Recharts' own scale
+                                instead of us reimplementing it. */}
+                            {deepestDistance !== null && (
+                              <ReferenceLine
+                                x={deepestDistance}
+                                stroke="none"
+                                className="cross-section-deepest-line"
+                              />
+                            )}
                           </AreaChart>
                         </ResponsiveContainer>
                       </>
