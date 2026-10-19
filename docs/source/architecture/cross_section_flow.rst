@@ -157,8 +157,8 @@ Sequence Diagram
             MB->>Modal: open=true, feature
             Modal->>Modal: SWR fetch secoes_transversais/<file>
             Modal->>Modal: parseProfile (distance, elevation pairs)
-            Modal->>Modal: useLayoutEffect reads rendered y=water_level pixel
-            Modal-->>User: Renders auto-scaled elevation chart + boat on the water line
+            Modal->>Modal: useLayoutEffect reads rendered y=water_level / x=deepest pixel
+            Modal-->>User: Renders auto-scaled elevation chart + boat at the deepest point
         end
 
 Chart Rendering Details
@@ -221,6 +221,66 @@ ambiguity -- CSS rotation around "center" just works everywhere -- which
 is also why the welcome screen's identical boat animation never hit this
 problem: it was already a plain ``<div>``.
 
+Boat's horizontal position -- anchored at the deepest point
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The boat originally just sat at a fixed ``left: 50%`` -- the chart's
+horizontal center, regardless of the profile's actual shape. That reads
+fine for a roughly symmetric channel, but for a lopsided section (the
+deep part of the channel well off to one side) it puts the boat floating
+over a riverbank instead of over water. It now anchors horizontally at
+the profile's own deepest point instead:
+
+.. code-block:: ts
+
+   const deepestDistance = useMemo(() => {
+     let best: ChartPoint | null = null;
+     for (const point of chartData) {
+       if (point.depth !== null && (best === null || point.depth < best.depth!)) {
+         best = point;
+       }
+     }
+     return best?.distance ?? null;
+   }, [chartData]);
+
+"Deepest" means the **lowest** ``depth`` (bed elevation) value, not the
+highest -- this data is raw elevation, not a positive-down depth, so (per
+`Axis domains -- dataMin/dataMax, not left unset`_ above) the lowest
+number is physically the deepest point of the channel, same as the Y
+axis's own non-reversed reading. A plain linear scan finds it in one pass
+over ``chartData``, skipping ``null`` (NoData) points -- there's no need
+for anything fancier since a profile is at most a few hundred points.
+
+Getting from that ``distance`` value to an actual pixel ``left`` offset
+needs the same "read back Recharts' own rendered position" technique
+already used for ``waterLineTop``, for the identical reason: the X domain
+also auto-scales per profile (``dataMin``/``dataMax``), so the same
+distance value lands at a different pixel column on every section. There
+is no public prop that hands this back directly, so the component adds a
+second, invisible ``<ReferenceLine x={deepestDistance} stroke="none"
+.../>`` purely as a measurement hook -- Recharts still computes and
+renders its ``x1``/``x2`` attributes via the ``recharts-reference-line-line``
+class, they're just not stroked. The same ``useLayoutEffect`` that reads
+``waterLineTop`` from the water line's ``y1`` also reads ``deepestLeft``
+from this line's ``x1``.
+
+With two ``ReferenceLine``\ s now in the chart, each gets its own
+``className`` (``cross-section-water-line`` / ``cross-section-deepest-line``)
+so the two queries scope to
+``.cross-section-water-line .recharts-reference-line-line`` and
+``.cross-section-deepest-line .recharts-reference-line-line`` respectively,
+rather than both matching the same unscoped ``.recharts-reference-line-line``
+selector and silently reading whichever line happens to come first in
+DOM order. Recharts forwards a ``className`` prop onto the ``<g>``
+wrapper it renders around the line (confirmed by reading
+``ReferenceLine.js`` in ``node_modules``, not assumed), which is what
+makes this scoping work.
+
+The boat's wrapper ``<div>`` then reads ``style={{ top: waterLineTop,
+left: deepestLeft }}``, falling back to ``CHART_TOP_MARGIN`` / ``'50%'``
+respectively before the first measurement lands (avoiding a one-frame
+flash at the SVG origin).
+
 Two-color area fill (riverbed vs. water)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -253,3 +313,45 @@ value shapes (a plain number for ``depth``, a 2-tuple for
 ``waterBand``) -- naively calling ``.toFixed()`` on whichever value
 Recharts happens to pass would throw for the array case the first time
 a user hovered a submerged point.
+
+Responsive layout: fullscreen on mobile
+-----------------------------------------
+
+Below Tailwind's ``sm`` breakpoint (640px), the modal and its chart
+behave differently in three ways, all gated by the same
+``useIsNarrowScreen`` hook (a ``window.matchMedia('(max-width: 639px)')``
+check with a live ``change`` listener, not a CSS media query -- see
+below for why):
+
+- **The modal itself goes fullscreen.** ``DialogContent`` gets a
+  responsive ``className`` (via ``cn(...)`` / ``tailwind-merge``) that's
+  edge-to-edge, unrounded, and borderless below ``sm`` (``inset``-style
+  positioning, ``h-[100dvh]``, ``w-screen``, ``rounded-none``,
+  ``border-0``), and reverts to the original centered, rounded,
+  max-width card at ``sm`` and up. ``100dvh`` (dynamic viewport height),
+  not ``100vh``, so the modal doesn't get cut off under a mobile
+  browser's collapsing address bar.
+- **The chart card grows to fill the remaining space.** The content
+  wrapper, the chart ``Card``, its ``CardContent``, and the chart's own
+  wrapper ``<div>`` all become a ``flex flex-1 flex-col`` chain below
+  ``sm`` (reverting to fixed heights at ``sm`` and up), so on a short
+  profile's popup the chart genuinely fills whatever vertical space the
+  header and stat cards don't use, instead of sitting at a fixed
+  ``h-72`` regardless of how much room is actually available.
+- **The Y-axis label is dropped, and the chart's own side margins tighten
+  further.** Recharts' ``YAxis label`` prop is plain SVG, not a DOM
+  element, so it can't be toggled with a ``hidden sm:block`` class --
+  it's set to ``undefined`` outright when ``isNarrowScreen``. The
+  ``CardTitle`` states both axes' units instead (``"... distância (m) ×
+  cota do leito (m)"``) so that information isn't lost. The
+  ``AreaChart``'s ``margin.left``/``margin.right`` also go more negative
+  on narrow screens, reclaiming the horizontal space the now-hidden label
+  would have reserved -- the chart is the entire point of the fullscreen
+  mobile modal, so it should use all the width it can get.
+
+Why a JS hook and not a CSS breakpoint for the Y-axis label: Recharts
+renders ``label`` as SVG text as part of the chart's own render pass, not
+as a DOM element you could separately show/hide with Tailwind's
+responsive classes -- the chart has to actually be told not to render it
+at all, which means a render-time boolean, which means knowing the
+viewport width in JS.

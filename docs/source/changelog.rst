@@ -30,6 +30,22 @@ River cross-section (transversal section) points
   for the riverbed/banks, blue layered on top wherever the channel is
   actually submerged (terrain below ``water_level``) -- plus max/mean
   elevation ("cota do leito") and measured-width summary stats.
+- The boat now anchors horizontally at the profile's own deepest point
+  (lowest bed-elevation value) instead of the chart's fixed horizontal
+  center, so it floats over the actual channel instead of a riverbank on
+  lopsided sections. Its pixel position is read back from a second,
+  invisible ``ReferenceLine`` at that distance -- the same "read back
+  Recharts' own rendered position" technique already used for the water
+  line's vertical offset -- with each line scoped by its own
+  ``className`` so the two measurements can't collide.
+- Below the ``sm`` breakpoint, the modal goes fullscreen (edge-to-edge,
+  unrounded) instead of the centered card used elsewhere, and the chart
+  grows to fill the available space instead of sitting at a fixed
+  height; the Y-axis label is also dropped on narrow screens (via a
+  ``matchMedia`` hook, since Recharts' ``label`` is SVG, not a DOM
+  element toggleable with a responsive class) with the chart title
+  stating both axes' units instead, and the chart's own side margins
+  tighten to reclaim that freed-up space.
 - See ``station-clustering.rst`` and the new
   ``architecture/cross_section_flow.rst`` diagrams for details.
 

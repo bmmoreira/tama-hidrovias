@@ -368,17 +368,24 @@ would draw it.
 The water-surface line is a Recharts ``ReferenceLine`` drawn at
 ``y={feature.properties.water_level}`` -- the station's own measured
 value, not a constant -- with a "boat" (the same icon/bob animation as
-the welcome screen) floating on it. Since a given ``water_level`` value
-lands at a different pixel row on every section (the axis domain differs
-per profile), the boat can't be positioned from a fixed offset: a
-``useLayoutEffect`` reads back Recharts' own rendered line position
-(via the stable ``recharts-reference-line-line`` CSS class) after every
-render and a ``ResizeObserver`` keeps it correct across window resizes.
-The boat itself is a plain HTML overlay, not nested inside the chart's
-SVG, specifically so its own bob-and-rotate animation doesn't depend on
-``transform-box: fill-box`` -- a CSS property with inconsistent
-cross-browser support on SVG elements that caused real, hard-to-diagnose
-positioning drift in earlier iterations of this feature.
+the welcome screen) floating on it, horizontally anchored over the
+profile's own deepest point (lowest ``depth``/bed-elevation value) rather
+than the chart's fixed horizontal center, so it reads over the actual
+channel instead of a riverbank on a lopsided section. Since both the
+water level's pixel row and the deepest point's pixel column depend on
+each profile's own auto-scaled axis domain, neither can be positioned
+from a fixed offset: a ``useLayoutEffect`` reads back Recharts' own
+rendered positions for *two* ``ReferenceLine``\ s (the visible water
+line, plus a second, invisible one at the deepest point's distance, used
+purely as a measurement hook) -- each scoped by its own ``className`` so
+the two reads can't pick up each other's line -- and a ``ResizeObserver``
+keeps both correct across window resizes. The boat itself is a plain
+HTML overlay, not nested inside the chart's SVG, specifically so its own
+bob-and-rotate animation doesn't depend on ``transform-box: fill-box`` --
+a CSS property with inconsistent cross-browser support on SVG elements
+that caused real, hard-to-diagnose positioning drift in earlier
+iterations of this feature. See :doc:`architecture/cross_section_flow`
+for the full mechanism, including the deepest-point calculation itself.
 
 The chart fills two separate ``Area`` series, not one: ``depth`` (the
 terrain, amber, filled from the axis bottom up -- the riverbed/bank
@@ -390,6 +397,14 @@ the water level (Recharts fills *between* the two numbers when a
 ``dataKey`` resolves to a 2-tuple, rather than from the axis baseline),
 and ``null`` wherever it's exposed -- ``connectNulls={false}`` keeps that
 a real gap in the water fill instead of bridging across dry land.
+
+Below the ``sm`` breakpoint, ``CrossSectionModal`` goes fullscreen
+(edge-to-edge, unrounded) instead of the centered card used everywhere
+else, and the chart grows to fill the available space rather than
+sitting at a fixed height -- the chart is the point of the modal, so a
+narrow screen should spend all its space on it. See
+:doc:`architecture/cross_section_flow`'s "Responsive layout" section for
+the full breakdown.
 
 Development Checklist
 ----------------------
