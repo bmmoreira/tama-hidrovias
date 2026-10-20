@@ -423,8 +423,8 @@ Playback controls
 A small frosted-glass pill, bottom-center of the map, appears whenever
 either flight is active (``isFlightActive`` in ``MapboxMap.tsx``) and
 disappears when it ends or is stopped: rewind, play/pause, fast-forward,
-and an explicit stop (``X``) button. Shared between both rivers -- only
-one flight can be active at a time (both effects share
+a speed button, and an explicit stop (``X``) button. Shared between both
+rivers -- only one flight can be active at a time (both effects share
 ``flythroughControllerRef``), so one panel implementation covers both.
 
 Why ``startRiverFlythrough`` needed a real refactor, not just new buttons
@@ -441,8 +441,9 @@ doesn't need to do anything to the camera at all, it just stops time
 from advancing.
 
 ``startRiverFlythrough`` now returns a ``FlythroughController`` (``pause``,
-``resume``, ``seekBy``, ``stop``, ``isPaused``, ``getProgress``) instead of
-a bare cancel function. ``seekBy(fractionDelta)`` jumps ``elapsedMs`` by
+``resume``, ``seekBy``, ``stop``, ``isPaused``, ``getProgress``,
+``setSpeed``, ``getSpeed``) instead of a bare cancel function.
+``seekBy(fractionDelta)`` jumps ``elapsedMs`` by
 a fraction of the total duration (clamped to the route's start/end) and
 immediately re-renders the camera at the new position -- deliberately
 not gated on "not paused," since a seek button should feel responsive
@@ -450,6 +451,24 @@ whether or not the flight happens to be playing at that moment. Seeking
 to the very end triggers ``onComplete`` the same as reaching it by
 playing, since from the camera's (and the wireframe streamer's)
 perspective they're the same state.
+
+Speed control
+~~~~~~~~~~~~~~~
+
+The panel's speed button cycles ``1x → 1.5x → 2x → 3x → 0.5x → 1x``
+(``MapboxMap.tsx``'s ``cycleFlightSpeed``), calling
+``setSpeed(multiplier)`` each click and resetting back to ``1x``
+whenever a new flight starts or is stopped. Implemented as a
+multiplier on the per-frame delta *before* it's accumulated into
+``elapsedMs`` (``elapsedMs += (now - lastFrameTime) * speedMultiplier``)
+-- not a change to ``durationMs`` itself, which would need recomputing
+what "100% progress" even means mid-flight. A multiplier on the input
+to elapsed-time accumulation sidesteps that entirely: the route and its
+total duration stay exactly as configured, only how fast real time
+counts toward that duration changes, and it can be changed again at any
+point (including repeatedly, including while paused -- it just won't
+visibly do anything until ``resume()``) without needing to know the
+flight's current progress at all.
 
 Interaction with wireframe streaming
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -459,7 +478,14 @@ Both ``pause`` and ``seekBy`` still fire ``onProgress``, so Madeira's
 reacts to a fast-forward/rewind exactly like normal playback -- a chunk
 fetches as soon as the jumped-to position is far enough from the last
 fetch's center, confirmed visually (a new chunk appeared at the new
-location immediately after fast-forwarding, even while paused). Rewinding
+location immediately after fast-forwarding, even while paused). Running
+at a higher speed multiplier eats into the same per-chunk fetch slack
+the "Configuration" section above describes for duration -- 3x speed
+means roughly a third as much wall-clock time for each chunk's fetch to
+land before the camera reaches it, so a mesh that keeps up fine at 1x
+may start visibly lagging at 3x; slowing back down (or lowering
+``NEXT_PUBLIC_MADEIRA_FLYTHROUGH_DURATION_MS``'s implied base speed) is
+the fix, same as for duration. Rewinding
 past chunks that have already been disposed (behind the streamer's
 sliding window) doesn't restore them -- the streamer has no "already
 visited, still relevant" memory, only a forward-looking one, so rewinding

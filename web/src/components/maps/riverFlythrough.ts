@@ -227,6 +227,15 @@ export interface FlythroughController {
    *  NOT the same as elapsed-time fraction (easing means they diverge near
    *  the start/end of the flight). For a UI progress bar. */
   getProgress: () => number;
+  /** Changes playback speed from here on (1 = normal, 2 = twice as fast,
+   *  0.5 = half speed) -- a live multiplier on how fast elapsed time
+   *  accumulates each frame, not a one-off jump like `seekBy`. Takes
+   *  effect immediately, including while paused (it just won't visibly
+   *  do anything until `resume()`). Doesn't change `durationMs` itself or
+   *  rescale an in-progress flight's remaining distance -- it changes how
+   *  fast time passes going forward. */
+  setSpeed: (multiplier: number) => void;
+  getSpeed: () => number;
 }
 
 /**
@@ -259,6 +268,8 @@ export function startRiverFlythrough(
     stop: () => {},
     isPaused: () => false,
     getProgress: () => 0,
+    setSpeed: () => {},
+    getSpeed: () => 1,
   };
   if (path.length < 2) {
     return noop;
@@ -288,6 +299,7 @@ export function startRiverFlythrough(
   let elapsedMs = 0;
   let lastFrameTime: number | null = null;
   let lastRawT = 0;
+  let speedMultiplier = 1;
 
   const restoreInteractions = () => {
     interactionHandlers.forEach((h, i) => {
@@ -327,7 +339,7 @@ export function startRiverFlythrough(
       // tick too, so the frame immediately after a resume() doesn't count
       // the entire paused duration as elapsed time.
       if (lastFrameTime !== null) {
-        elapsedMs += now - lastFrameTime;
+        elapsedMs += (now - lastFrameTime) * speedMultiplier;
       }
       lastFrameTime = now;
 
@@ -369,5 +381,10 @@ export function startRiverFlythrough(
     stop,
     isPaused: () => paused,
     getProgress: () => lastRawT,
+    setSpeed: (multiplier: number) => {
+      if (cancelled) return;
+      speedMultiplier = Math.max(multiplier, 0);
+    },
+    getSpeed: () => speedMultiplier,
   };
 }

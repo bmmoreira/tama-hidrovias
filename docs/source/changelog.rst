@@ -4,8 +4,8 @@ Changelog
 Upcoming
 --------
 
-Flythrough playback controls (pause/resume/rewind/fast-forward)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Flythrough playback controls (pause/resume/rewind/fast-forward/speed)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - Added a small frosted-glass control panel, bottom-center of the map,
   shown whenever a Tapajós or Madeira flythrough is active: rewind
@@ -27,9 +27,16 @@ Flythrough playback controls (pause/resume/rewind/fast-forward)
   jumps the camera and streams a new chunk immediately, stop removes
   both the panel and every loaded wireframe chunk, and map interactions
   (scroll-zoom, drag) are confirmed working again immediately after stop.
+- The panel also has a speed button, cycling ``1x → 1.5x → 2x → 3x →
+  0.5x``: a live multiplier on how fast elapsed time accumulates each
+  frame (``FlythroughController.setSpeed``), not a change to the
+  configured route duration itself -- confirmed via Playwright that the
+  camera covers noticeably more ground in 3 real seconds at 3x than it
+  does in 9 seconds at 1x.
 - See ``architecture/river_flythrough.rst``'s "Playback controls"
   section for the full mechanism, including why rewinding past a
-  disposed chunk doesn't restore it.
+  disposed chunk doesn't restore it, and how speed interacts with the
+  wireframe streamer's own fetch timing.
 
 Madeira flythrough: full independent tuning (camera + streaming)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

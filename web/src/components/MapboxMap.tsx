@@ -173,6 +173,7 @@ export default function MapboxMap({
   // re-renders; the controller ref itself intentionally doesn't.
   const [isFlightActive, setIsFlightActive] = useState(false);
   const [isFlightPaused, setIsFlightPaused] = useState(false);
+  const [flightSpeed, setFlightSpeed] = useState(1);
   const swotLayerRef = useRef<SwotGaugeClusterLayer | null>(null);
   const onDoubleClickRef = useRef(onStationDoubleClick);
   // Read from the double-click handler registered once on map load, so it
@@ -436,6 +437,7 @@ export default function MapboxMap({
 
     flythroughControllerRef.current?.stop();
     setIsFlightPaused(false);
+    setFlightSpeed(1);
 
     const path = buildTapajosPath(crossSectionFeatures);
     flythroughControllerRef.current = startRiverFlythrough(map, path, {
@@ -498,6 +500,7 @@ export default function MapboxMap({
     flythroughControllerRef.current?.stop();
     removeDepthWireframeRef.current?.();
     setIsFlightPaused(false);
+    setFlightSpeed(1);
 
     const path = buildMadeiraPath(crossSectionFeatures);
     const streamer = createDepthWireframeStreamer(map, 'madeira-depth-wireframe', {
@@ -548,6 +551,18 @@ export default function MapboxMap({
     removeDepthWireframeRef.current = null;
     setIsFlightActive(false);
     setIsFlightPaused(false);
+    setFlightSpeed(1);
+  };
+
+  // Cycles playback speed on each click of the panel's speed button --
+  // 1x (normal, matching the already-tuned NEXT_PUBLIC_*_DURATION_MS pace)
+  // up to 3x, back down to 0.5x. A live multiplier, not a seek -- see
+  // FlythroughController.setSpeed's own comment in riverFlythrough.ts.
+  const cycleFlightSpeed = () => {
+    const speeds = [1, 1.5, 2, 3, 0.5];
+    const next = speeds[(speeds.indexOf(flightSpeed) + 1) % speeds.length];
+    flythroughControllerRef.current?.setSpeed(next);
+    setFlightSpeed(next);
   };
 
   // Bathymetry depth-on-click, only while a forecast GeoTIFF overlay
@@ -1033,6 +1048,14 @@ export default function MapboxMap({
               aria-label="Avançar"
             >
               <SkipForward className="h-4 w-4" fill="currentColor" />
+            </button>
+            <button
+              type="button"
+              onClick={cycleFlightSpeed}
+              className="flex h-9 min-w-9 items-center justify-center rounded-full px-2 text-xs font-semibold text-white/90 transition hover:bg-white/15 hover:text-white"
+              aria-label="Velocidade de reprodução"
+            >
+              {flightSpeed}x
             </button>
             <div className="mx-1 h-6 w-px bg-white/20" />
             <button
