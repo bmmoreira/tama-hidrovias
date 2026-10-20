@@ -112,6 +112,11 @@ export default function MapPage() {
   const [crossSectionMetric, setCrossSectionMetric] = useState<CrossSectionMetric>(
     CROSS_SECTION_DEFAULT_METRIC,
   );
+  // Bumped to Date.now() by ForecastDrawer's "Simular navegação" button to
+  // start the Tapajós river flythrough -- see riverFlythrough.ts. Lives here
+  // (not inside either component) since the trigger and the map that acts
+  // on it are siblings, same reasoning as forecastOverlay/swotFilter below.
+  const [flythroughRequestId, setFlythroughRequestId] = useState<number>();
   // Spatial filter modes ("near rivers" / "inside basins") match against
   // whichever rivers/basins are currently visible in the Camadas drawer.
   // Memoized since the spatial checks are heavier than the other filters.
@@ -186,6 +191,7 @@ export default function MapPage() {
             basinFeatures={filteredBasinFeatures}
             crossSectionFeatures={crossSectionFeatures}
             crossSectionMetric={crossSectionMetric}
+            flythroughRequestId={flythroughRequestId}
           >
             <StationExplorerOverlay controller={stationExplorer} />
             <ForecastLegend
@@ -199,6 +205,7 @@ export default function MapPage() {
               onTileLayerChange={setForecastOverlay}
               onOpenChange={setForecastDrawerOpen}
               appSettings={appSettings}
+              onStartFlythrough={() => setFlythroughRequestId(Date.now())}
             />
             {(swotGaugeFeatures.length > 0 || crossSectionFeatures.length > 0) && (
               <SwotFilterDrawer

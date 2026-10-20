@@ -58,6 +58,10 @@ export interface ForecastDrawerProps {
   onTileLayerChange: (overlay?: ForecastOverlayConfig) => void;
   onOpenChange?: (isOpen: boolean) => void;
   appSettings?: AppSettings;
+  /** Called when "Simular navegação" is clicked -- starts the Tapajós river
+   *  flythrough camera animation on the map (see riverFlythrough.ts). Only
+   *  rendered when the "profundidade" (bathymetry) area has data. */
+  onStartFlythrough?: () => void;
 }
 
 const fetcher = async (url: string) => {
@@ -195,6 +199,7 @@ export default function ForecastDrawer({
   onTileLayerChange,
   onOpenChange,
   appSettings,
+  onStartFlythrough,
 }: ForecastDrawerProps) {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
@@ -424,6 +429,28 @@ export default function ForecastDrawer({
     setSelectedFrameIndex(0);
   };
 
+  // "PROFUNDIDADE" is the one area with real bathymetry (depth) GeoTIFFs
+  // today (assets/tiff/profundidade/ -- forecast-tiles.ts always uppercases
+  // `area`, regardless of the folder name's own casing on disk, so this is
+  // the reliable value to compare against, not a guess) -- the flythrough
+  // button only makes sense, and only shows, when that area has frames.
+  const bathymetryGroup = groups.find((group) => group.area === 'PROFUNDIDADE');
+
+  const startFlythrough = () => {
+    // `selectedGroup` can already be "PROFUNDIDADE" (it's groups[0], the
+    // default) without the overlay actually being active -- `isEnabled`
+    // is what the "CAMADA ATIVA" card and the raster layer itself key off
+    // of, so both have to be checked, not just which area is selected.
+    if (!isEnabled || selectedGroup?.area !== 'PROFUNDIDADE') {
+      // Activates the bathymetry overlay as part of starting the flight,
+      // not as a precondition the user has to set up first themselves --
+      // "simulate navigating the river" should mean one click.
+      selectArea('PROFUNDIDADE');
+    }
+    setIsOpen(false);
+    onStartFlythrough?.();
+  };
+
   return (
     <>
       {isOpen && (
@@ -579,6 +606,26 @@ export default function ForecastDrawer({
               </div>
             )}
           </section>
+
+          {bathymetryGroup && (
+            <section className="rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-cyan-700">
+                Navegação simulada
+              </p>
+              <p className="mt-1 text-xs text-cyan-900/70">
+                Sobrevoa o rio Tapajós de ponta a ponta, com a batimetria
+                carregada, como se estivesse navegando pela água.
+              </p>
+              <button
+                type="button"
+                onClick={startFlythrough}
+                className="mt-3 inline-flex items-center gap-2 rounded-full bg-cyan-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-cyan-700"
+              >
+                <Ship className="h-4 w-4" />
+                <span>Iniciar navegação pelo rio</span>
+              </button>
+            </section>
+          )}
 
           <section>
             <p className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">

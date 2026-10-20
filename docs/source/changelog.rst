@@ -4,6 +4,28 @@ Changelog
 Upcoming
 --------
 
+River navigation flythrough (Tapajós, test/demo)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Added a "Navegação simulada" section to the Camadas de Previsão
+  drawer, shown whenever the Tapajós bathymetry area has frames: one
+  click activates the bathymetry raster (if not already active) and
+  flies the camera along the whole Tapajós reach, first cross-section
+  node to last, tilted and zoomed close to the water.
+- The camera is driven by a hand-rolled ``requestAnimationFrame`` loop
+  (``riverFlythrough.ts``), not ``flyTo``/``easeTo`` -- distance-weighted
+  interpolation along the path (not equal time per node, which would
+  visibly vary speed across unevenly-spaced nodes), a look-ahead bearing
+  so the camera's heading drifts smoothly around bends, and the map's
+  normal interaction handlers (drag/scroll/etc.) temporarily disabled
+  so user input can't fight the forced camera updates mid-flight.
+- Pitch, zoom ("height"), and total flight duration are tunable via
+  ``NEXT_PUBLIC_FLYTHROUGH_PITCH``/``_ZOOM``/``_DURATION_MS``.
+- Explicitly a test/demo of the concept, not a finished feature yet --
+  see ``architecture/river_flythrough.rst``'s "Known limitations"
+  section for what a real version would still need (most notably:
+  works for Tapajós only, hardcoded).
+
 Bathymetry depth lookup (PostGIS)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

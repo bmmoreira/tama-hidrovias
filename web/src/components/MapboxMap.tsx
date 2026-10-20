@@ -28,6 +28,7 @@ import {
 } from '@/components/maps/crossSectionClusterLayer';
 import type { CrossSectionFeature, CrossSectionMetric } from '@/components/maps/crossSectionClusterLayer';
 import CrossSectionModal from '@/components/maps/CrossSectionModal';
+import { buildTapajosPath, startRiverFlythrough } from '@/components/maps/riverFlythrough';
 
 export interface ViewState {
   longitude: number;
@@ -68,6 +69,11 @@ export interface MapboxMapProps {
   crossSectionFeatures?: CrossSectionFeature[];
   /** Which precomputed property drives cross-section circle color/label — see SwotFilterDrawer. */
   crossSectionMetric?: CrossSectionMetric;
+  /** Bumped (e.g. to Date.now()) to start the Tapajós river flythrough camera
+   *  animation — see riverFlythrough.ts and ForecastDrawer's trigger button.
+   *  Any new, distinct value starts a (new) flight; the value itself isn't
+   *  otherwise meaningful. */
+  flythroughRequestId?: number;
   children?: ReactNode;
 }
 
@@ -126,11 +132,13 @@ export default function MapboxMap({
   basinFeatures = [],
   crossSectionFeatures = [],
   crossSectionMetric = CROSS_SECTION_DEFAULT_METRIC,
+  flythroughRequestId,
   children,
 }: MapboxMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const popupRef = useRef<mapboxgl.Popup | null>(null);
+  const cancelFlythroughRef = useRef<(() => void) | null>(null);
   const swotLayerRef = useRef<SwotGaugeClusterLayer | null>(null);
   const onDoubleClickRef = useRef(onStationDoubleClick);
   // Read from the double-click handler registered once on map load, so it
@@ -381,6 +389,36 @@ export default function MapboxMap({
 
     updateCrossSectionLayerData(map, crossSectionFeatures, crossSectionMetric);
   }, [crossSectionFeatures, crossSectionMetric, mapLoaded]);
+
+  // Starts the Tapajós river flythrough whenever `flythroughRequestId`
+  // changes to a new, defined value -- see ForecastDrawer's trigger button
+  // and riverFlythrough.ts. Guarding on `flythroughRequestId != null` (not
+  // just truthy) means mount with the prop omitted never auto-starts one.
+  // Cancels any flight already in progress first, so mashing the trigger
+  // button restarts cleanly instead of running two animations at once.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded || flythroughRequestId == null) return;
+
+    cancelFlythroughRef.current?.();
+
+    const path = buildTapajosPath(crossSectionFeatures);
+    cancelFlythroughRef.current = startRiverFlythrough(map, path, {
+      onComplete: () => {
+        cancelFlythroughRef.current = null;
+      },
+    });
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- crossSectionFeatures
+    // intentionally not a dependency: the path is read once per trigger, not
+    // kept in sync with live data changes mid-flight.
+  }, [flythroughRequestId, mapLoaded]);
+
+  // Cancel an in-progress flythrough on unmount, same reasoning as every
+  // other map.on listener's cleanup in this file.
+  useEffect(() => {
+    return () => cancelFlythroughRef.current?.();
+  }, []);
 
   // Bathymetry depth-on-click, only while a forecast GeoTIFF overlay
   // (Camadas de Previsão) is active -- a click anywhere else on the map
