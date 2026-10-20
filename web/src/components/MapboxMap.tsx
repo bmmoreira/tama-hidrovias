@@ -29,6 +29,7 @@ import {
 import type { CrossSectionFeature, CrossSectionMetric } from '@/components/maps/crossSectionClusterLayer';
 import CrossSectionModal from '@/components/maps/CrossSectionModal';
 import { buildTapajosPath, startRiverFlythrough } from '@/components/maps/riverFlythrough';
+import { addRiverDepthWireframe } from '@/components/maps/riverFlythroughTerrain';
 
 export interface ViewState {
   longitude: number;
@@ -139,6 +140,7 @@ export default function MapboxMap({
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const popupRef = useRef<mapboxgl.Popup | null>(null);
   const cancelFlythroughRef = useRef<(() => void) | null>(null);
+  const removeDepthWireframeRef = useRef<(() => void) | null>(null);
   const swotLayerRef = useRef<SwotGaugeClusterLayer | null>(null);
   const onDoubleClickRef = useRef(onStationDoubleClick);
   // Read from the double-click handler registered once on map load, so it
@@ -409,15 +411,43 @@ export default function MapboxMap({
       },
     });
 
+    // Step-one 3D riverbed wireframe prototype (see
+    // architecture/river_flythrough.rst) -- a single static chunk of real,
+    // sampled depth data near the flight's starting node, not yet following
+    // the camera along the path. Hardcoded to one known Tapajós bathymetry
+    // frame, matching how hardcoded the rest of this whole feature already
+    // is (see riverFlythrough.ts's own Tapajós-only node-id-prefix filter).
+    removeDepthWireframeRef.current?.();
+    removeDepthWireframeRef.current = null;
+    if (path.length > 0) {
+      const [originLng, originLat] = path[0];
+      const halfSpanDeg = 0.01;
+      addRiverDepthWireframe(map, 'river-depth-wireframe', {
+        slug: 'profundidade/TAPAJOS_BATHYMETRY_2023-12-05T00h00_wgs84',
+        bounds: [originLng - halfSpanDeg, originLat - halfSpanDeg, originLng + halfSpanDeg, originLat + halfSpanDeg],
+      })
+        .then((remove) => {
+          removeDepthWireframeRef.current = remove;
+        })
+        .catch((error) => {
+          // eslint-disable-next-line no-console
+          console.error('[riverFlythroughTerrain] failed to add depth wireframe:', error);
+        });
+    }
+
     // eslint-disable-next-line react-hooks/exhaustive-deps -- crossSectionFeatures
     // intentionally not a dependency: the path is read once per trigger, not
     // kept in sync with live data changes mid-flight.
   }, [flythroughRequestId, mapLoaded]);
 
-  // Cancel an in-progress flythrough on unmount, same reasoning as every
-  // other map.on listener's cleanup in this file.
+  // Cancel an in-progress flythrough (and remove the depth wireframe layer)
+  // on unmount, same reasoning as every other map.on listener's cleanup in
+  // this file.
   useEffect(() => {
-    return () => cancelFlythroughRef.current?.();
+    return () => {
+      cancelFlythroughRef.current?.();
+      removeDepthWireframeRef.current?.();
+    };
   }, []);
 
   // Bathymetry depth-on-click, only while a forecast GeoTIFF overlay

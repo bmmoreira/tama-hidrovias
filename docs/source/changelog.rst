@@ -25,6 +25,17 @@ River navigation flythrough (Tapajós, test/demo)
   see ``architecture/river_flythrough.rst``'s "Known limitations"
   section for what a real version would still need (most notably:
   works for Tapajós only, hardcoded).
+- Added a step-one prototype of a real 3D riverbed: a single static
+  chunk of actual sampled depth data near the flight's starting node,
+  rendered as a Three.js wireframe inside a Mapbox custom layer (not yet
+  following the camera along the path). A new endpoint,
+  ``GET /api/bathymetry/raster-grid``, crops and decodes a small window
+  of a bathymetry GeoTIFF into a plain JSON grid of depth values via
+  TiTiler + the ``geotiff`` npm package. See
+  ``architecture/river_flythrough.rst``'s "3D riverbed wireframe
+  (prototype)" section for the full mechanism, including a real bug hit
+  on the first pass (copying Mapbox's standard 3D-model rotation, which
+  tipped an already-correct flat grid into a vertical wall) and the fix.
 
 Bathymetry depth lookup (PostGIS)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

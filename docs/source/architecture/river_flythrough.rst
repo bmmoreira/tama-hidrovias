@@ -119,6 +119,88 @@ reads ``.env`` directly at runtime) has been exercised so far. Add them
 there the same way if/when this needs to work in a production build with
 non-default values.
 
+3D riverbed wireframe (prototype)
+------------------------------------
+
+A first step toward a real 3D riverbed, rendered as actual sampled depth
+data rather than a flat raster: when the flight starts, a single static
+chunk of real bathymetry near the first node is rendered as a Three.js
+wireframe (``riverFlythroughTerrain.ts``), layered into the same WebGL
+context Mapbox GL itself uses via a ``CustomLayerInterface``. This is a
+proof of mechanics, not a finished feature -- it doesn't follow the
+camera along the flight path yet, see "Known limitations" below.
+
+Why a wireframe, and why sampled data, not the rendered raster
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The rest of the forecast system (``/api/forecast-tiles/...``) serves
+*rendered PNG tiles* -- pixel colors, with no numeric values a client
+could turn into 3D vertices. A wireframe needs the actual depth numbers
+at a grid of points, so this prototype adds a separate endpoint,
+``GET /api/bathymetry/raster-grid?slug=&bbox=&size=``
+(``web/src/app/api/bathymetry/raster-grid/route.ts``), which:
+
+1. Proxies TiTiler's ``/cog/bbox/{minx},{miny},{maxx},{maxy}/{w}x{h}.tif``
+   -- a small *cropped GeoTIFF*, not a full re-render -- for the
+   requested area.
+2. Decodes it server-side with the ``geotiff`` npm package (chosen over
+   asking TiTiler for its ``.npy`` format: decoding an actual GeoTIFF,
+   bands and nodata mask included, is a well-trodden path through an
+   actively maintained library, versus hand-rolling a ``.npy`` header
+   parser for a one-off feature).
+3. Returns plain JSON (``{ width, height, bounds, values }``, row-major,
+   ``null`` for nodata pixels) -- grid resolution is clamped to 128px
+   per side server-side, since this is a prototype chunk, not a tile
+   pipeline.
+
+Positioning: Three.js inside a Mapbox custom layer
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``addRiverDepthWireframe`` follows Mapbox's own documented recipe for
+embedding Three.js (a ``CustomLayerInterface`` whose ``render`` callback
+receives Mapbox's current projection matrix every frame, shared over the
+same ``WebGL2RenderingContext``/canvas rather than a second one):
+
+- Each sampled grid point's lng/lat is converted to **meters offset from
+  a chosen origin** (an equirectangular approximation -- accurate enough
+  for a chunk a couple km across, and avoids pulling in a geodesy
+  library for this prototype) -- not directly into Mapbox's own Mercator
+  coordinates. Mercator coordinates are tiny fractional numbers; placing
+  Three.js ``BufferGeometry`` vertices directly in that space would lose
+  precision in 32-bit floats. Keeping vertices in ordinary meter-scale
+  numbers (roughly -1000 to 1000) avoids that entirely.
+- A single **model transform** (translate to the origin's Mercator
+  position + a uniform scale factor, from
+  ``MercatorCoordinate.meterInMercatorCoordinateUnits()``) converts that
+  local meter space into Mercator space once; multiplying it by Mapbox's
+  own per-frame matrix in ``render()`` is what actually places the
+  geometry correctly under the live camera.
+- Depth becomes a **local, exaggerated Z offset** (``-depth *
+  exaggeration``, default 12x) in that same meter space -- since the
+  model transform scales X, Y, and Z uniformly, "12x exaggerated" stays
+  physically meaningful instead of warping into some other axis's units.
+- ``renderer.autoClear = false`` and an explicit ``renderer.resetState()``
+  before every draw call are both required -- without them, Three.js's
+  own WebGL state management conflicts with Mapbox's, and one renderer
+  clobbers the other's frame.
+- **No fixed 90° rotation in the model transform, deliberately.** Mapbox's
+  own "add a 3D model with three.js" example applies a ``rotateX: PI/2``
+  in its model transform -- but that exists to convert a *Y-up* authored
+  glTF/OBJ model into Mapbox's Z-up world, not as a universal requirement
+  for every Three.js layer. This geometry's local axes are already
+  ``(X=east, Y=north, Z=up)`` by construction, so copying that rotation
+  over tips an already-correct, flat, horizontal grid onto its side into
+  a vertical wall facing the camera -- a real bug this prototype hit on
+  its first pass, not a hypothetical one.
+
+Verified visually via Playwright: the wireframe renders as a real,
+camera-correct 3D quad over the actual river location (not a flat
+on-screen rectangle -- its shape skews with the live pitch/bearing
+exactly like the basemap itself does), coexists with the colored
+bathymetry raster underneath it without either clobbering the other,
+and correctly disappears once the camera has flown far enough away
+(expected, since it's one fixed chunk, not a camera-following one).
+
 Known limitations
 -------------------
 
@@ -138,3 +220,12 @@ This is explicitly a demo/test of the concept, not a finished feature:
   horizon once zoomed in or over open water, but the base map style has
   no elevation data, so the "flying over terrain" feel is mostly carried
   by the raster/water content in view, not true 3D relief.
+- **The riverbed wireframe is one static chunk, not a camera-following
+  one.** It's placed near the flight's starting node and stays there for
+  the whole flight -- proving the Three.js/Mapbox/TiTiler mechanics work
+  end to end, not yet the progressive, chunk-streaming version (fetch a
+  window of chunks ahead of the camera, dispose ones behind it) that a
+  real "3D riverbed the whole flight" feature would need.
+- **``slug``/``bounds`` are hardcoded to one known Tapajós bathymetry
+  frame and the flight's start node**, in ``MapboxMap.tsx``, not derived
+  from whatever frame ``ForecastDrawer`` actually has active.
