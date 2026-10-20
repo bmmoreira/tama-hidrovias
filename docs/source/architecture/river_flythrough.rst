@@ -307,10 +307,68 @@ is exactly as "missing" as a raster pixel with a ``0`` mask value.
 
 Verified visually via Playwright: the wireframe renders flat (not the
 Tapajós prototype's one-time rotation bug), amber-colored, following
-the Madeira channel's real, irregular shape (not a clean rectangle) near
-the flight's starting node, and the camera itself correctly flies along
-the real Rio Madeira (confirmed against on-map place labels passed
-during the flight) rather than Tapajós.
+the Madeira channel's real, irregular shape (not a clean rectangle), and
+the camera itself correctly flies along the real Rio Madeira (confirmed
+against on-map place labels passed during the flight) rather than
+Tapajós.
+
+Progressive chunk streaming (Madeira)
+-----------------------------------------
+
+Madeira's wireframe no longer stops at one static chunk near the start
+-- it streams a sliding window of chunks as the camera advances, via
+``createDepthWireframeStreamer`` in ``riverFlythroughTerrain.ts``. This
+was practical to build for Madeira specifically, and not attempted for
+Tapajós yet, because each chunk fetch there is one indexed Postgres
+query (a few ms, see "One indexed query instead of a raster crop +
+decode" above) -- cheap enough to do live, repeatedly, for the whole
+flight, unlike Tapajós's TiTiler-crop-plus-``geotiff``-decode round trip.
+
+How it's driven
+~~~~~~~~~~~~~~~~~
+
+``startRiverFlythrough`` gained an ``onProgress`` callback (part of
+``FlythroughOptions``), fired every animation frame with the camera's
+current position and distance traveled along the path -- not throttled
+inside the camera loop itself, since different consumers might want
+different thresholds. The Madeira effect in ``MapboxMap.tsx`` feeds this
+straight into a ``DepthWireframeStreamer``'s own ``onProgress``, which
+does its own throttling:
+
+- A new chunk is only fetched once the camera has traveled at least
+  ``stepDistanceM`` (default 2000m) past the position the last chunk was
+  centered on -- not every frame, which would mean hundreds of requests
+  per second.
+- Each chunk still spans ``2 * chunkHalfSpanDeg`` (default 0.03°, ~3km)
+  across, same as the original static chunk -- stepping by less than a
+  full chunk's width means consecutive chunks overlap, so there's
+  continuous coverage with no visible gap while the next one is still
+  loading.
+- At most ``maxChunks`` (default 4) stay loaded at once -- a sliding
+  window, not an ever-growing pile. Once a new chunk is added past that
+  limit, the oldest one is disposed (layer removed, geometry disposed).
+  Chunks are added in the order the camera -- which never backtracks
+  along the path -- visits them, so "oldest added" and "furthest behind
+  the camera" are always the same chunk; a plain FIFO queue is enough,
+  no distance bookkeeping needed to decide what to drop.
+- A single in-flight ``pending`` flag prevents overlapping fetches --
+  deliberately simple for a first version (see "Known limitations"
+  below for what real prefetching would add).
+
+Pacing: Madeira needed its own duration, not Tapajós's
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Both flights originally shared ``FLYTHROUGH_DURATION_MS``. Madeira's
+path (~1014km) is about 3.5x longer than Tapajós's (~292km), so the same
+total duration meant Madeira's camera moved roughly 3.5x faster -- this
+is what "going a little too fast" actually was, confirmed by computing
+both paths' real cumulative distance. Fixed with a separate
+``MADEIRA_FLYTHROUGH_DURATION_MS`` /
+``NEXT_PUBLIC_MADEIRA_FLYTHROUGH_DURATION_MS`` (default 150 seconds,
+versus Tapajós's 45) -- a deliberately independent pacing knob rather
+than deriving one duration from the other's speed, since literally
+matching speeds would stretch Madeira's flight to several minutes,
+which may not suit every use of this demo either.
 
 Known limitations
 -------------------
@@ -331,15 +389,25 @@ This is explicitly a demo/test of the concept, not a finished feature:
   horizon once zoomed in or over open water, but the base map style has
   no elevation data, so the "flying over terrain" feel is mostly carried
   by the raster/water content in view, not true 3D relief.
-- **Both riverbed wireframes are one static chunk, not camera-following
-  ones.** Each is placed near its flight's starting node and stays there
-  for the whole flight -- proving the Three.js/Mapbox mechanics (and, for
-  Madeira, the PostGIS data path) work end to end, not yet the
-  progressive, chunk-streaming version (fetch a window of chunks ahead of
-  the camera, dispose ones behind it) that a real "3D riverbed the whole
-  flight" feature would need. Madeira's real, already-loaded point data
-  (see "Madeira flythrough" above) is the cheaper foundation to build
-  that streaming version on, if/when it happens.
+- **Tapajós's riverbed wireframe is still one static chunk, not a
+  camera-following one.** It's placed near the flight's starting node and
+  stays there for the whole flight -- Madeira's is the one that streams
+  (see `Madeira flythrough: real PostGIS data, not a raster`_ and
+  `Progressive chunk streaming (Madeira)`_ below); porting that to
+  Tapajós would mean the same streaming manager driven by
+  ``fetchDepthChunkFromRaster`` instead, which is possible but hasn't
+  been done -- each raster-crop fetch costs a TiTiler round trip plus a
+  server-side GeoTIFF decode, materially more expensive per chunk than
+  Madeira's single indexed Postgres query, so it needs its own
+  pacing/step-size tuning rather than reusing Madeira's defaults as-is.
+- **Madeira's streaming is fetch-as-you-go, not prefetched ahead of the
+  camera.** A new chunk is only requested once the camera has already
+  traveled far enough past the last one's center -- there's no attempt
+  to anticipate the camera's direction and start fetching early, and no
+  de-duplication beyond a single in-flight-request flag (a slow fetch
+  just means that progress tick's check is skipped, not queued). Fine
+  at the current pacing/step-size; would need real prefetching to stay
+  smooth at a much faster flight speed or a much coarser step size.
 - **Tapajós's ``slug``/bounds, and Madeira's bounds, are hardcoded** to
   one known bathymetry frame and each flight's start node, in
   ``MapboxMap.tsx`` -- Tapajós's isn't derived from whatever frame

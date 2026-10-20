@@ -252,3 +252,116 @@ export function addRiverDepthWireframe(
     if (map.getLayer(layerId)) map.removeLayer(layerId);
   };
 }
+
+export interface DepthWireframeStreamerOptions {
+  /** `fetchDepthChunkFromPoints` (Madeira) or a bound
+   *  `fetchDepthChunkFromRaster` (Tapajós, if ever streamed too) -- the
+   *  streamer doesn't care which, same reasoning as `addRiverDepthWireframe`
+   *  taking an already-resolved chunk instead of fetching itself. */
+  fetchChunk: (bounds: [number, number, number, number]) => Promise<DepthChunk>;
+  /** Half-width, in degrees, of each fetched chunk's bbox (so a chunk spans
+   *  roughly `2 * chunkHalfSpanDeg` degrees across, centered on the
+   *  camera's position when it was fetched). */
+  chunkHalfSpanDeg?: number;
+  /** How far (meters) the camera must travel past the position the last
+   *  chunk was centered on before fetching the next one. Smaller than a
+   *  full chunk width so consecutive chunks overlap and there's no gap
+   *  while the next one is still loading. */
+  stepDistanceM?: number;
+  /** How many chunks stay loaded at once (a sliding window -- the oldest,
+   *  i.e. furthest behind the camera, is disposed first once this is
+   *  exceeded). Bounds memory/GPU cost for a long flight instead of
+   *  accumulating every chunk ever fetched. */
+  maxChunks?: number;
+  exaggeration?: number;
+  color?: string;
+}
+
+export interface DepthWireframeStreamer {
+  /** Feed this a flythrough's `onProgress` callback (see riverFlythrough.ts's
+   *  `FlythroughOptions.onProgress`) -- called every animation frame; the
+   *  streamer does its own internal throttling against `stepDistanceM`. */
+  onProgress: (position: [number, number], distanceM: number) => void;
+  /** Disposes every currently-loaded chunk -- call on flight
+   *  completion/cancellation, same as `addRiverDepthWireframe`'s own
+   *  returned remove function, just for however many chunks are active. */
+  dispose: () => void;
+}
+
+/**
+ * First version of progressive chunk streaming along a flythrough's path
+ * (see architecture/river_flythrough.rst's "Known limitations" -- this is
+ * what replaces "one static chunk" there): as the camera advances,
+ * periodically fetches a new chunk centered on its current position and
+ * adds it via `addRiverDepthWireframe`, while disposing chunks that have
+ * fallen more than `maxChunks` behind. Deliberately simple for a first
+ * pass -- fetch-as-you-go, not prefetching ahead of the camera's direction
+ * of travel, and no in-flight request de-duplication beyond a single
+ * `pending` flag (a slow fetch just means the next progress tick's check
+ * is skipped, not queued).
+ */
+export function createDepthWireframeStreamer(
+  map: mapboxgl.Map,
+  layerIdPrefix: string,
+  options: DepthWireframeStreamerOptions,
+): DepthWireframeStreamer {
+  const {
+    fetchChunk,
+    chunkHalfSpanDeg = 0.015,
+    stepDistanceM = 2000,
+    maxChunks = 4,
+    exaggeration = 12,
+    color = '#f59e0b',
+  } = options;
+
+  let lastFetchDistanceM = -Infinity;
+  let chunkCounter = 0;
+  let pending = false;
+  let disposed = false;
+  const activeChunks: { remove: () => void }[] = [];
+
+  function addChunkAt(position: [number, number]) {
+    const bounds: [number, number, number, number] = [
+      position[0] - chunkHalfSpanDeg,
+      position[1] - chunkHalfSpanDeg,
+      position[0] + chunkHalfSpanDeg,
+      position[1] + chunkHalfSpanDeg,
+    ];
+    const id = `${layerIdPrefix}-${chunkCounter++}`;
+    pending = true;
+
+    fetchChunk(bounds)
+      .then((chunk) => {
+        if (disposed) return;
+        const remove = addRiverDepthWireframe(map, id, { chunk, exaggeration, color });
+        activeChunks.push({ remove });
+        // FIFO: chunks are added in the order the (monotonically advancing,
+        // never-backtracking) camera visits them, so the oldest entry is
+        // always the one furthest behind -- the correct one to drop first.
+        while (activeChunks.length > maxChunks) {
+          activeChunks.shift()?.remove();
+        }
+      })
+      .catch((error) => {
+        // eslint-disable-next-line no-console
+        console.error(`[riverFlythroughTerrain] failed to stream chunk ${id}:`, error);
+      })
+      .finally(() => {
+        pending = false;
+      });
+  }
+
+  return {
+    onProgress(position, distanceM) {
+      if (disposed || pending) return;
+      if (distanceM - lastFetchDistanceM < stepDistanceM) return;
+      lastFetchDistanceM = distanceM;
+      addChunkAt(position);
+    },
+    dispose() {
+      disposed = true;
+      for (const chunk of activeChunks) chunk.remove();
+      activeChunks.length = 0;
+    },
+  };
+}

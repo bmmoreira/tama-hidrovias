@@ -4,6 +4,30 @@ Changelog
 Upcoming
 --------
 
+Madeira flythrough: progressive wireframe streaming + its own pacing
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- The Madeira riverbed wireframe now streams a sliding window of chunks
+  as the camera advances (``createDepthWireframeStreamer``), instead of
+  showing one static chunk near the start -- a new chunk fetches every
+  2km of travel, up to 4 stay loaded at once (oldest disposed first),
+  giving continuous wireframe coverage the whole flight. Practical for
+  Madeira specifically since each chunk is one cheap indexed Postgres
+  query; Tapajós's raster-crop-and-decode path would need its own
+  pacing/step tuning before streaming the same way.
+- ``startRiverFlythrough`` gained an ``onProgress`` callback (position +
+  distance traveled, fired every frame) that the streamer uses to decide
+  when to fetch the next chunk -- not throttled in the camera loop
+  itself, since different consumers may want different thresholds.
+- Fixed Madeira's flight feeling too fast: it shared ``FLYTHROUGH_DURATION_MS``
+  with Tapajós, but Madeira's path is ~3.5x longer (~1014km vs ~292km),
+  so the same total duration meant ~3.5x the camera speed. Given its own
+  ``NEXT_PUBLIC_MADEIRA_FLYTHROUGH_DURATION_MS`` (default 150s, vs.
+  Tapajós's 45s) instead of deriving one from the other's speed, which
+  would stretch Madeira's flight to several minutes.
+- See ``architecture/river_flythrough.rst``'s "Progressive chunk
+  streaming (Madeira)" and "Pacing" sections for the full mechanism.
+
 Madeira river flythrough (separate demo, real PostGIS data)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

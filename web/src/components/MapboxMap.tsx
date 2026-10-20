@@ -28,11 +28,17 @@ import {
 } from '@/components/maps/crossSectionClusterLayer';
 import type { CrossSectionFeature, CrossSectionMetric } from '@/components/maps/crossSectionClusterLayer';
 import CrossSectionModal from '@/components/maps/CrossSectionModal';
-import { buildTapajosPath, buildMadeiraPath, startRiverFlythrough } from '@/components/maps/riverFlythrough';
+import {
+  buildTapajosPath,
+  buildMadeiraPath,
+  startRiverFlythrough,
+  MADEIRA_FLYTHROUGH_DURATION_MS,
+} from '@/components/maps/riverFlythrough';
 import {
   addRiverDepthWireframe,
   fetchDepthChunkFromRaster,
   fetchDepthChunkFromPoints,
+  createDepthWireframeStreamer,
 } from '@/components/maps/riverFlythroughTerrain';
 
 export interface ViewState {
@@ -460,43 +466,31 @@ export default function MapboxMap({
   // available. Shares cancelFlythroughRef/removeDepthWireframeRef with the
   // Tapajós effect above (not separate refs) so starting either one
   // cancels the other -- only one flight/wireframe should ever run at once,
-  // regardless of which button triggered it.
+  // regardless of which button triggered it. Unlike Tapajós's one static
+  // chunk, Madeira streams a sliding window of chunks as the camera
+  // advances (see createDepthWireframeStreamer) -- cheap enough per-chunk
+  // (one indexed Postgres query) to do live, unlike the Tapajós path's
+  // TiTiler-crop-plus-decode round trip.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapLoaded || madeiraFlythroughRequestId == null) return;
 
     cancelFlythroughRef.current?.();
+    removeDepthWireframeRef.current?.();
 
     const path = buildMadeiraPath(crossSectionFeatures);
+    const streamer = createDepthWireframeStreamer(map, 'madeira-depth-wireframe', {
+      fetchChunk: fetchDepthChunkFromPoints,
+    });
+    removeDepthWireframeRef.current = streamer.dispose;
+
     cancelFlythroughRef.current = startRiverFlythrough(map, path, {
+      durationMs: MADEIRA_FLYTHROUGH_DURATION_MS,
+      onProgress: ({ position, distanceM }) => streamer.onProgress(position, distanceM),
       onComplete: () => {
         cancelFlythroughRef.current = null;
       },
     });
-
-    removeDepthWireframeRef.current?.();
-    removeDepthWireframeRef.current = null;
-    if (path.length > 0) {
-      const [originLng, originLat] = path[0];
-      const halfSpanDeg = 0.015;
-      const bounds: [number, number, number, number] = [
-        originLng - halfSpanDeg,
-        originLat - halfSpanDeg,
-        originLng + halfSpanDeg,
-        originLat + halfSpanDeg,
-      ];
-      fetchDepthChunkFromPoints(bounds)
-        .then((chunk) => {
-          removeDepthWireframeRef.current = addRiverDepthWireframe(map, 'river-depth-wireframe', {
-            chunk,
-            color: '#f59e0b',
-          });
-        })
-        .catch((error) => {
-          // eslint-disable-next-line no-console
-          console.error('[riverFlythroughTerrain] failed to add Madeira depth wireframe:', error);
-        });
-    }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps -- crossSectionFeatures
     // intentionally not a dependency, same reasoning as the Tapajós effect.

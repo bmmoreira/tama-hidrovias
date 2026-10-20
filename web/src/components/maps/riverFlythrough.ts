@@ -22,8 +22,21 @@ export const FLYTHROUGH_ZOOM = Number(process.env.NEXT_PUBLIC_FLYTHROUGH_ZOOM) |
 /** Total time, in ms, to fly the entire path from end to end -- NOT per
  *  node, since nodes aren't evenly spaced: speed is distance-weighted
  *  along the whole route (see `pointAlongPath` below) so the camera
- *  doesn't visibly speed up/slow down crossing uneven node gaps. */
+ *  doesn't visibly speed up/slow down crossing uneven node gaps. This is
+ *  the Tapajós flight's duration specifically -- see
+ *  `MADEIRA_FLYTHROUGH_DURATION_MS` below for why Madeira needs its own,
+ *  much larger default rather than sharing this one. */
 export const FLYTHROUGH_DURATION_MS = Number(process.env.NEXT_PUBLIC_FLYTHROUGH_DURATION_MS) || 45000;
+
+/** Madeira's path (~1014km) is ~3.5x longer than Tapajós's (~292km) -- using
+ *  the same total duration for both meant Madeira's camera moved ~3.5x
+ *  faster, which is what "going too fast" actually was. Separately tunable
+ *  rather than deriving one from the other's speed, since a literally
+ *  speed-matched duration would make Madeira's flight ~3.5x longer in wall
+ *  time too (several minutes), which may not be what a quick demo wants
+ *  either -- this is a independent pacing knob, not a physics simulation. */
+export const MADEIRA_FLYTHROUGH_DURATION_MS =
+  Number(process.env.NEXT_PUBLIC_MADEIRA_FLYTHROUGH_DURATION_MS) || 150000;
 
 type LngLat = [number, number];
 
@@ -148,11 +161,27 @@ function easeInOutCosine(t: number): number {
   return (1 - Math.cos(t * Math.PI)) / 2;
 }
 
+export interface FlythroughProgress {
+  position: LngLat;
+  /** Distance traveled so far along the path, in meters. */
+  distanceM: number;
+  totalDistanceM: number;
+}
+
 export interface FlythroughOptions {
   pitch?: number;
   zoom?: number;
   durationMs?: number;
   onComplete?: () => void;
+  /** Called every animation frame with the camera's current position along
+   *  the path -- lets a caller (e.g. the Madeira riverbed wireframe) stream
+   *  in new chunks as the flight progresses, instead of only ever showing
+   *  one static chunk at the start. Fired at full frame rate deliberately,
+   *  not throttled here -- a caller that only wants to act every N meters
+   *  should do that throttling itself (see `createDepthWireframeStreamer`
+   *  in riverFlythroughTerrain.ts), since different consumers may want
+   *  different thresholds. */
+  onProgress?: (progress: FlythroughProgress) => void;
 }
 
 /**
@@ -221,8 +250,10 @@ export function startRiverFlythrough(
     const rawT = Math.min(Math.max(elapsed / durationMs, 0), 1);
     const t = easeInOutCosine(rawT);
 
-    const { position, bearing } = pointAlongPath(table, t * table.totalDistanceM);
+    const distanceM = t * table.totalDistanceM;
+    const { position, bearing } = pointAlongPath(table, distanceM);
     map.jumpTo({ center: position, zoom, pitch, bearing });
+    options.onProgress?.({ position, distanceM, totalDistanceM: table.totalDistanceM });
 
     if (rawT >= 1) {
       stop();
