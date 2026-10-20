@@ -411,6 +411,14 @@ narrow screen should spend all its space on it. See
 :doc:`architecture/cross_section_flow`'s "Responsive layout" section for
 the full breakdown.
 
+Unclustered circles also color and label themselves by one of two
+precomputed per-point metrics (max/mean "cota do leito", switchable live
+from the Filtros drawer), scaled to a green ramp sized to the current
+data's own min/max -- see :doc:`architecture/cross_section_flow`'s
+"Circle Styling" section for the full mechanism, including why those
+metrics are precomputed by a script rather than fetched/aggregated in
+the browser.
+
 Development Checklist
 ----------------------
 

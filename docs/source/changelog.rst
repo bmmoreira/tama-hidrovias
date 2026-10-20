@@ -4,6 +4,36 @@ Changelog
 Upcoming
 --------
 
+Cross-section circle styling: size, color, and a metric selector
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Individual cross-section circles are bigger (``NEXT_PUBLIC_CROSS_SECTION_CIRCLE_RADIUS``,
+  default 14px, up from a flat 4-8px dot) and now show a value label
+  and a color driven by one of two precomputed metrics: max or mean
+  "cota do leito" (bed elevation). Clusters are unchanged -- still just
+  a point count, no per-cluster aggregate.
+- The two metrics (``cota_leito_maxima``/``cota_leito_media``) are
+  precomputed per point by a new script,
+  ``scripts/compute_cross_section_stats.py``, rather than fetched or
+  aggregated in the browser -- computing them at runtime would mean
+  fetching all ~500 profile files just to color map markers, defeating
+  ``CrossSectionModal``'s lazy, one-at-a-time profile fetching.
+- Color is a two-stop green ramp (``NEXT_PUBLIC_CROSS_SECTION_COLOR_LOW``/
+  ``_HIGH``, defaulting to the exact colors the SWOT gauge legend already
+  uses for its positive-value ramp), scaled to the selected metric's own
+  min/max across the currently loaded data -- not a fixed domain, since
+  Madeira and Tapajós have very different elevation ranges.
+- A new "Seção Transversal" section in the Filtros drawer
+  (``SwotFilterDrawer.tsx``) lets visitors switch between máxima
+  (default, ``NEXT_PUBLIC_CROSS_SECTION_DEFAULT_METRIC``) and média
+  live; a matching legend section was added to ``ForecastLegend.tsx``.
+  Fixed a latent bug this surfaced: the Filtros drawer previously
+  returned ``null`` whenever there were zero SWOT gauges, which would
+  have hidden the entire drawer (including the new cross-section
+  section) on any map with cross-section data but no SWOT gauges.
+- See ``architecture/cross_section_flow.rst``'s "Circle Styling" section
+  for the full mechanism.
+
 Tapajós river cross-section points
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

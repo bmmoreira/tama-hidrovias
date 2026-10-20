@@ -6,6 +6,7 @@ import clsx from 'clsx';
 import type { SwotGaugeFeature } from '@/lib/strapi';
 import type { RiverFeature, BasinFeature } from './LayersDrawer';
 import { isNearAnyRiver, isInsideAnyBasin } from './spatialFilter';
+import { CROSS_SECTION_METRIC_OPTIONS, type CrossSectionMetric } from './crossSectionClusterLayer';
 
 /** Water-level trend bucket derived from a gauge's `Change` reading. */
 export type SwotDirection = 'all' | 'rising' | 'falling' | 'nodata';
@@ -155,6 +156,14 @@ interface SwotFilterDrawerProps {
   /** Basins currently visible/selected in the Camadas drawer — powers the
    *  "inside basins" spatial filter. */
   basinFeatures?: BasinFeature[];
+  /** Whether any cross-section points are loaded — shows the "Seção
+   *  Transversal" metric section below, independent of SWOT gauge data
+   *  (unlike `features`, this never gates the whole drawer's visibility
+   *  on its own -- see the `return null` guard below). */
+  hasCrossSection?: boolean;
+  /** Which precomputed property drives cross-section circle color/label. */
+  crossSectionMetric?: CrossSectionMetric;
+  onCrossSectionMetricChange?: (metric: CrossSectionMetric) => void;
 }
 
 const SPATIAL_MODE_OPTIONS: { value: SwotSpatialMode; label: string }[] = [
@@ -201,6 +210,9 @@ export default function SwotFilterDrawer({
   searchPanelOpen = false,
   riverFeatures = [],
   basinFeatures = [],
+  hasCrossSection = false,
+  crossSectionMetric,
+  onCrossSectionMetricChange,
 }: SwotFilterDrawerProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -235,7 +247,10 @@ export default function SwotFilterDrawer({
     onFilterChange({ ...filter, ...patch });
   }
 
-  if (totalCount === 0) return null;
+  // Keep the drawer mounted for cross-section's metric selector even on a
+  // map with no SWOT gauges at all -- only bail out when there's truly
+  // nothing in it to show.
+  if (totalCount === 0 && !hasCrossSection) return null;
 
   return (
     <>
@@ -603,6 +618,37 @@ export default function SwotFilterDrawer({
               )}
             </div>
           </div>
+
+          {/* Cross-section circle metric -- outside the opacity-wrapped
+              block above on purpose: this has nothing to do with SWOT gauge
+              visibility, so it shouldn't dim when `filter.visible` is off. */}
+          {hasCrossSection && crossSectionMetric && onCrossSectionMetricChange && (
+            <div className="border-t border-slate-100 pt-5 dark:border-slate-800">
+              <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500">
+                Seção Transversal
+              </p>
+              <p className="mb-2 text-[11px] text-slate-500 dark:text-slate-400">
+                Valor exibido nos pontos de seção transversal
+              </p>
+              <div className="grid grid-cols-2 gap-1.5">
+                {CROSS_SECTION_METRIC_OPTIONS.map(({ value, label }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => onCrossSectionMetricChange(value)}
+                    className={clsx(
+                      'rounded-xl border px-2 py-2 text-xs font-medium transition',
+                      crossSectionMetric === value
+                        ? 'border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-500 dark:bg-emerald-950/40 dark:text-emerald-300'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600',
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer — shown only when filters are active */}

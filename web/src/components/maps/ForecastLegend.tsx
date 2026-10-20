@@ -3,11 +3,23 @@
 import { Waves } from 'lucide-react';
 import { useTranslation } from '@/lib/use-app-translation';
 import type { ForecastOverlayConfig } from './ForecastDrawer';
+import {
+  CROSS_SECTION_COLOR_LOW,
+  CROSS_SECTION_COLOR_HIGH,
+  CROSS_SECTION_METRIC_OPTIONS,
+  type CrossSectionFeature,
+  type CrossSectionMetric,
+} from './crossSectionClusterLayer';
 
 export interface ForecastLegendProps {
   overlay?: ForecastOverlayConfig;
   drawerOpen?: boolean;
   hasSwotGauges?: boolean;
+  /** Currently loaded cross-section points -- used only to compute the
+   *  legend's min/max labels for whichever metric is selected; pass [] or
+   *  omit to hide this legend section entirely. */
+  crossSectionFeatures?: CrossSectionFeature[];
+  crossSectionMetric?: CrossSectionMetric;
 }
 
 const LEGEND_VALUES = Array.from({ length: 15 }, (_, i) => 15 - i) as number[];
@@ -49,14 +61,25 @@ export default function ForecastLegend({
   overlay,
   drawerOpen = false,
   hasSwotGauges = false,
+  crossSectionFeatures = [],
+  crossSectionMetric = 'cota_leito_maxima',
 }: ForecastLegendProps) {
   const { t } = useTranslation();
 
   const showForecast = !!(overlay?.tileLayerUrl && overlay.legendColorMap);
+  const showCrossSection = crossSectionFeatures.length > 0;
 
-  if (!showForecast && !hasSwotGauges) {
+  if (!showForecast && !hasSwotGauges && !showCrossSection) {
     return null;
   }
+
+  const crossSectionValues = crossSectionFeatures
+    .map((f) => f.properties[crossSectionMetric])
+    .filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
+  const crossSectionMin = crossSectionValues.length ? Math.min(...crossSectionValues) : 0;
+  const crossSectionMax = crossSectionValues.length ? Math.max(...crossSectionValues) : 0;
+  const crossSectionMetricLabel =
+    CROSS_SECTION_METRIC_OPTIONS.find((o) => o.value === crossSectionMetric)?.label ?? '';
 
   return (
     <div
@@ -121,7 +144,37 @@ export default function ForecastLegend({
       )}
 
       {/* Divider between sections */}
-      {showForecast && hasSwotGauges && (
+      {hasSwotGauges && (showCrossSection || showForecast) && (
+        <div className="h-px bg-slate-200 dark:bg-slate-700" />
+      )}
+
+      {/* ── Cross-section legend ── */}
+      {showCrossSection && (
+        <div className="flex flex-col gap-2">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+            Seção Transversal
+          </p>
+          <div className="flex flex-col gap-0.5">
+            <div
+              className="h-2 w-28 rounded-full"
+              style={{ background: `linear-gradient(to right, ${CROSS_SECTION_COLOR_LOW}, ${CROSS_SECTION_COLOR_HIGH})` }}
+            />
+            <div className="flex justify-between px-0.5">
+              <span className="text-[9px] leading-none text-slate-400">
+                {crossSectionMin.toFixed(0)} m
+              </span>
+              <span className="text-[9px] leading-none text-slate-400">
+                {crossSectionMax.toFixed(0)} m
+              </span>
+            </div>
+          </div>
+          <p className="text-[9px] leading-tight text-slate-400 dark:text-slate-500">
+            {crossSectionMetricLabel}
+          </p>
+        </div>
+      )}
+
+      {showCrossSection && showForecast && (
         <div className="h-px bg-slate-200 dark:bg-slate-700" />
       )}
 

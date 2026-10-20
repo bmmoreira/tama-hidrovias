@@ -32,7 +32,8 @@ import LayersDrawer, {
   type BasinFeatureProperties,
 } from '@/components/maps/LayersDrawer';
 import { useMockRainHeatmap } from '@/components/maps/useMockRainHeatmap';
-import type { CrossSectionFeature } from '@/components/maps/crossSectionClusterLayer';
+import { CROSS_SECTION_DEFAULT_METRIC } from '@/components/maps/crossSectionClusterLayer';
+import type { CrossSectionFeature, CrossSectionMetric } from '@/components/maps/crossSectionClusterLayer';
 
 const geojsonFetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -108,6 +109,9 @@ export default function MapPage() {
   const filteredBasinFeatures = filterBasinFeatures(basinFeaturesWithRain, layersFilter);
 
   const [swotFilter, setSwotFilter] = useState<SwotGaugeFilter>(DEFAULT_SWOT_FILTER);
+  const [crossSectionMetric, setCrossSectionMetric] = useState<CrossSectionMetric>(
+    CROSS_SECTION_DEFAULT_METRIC,
+  );
   // Spatial filter modes ("near rivers" / "inside basins") match against
   // whichever rivers/basins are currently visible in the Camadas drawer.
   // Memoized since the spatial checks are heavier than the other filters.
@@ -181,19 +185,22 @@ export default function MapPage() {
             riverFeatures={filteredRiverFeatures}
             basinFeatures={filteredBasinFeatures}
             crossSectionFeatures={crossSectionFeatures}
+            crossSectionMetric={crossSectionMetric}
           >
             <StationExplorerOverlay controller={stationExplorer} />
             <ForecastLegend
               overlay={forecastOverlay}
               drawerOpen={forecastDrawerOpen}
               hasSwotGauges={swotGaugeFeatures.length > 0}
+              crossSectionFeatures={crossSectionFeatures}
+              crossSectionMetric={crossSectionMetric}
             />
             <ForecastDrawer
               onTileLayerChange={setForecastOverlay}
               onOpenChange={setForecastDrawerOpen}
               appSettings={appSettings}
             />
-            {swotGaugeFeatures.length > 0 && (
+            {(swotGaugeFeatures.length > 0 || crossSectionFeatures.length > 0) && (
               <SwotFilterDrawer
                 features={swotGaugeFeatures}
                 filter={swotFilter}
@@ -202,6 +209,9 @@ export default function MapPage() {
                 forecastDrawerOpen={forecastDrawerOpen}
                 riverFeatures={filteredRiverFeatures}
                 basinFeatures={filteredBasinFeatures}
+                hasCrossSection={crossSectionFeatures.length > 0}
+                crossSectionMetric={crossSectionMetric}
+                onCrossSectionMetricChange={setCrossSectionMetric}
               />
             )}
             {(riverFeatures.length > 0 || basinFeatures.length > 0) && (

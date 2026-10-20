@@ -20,8 +20,9 @@ import {
   addCrossSectionLayers,
   attachCrossSectionLayerInteractions,
   updateCrossSectionLayerData,
+  CROSS_SECTION_DEFAULT_METRIC,
 } from '@/components/maps/crossSectionClusterLayer';
-import type { CrossSectionFeature } from '@/components/maps/crossSectionClusterLayer';
+import type { CrossSectionFeature, CrossSectionMetric } from '@/components/maps/crossSectionClusterLayer';
 import CrossSectionModal from '@/components/maps/CrossSectionModal';
 
 export interface ViewState {
@@ -61,6 +62,8 @@ export interface MapboxMapProps {
   basinFeatures?: BasinFeature[];
   /** River cross-section (transversal section) points, see crossSectionClusterLayer.ts. */
   crossSectionFeatures?: CrossSectionFeature[];
+  /** Which precomputed property drives cross-section circle color/label — see SwotFilterDrawer. */
+  crossSectionMetric?: CrossSectionMetric;
   children?: ReactNode;
 }
 
@@ -102,6 +105,7 @@ export default function MapboxMap({
   riverFeatures = [],
   basinFeatures = [],
   crossSectionFeatures = [],
+  crossSectionMetric = CROSS_SECTION_DEFAULT_METRIC,
   children,
 }: MapboxMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -348,13 +352,14 @@ export default function MapboxMap({
     updateStationLayerData(map, stations);
   }, [stations, mapLoaded]);
 
-  // Update cross-section points when the source data changes.
+  // Update cross-section points when the source data OR the selected
+  // metric changes -- both affect the unclustered circles' color/label.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapLoaded) return;
 
-    updateCrossSectionLayerData(map, crossSectionFeatures);
-  }, [crossSectionFeatures, mapLoaded]);
+    updateCrossSectionLayerData(map, crossSectionFeatures, crossSectionMetric);
+  }, [crossSectionFeatures, crossSectionMetric, mapLoaded]);
 
   // Update rivers GeoJSON when the layers drawer selection changes.
   useEffect(() => {

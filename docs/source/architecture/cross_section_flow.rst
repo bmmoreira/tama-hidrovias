@@ -19,8 +19,10 @@ under ``web/public/geojson/``, the same convention already used for
   file for every river**, not one per river -- see `Adding Another
   River`_ below. Each feature's properties carry ``sword_node_id``,
   ``sword_reach_id``, ``sword_width``, ``sword_dist_out``, a ``file``
-  name, and ``water_level`` -- the station's measured water-surface
-  elevation, in meters.
+  name, ``water_level`` (the station's measured water-surface
+  elevation, in meters), and the precomputed ``cota_leito_maxima``/
+  ``cota_leito_media`` pair used for the map marker's own color/label
+  -- see `Circle Styling: Size, Color, and the Metric Selector`_.
 - ``secoes_transversais/<file>`` -- one profile per point, from either
   river, in the same flat directory: two tab-separated columns, no
   header (distance along the section in meters, then the elevation in
@@ -47,14 +49,19 @@ another river, check for the same two gotchas the Tapajós merge hit:
 
 - **Property schema.** A fresh SWORD export tends to carry the *entire*
   raw join (``sword_x``, ``sword_wse``, ``sword_facc``, ``fid``, and
-  two to three dozen more) rather than the clean 6-property shape
+  two to three dozen more) rather than the clean shape
   ``CrossSectionFeatureProperties`` expects. Normalize down to exactly
   ``sword_node_id``, ``sword_reach_id``, ``sword_width``,
   ``sword_dist_out``, ``file``, ``water_level`` before merging --
   Tapajós's raw export didn't even have a ``file`` field, which was
   derived as ``f"{int(sword_node_id)}_{int(sword_dist_out)}.txt"``
   (confirmed against the actual ``.txt`` filenames already present, not
-  assumed from the naming description alone).
+  assumed from the naming description alone). Afterward, re-run
+  ``scripts/compute_cross_section_stats.py`` -- it fills in
+  ``cota_leito_maxima``/``cota_leito_media`` for every point
+  (idempotent, so it's safe to just always re-run after any point or
+  profile change) and prints which ``file`` references, if any,
+  couldn't be resolved to a real profile instead of failing silently.
 - **Coordinate reference system.** GeoJSON's own spec assumes WGS84
   lon/lat, and Mapbox GL renders it that way unconditionally -- but a
   raw raster-processing export is frequently still in whatever
@@ -114,12 +121,17 @@ Updating the Data
 2. Copy the same files into ``web/public/geojson/`` (this is a manual
    sync step, not an automated build step -- see `Data`_ above for why
    the two copies exist).
-3. If the point count or any ``CrossSectionFeatureProperties`` field
+3. Run ``pipeline/venv/bin/python scripts/compute_cross_section_stats.py``
+   to (re)fill ``cota_leito_maxima``/``cota_leito_media`` on every point
+   in both copies -- the map marker styling described in `Circle
+   Styling: Size, Color, and the Metric Selector`_ depends on these
+   being present and up to date with whatever profile data is current.
+4. If the point count or any ``CrossSectionFeatureProperties`` field
    changed shape, update the type in ``crossSectionClusterLayer.ts`` to
    match, and grep the codebase for any now-removed field (this
    happened when a prior data revision dropped ``fid`` and added
    ``water_level`` -- see the changelog entry for that swap).
-4. Run ``npx tsc --noEmit`` in ``web/``, then manually verify in a
+5. Run ``npx tsc --noEmit`` in ``web/``, then manually verify in a
    browser: the layer still clusters, a popup opens with sane values,
    and the profile chart renders correctly for a station with terrain
    both above and below its water line (the most informative case to
@@ -393,3 +405,110 @@ as a DOM element you could separately show/hide with Tailwind's
 responsive classes -- the chart has to actually be told not to render it
 at all, which means a render-time boolean, which means knowing the
 viewport width in JS.
+
+Circle Styling: Size, Color, and the Metric Selector
+-------------------------------------------------------
+
+Individual (unclustered) cross-section points on the map aren't plain
+dots -- each is a colored circle with a value label on top, both driven
+by one of two precomputed, per-point metrics the visitor can switch
+between live. Cluster circles are unaffected by any of this: they still
+just show a point count via Mapbox's native ``step`` color/radius
+expressions on ``point_count``, same as before (see the `Data`_ section
+above's own note on why no per-cluster aggregate is computed here, same
+reasoning as station clusters).
+
+Precomputed metrics, not runtime aggregation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The two selectable metrics -- ``cota_leito_maxima`` (max bed elevation)
+and ``cota_leito_media`` (mean) -- are properties baked onto every
+feature in ``output_points_water_level.geojson`` by
+``scripts/compute_cross_section_stats.py``, **not** computed in the
+browser. This has to happen ahead of time: computing either value
+means reading a point's full ``secoes_transversais/<file>`` profile, and
+``CrossSectionModal`` deliberately only fetches one profile at a time,
+lazily, when its own modal opens (see `Endpoints and Backend`_) --
+fetching all ~500 profile files just to color map markers would defeat
+that design entirely. The script is idempotent and documented in
+`Updating the Data`_ above; it needs re-running any time point or
+profile data changes.
+
+Color ramp: a data-driven Mapbox expression, not per-feature JS
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Unlike ``swotGaugeClusterLayer.ts`` (which bakes a computed color onto
+each feature in JS before pushing it into the source, because its
+cluster aggregates need an exact median that Mapbox's own clustering
+can't compute), cross-section clusters don't need a value at all --
+only individual points do, and Mapbox's native ``cluster: true`` source
+already keeps every unclustered feature's raw properties intact. That
+means the color can be a plain Mapbox ``interpolate`` style expression
+evaluated directly against ``['get', metric]``, with no per-feature
+JS computation required:
+
+.. code-block:: ts
+
+   ['interpolate', ['linear'], ['get', metric], min, COLOR_LOW, max, COLOR_HIGH]
+
+``min``/``max`` are the selected metric's actual range across whatever
+features are currently loaded (not a fixed domain -- Madeira and
+Tapajós have very different elevation ranges, so a shared hardcoded
+scale would wash one of them out; see `Adding Another River`_). Both
+the color expression and the value-label text layer are rebuilt via
+``map.setPaintProperty``/``setLayoutProperty`` inside
+``updateCrossSectionLayerData`` every time the data *or* the selected
+metric changes -- the function takes ``metric`` as a parameter precisely
+so ``MapboxMap.tsx`` can re-run it from a single ``useEffect`` keyed on
+both dependencies, rather than needing two different update paths.
+
+Color defaults to the exact same green ``ForecastLegend.tsx`` already
+uses for the SWOT gauge legend's positive-value ramp (``#bbf7d0`` →
+``#15803d``) -- reused as-is, not reinvented, since "cota do leito" is a
+plain, non-diverging elevation with no natural negative pole to ramp
+toward SWOT's red the way a water-level anomaly has. Both stops, the
+circle's radius, and the default metric are all tunable via
+``.env`` (``NEXT_PUBLIC_CROSS_SECTION_COLOR_LOW``/``_HIGH``,
+``NEXT_PUBLIC_CROSS_SECTION_CIRCLE_RADIUS``,
+``NEXT_PUBLIC_CROSS_SECTION_DEFAULT_METRIC``).
+
+The metric selector
+~~~~~~~~~~~~~~~~~~~~~
+
+The segmented "Cota do leito máxima / média" control lives in the
+**Filtros** drawer (``SwotFilterDrawer.tsx``, despite the name -- see
+below), mirroring the exact visual pattern of that same component's own
+(currently feature-flagged off) SWOT metric selector: a small grid of
+toggle buttons, the active one highlighted. Two differences from the
+SWOT version are deliberate:
+
+- It's **always visible** when any cross-section data is loaded, not
+  gated behind an env flag the way ``SWOT_METRIC_SELECTOR_ENABLED``
+  gates SWOT's -- this was a directly requested, finished feature, not
+  an experimental one.
+- It renders **outside** the ``opacity-40``-when-hidden wrapper that
+  contains all the SWOT-specific filter controls, since cross-section
+  circle styling has nothing to do with the "Exibir estações no mapa"
+  (SWOT visibility) toggle and shouldn't dim along with it.
+
+Putting a cross-section control inside a component literally named
+``SwotFilterDrawer`` needed one real fix, not just a new section: that
+component had a ``if (totalCount === 0) return null`` guard where
+``totalCount`` only ever counted SWOT features -- on a map with
+cross-section data but zero SWOT gauges, the whole drawer (and the
+Filtros button that opens it) would have silently never rendered at
+all. The guard now also checks a new ``hasCrossSection`` prop before
+bailing out.
+
+Legend
+~~~~~~~
+
+``ForecastLegend.tsx`` grew a third optional section (next to its
+existing SWOT and forecast-colormap ones), shown whenever
+``crossSectionFeatures`` is non-empty: the same two-stop gradient bar
+style as the SWOT rows, labeled with the selected metric's actual
+min/max (computed the same way the color expression's domain is, from
+the currently loaded features) and its display name. All three legend
+sections can coexist; the component's divider logic accounts for every
+combination of which sections are present, not just the original
+SWOT/forecast pair.
