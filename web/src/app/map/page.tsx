@@ -117,6 +117,10 @@ export default function MapPage() {
   // (not inside either component) since the trigger and the map that acts
   // on it are siblings, same reasoning as forecastOverlay/swotFilter below.
   const [flythroughRequestId, setFlythroughRequestId] = useState<number>();
+  // Separate trigger for the Madeira flythrough demo (real PostGIS depth
+  // data) -- a distinct proof/demo from the Tapajós one above, not a mode
+  // switch on the same trigger.
+  const [madeiraFlythroughRequestId, setMadeiraFlythroughRequestId] = useState<number>();
   // Spatial filter modes ("near rivers" / "inside basins") match against
   // whichever rivers/basins are currently visible in the Camadas drawer.
   // Memoized since the spatial checks are heavier than the other filters.
@@ -192,6 +196,7 @@ export default function MapPage() {
             crossSectionFeatures={crossSectionFeatures}
             crossSectionMetric={crossSectionMetric}
             flythroughRequestId={flythroughRequestId}
+            madeiraFlythroughRequestId={madeiraFlythroughRequestId}
           >
             <StationExplorerOverlay controller={stationExplorer} />
             <ForecastLegend
@@ -206,6 +211,7 @@ export default function MapPage() {
               onOpenChange={setForecastDrawerOpen}
               appSettings={appSettings}
               onStartFlythrough={() => setFlythroughRequestId(Date.now())}
+              onStartMadeiraFlythrough={() => setMadeiraFlythroughRequestId(Date.now())}
             />
             {(swotGaugeFeatures.length > 0 || crossSectionFeatures.length > 0) && (
               <SwotFilterDrawer

@@ -28,8 +28,12 @@ import {
 } from '@/components/maps/crossSectionClusterLayer';
 import type { CrossSectionFeature, CrossSectionMetric } from '@/components/maps/crossSectionClusterLayer';
 import CrossSectionModal from '@/components/maps/CrossSectionModal';
-import { buildTapajosPath, startRiverFlythrough } from '@/components/maps/riverFlythrough';
-import { addRiverDepthWireframe } from '@/components/maps/riverFlythroughTerrain';
+import { buildTapajosPath, buildMadeiraPath, startRiverFlythrough } from '@/components/maps/riverFlythrough';
+import {
+  addRiverDepthWireframe,
+  fetchDepthChunkFromRaster,
+  fetchDepthChunkFromPoints,
+} from '@/components/maps/riverFlythroughTerrain';
 
 export interface ViewState {
   longitude: number;
@@ -75,6 +79,11 @@ export interface MapboxMapProps {
    *  Any new, distinct value starts a (new) flight; the value itself isn't
    *  otherwise meaningful. */
   flythroughRequestId?: number;
+  /** Same idea as `flythroughRequestId`, for the separate Madeira flythrough
+   *  demo (real PostGIS depth data, see riverFlythroughTerrain.ts's
+   *  `fetchDepthChunkFromPoints`) -- a distinct trigger/river, not a mode
+   *  switch on the same one, per the "new separated proof/demo" this is. */
+  madeiraFlythroughRequestId?: number;
   children?: ReactNode;
 }
 
@@ -134,6 +143,7 @@ export default function MapboxMap({
   crossSectionFeatures = [],
   crossSectionMetric = CROSS_SECTION_DEFAULT_METRIC,
   flythroughRequestId,
+  madeiraFlythroughRequestId,
   children,
 }: MapboxMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -422,16 +432,19 @@ export default function MapboxMap({
     if (path.length > 0) {
       const [originLng, originLat] = path[0];
       const halfSpanDeg = 0.01;
-      addRiverDepthWireframe(map, 'river-depth-wireframe', {
-        slug: 'profundidade/TAPAJOS_BATHYMETRY_2023-12-05T00h00_wgs84',
-        bounds: [originLng - halfSpanDeg, originLat - halfSpanDeg, originLng + halfSpanDeg, originLat + halfSpanDeg],
-      })
-        .then((remove) => {
-          removeDepthWireframeRef.current = remove;
+      const bounds: [number, number, number, number] = [
+        originLng - halfSpanDeg,
+        originLat - halfSpanDeg,
+        originLng + halfSpanDeg,
+        originLat + halfSpanDeg,
+      ];
+      fetchDepthChunkFromRaster('profundidade/TAPAJOS_BATHYMETRY_2023-12-05T00h00_wgs84', bounds)
+        .then((chunk) => {
+          removeDepthWireframeRef.current = addRiverDepthWireframe(map, 'river-depth-wireframe', { chunk });
         })
         .catch((error) => {
           // eslint-disable-next-line no-console
-          console.error('[riverFlythroughTerrain] failed to add depth wireframe:', error);
+          console.error('[riverFlythroughTerrain] failed to add Tapajós depth wireframe:', error);
         });
     }
 
@@ -439,6 +452,55 @@ export default function MapboxMap({
     // intentionally not a dependency: the path is read once per trigger, not
     // kept in sync with live data changes mid-flight.
   }, [flythroughRequestId, mapLoaded]);
+
+  // Separate "new, separated proof/demo" flythrough for Madeira, which has
+  // real loaded PostGIS depth data (bathymetry_points) instead of a
+  // bathymetry GeoTIFF -- see fetchDepthChunkFromPoints's own comment for
+  // why that's actually the cheaper, more accurate data source where it's
+  // available. Shares cancelFlythroughRef/removeDepthWireframeRef with the
+  // Tapajós effect above (not separate refs) so starting either one
+  // cancels the other -- only one flight/wireframe should ever run at once,
+  // regardless of which button triggered it.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded || madeiraFlythroughRequestId == null) return;
+
+    cancelFlythroughRef.current?.();
+
+    const path = buildMadeiraPath(crossSectionFeatures);
+    cancelFlythroughRef.current = startRiverFlythrough(map, path, {
+      onComplete: () => {
+        cancelFlythroughRef.current = null;
+      },
+    });
+
+    removeDepthWireframeRef.current?.();
+    removeDepthWireframeRef.current = null;
+    if (path.length > 0) {
+      const [originLng, originLat] = path[0];
+      const halfSpanDeg = 0.015;
+      const bounds: [number, number, number, number] = [
+        originLng - halfSpanDeg,
+        originLat - halfSpanDeg,
+        originLng + halfSpanDeg,
+        originLat + halfSpanDeg,
+      ];
+      fetchDepthChunkFromPoints(bounds)
+        .then((chunk) => {
+          removeDepthWireframeRef.current = addRiverDepthWireframe(map, 'river-depth-wireframe', {
+            chunk,
+            color: '#f59e0b',
+          });
+        })
+        .catch((error) => {
+          // eslint-disable-next-line no-console
+          console.error('[riverFlythroughTerrain] failed to add Madeira depth wireframe:', error);
+        });
+    }
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- crossSectionFeatures
+    // intentionally not a dependency, same reasoning as the Tapajós effect.
+  }, [madeiraFlythroughRequestId, mapLoaded]);
 
   // Cancel an in-progress flythrough (and remove the depth wireframe layer)
   // on unmount, same reasoning as every other map.on listener's cleanup in

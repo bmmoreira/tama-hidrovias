@@ -1,12 +1,23 @@
 River Navigation Flythrough
 ==============================
 
-A simulated camera flight along the Tapajós river, as a demo/test of what
-a boat-navigation-style map experience could feel like: the camera flies
-from the river's first cross-section node (near its mouth) to its last
-(farthest upstream, node ``62241500070411``), tilted and zoomed close to
-the water like it's following the current, with the Tapajós bathymetry
-raster active underneath the whole flight.
+A simulated camera flight along a river, as a demo/test of what a
+boat-navigation-style map experience could feel like: the camera flies
+from a river's first cross-section node (near its mouth) to its last
+(farthest upstream), tilted and zoomed close to the water like it's
+following the current. There are two **separate** demos, not one
+feature with a river switch, triggered by two different buttons in the
+Camadas de Previsão drawer:
+
+- **Tapajós** (node ``62241500070411`` is its last node) -- flies with
+  the Tapajós bathymetry *raster* active underneath, and its riverbed
+  wireframe samples that GeoTIFF via TiTiler (see `3D riverbed wireframe
+  (prototype)`_).
+- **Madeira** -- no raster involved at all; its riverbed wireframe is
+  built directly from real, loaded PostGIS depth data
+  (``bathymetry_points``, see :doc:`bathymetry_depth_lookup`), which is
+  both cheaper to query and more accurate than resampling a raster (see
+  `Madeira flythrough: real PostGIS data, not a raster`_).
 
 Trigger
 --------
@@ -36,18 +47,29 @@ starts the flight whenever it changes to a new, defined value, cancelling
 any flight already in progress first so re-clicking the button restarts
 cleanly rather than running two animations at once.
 
+The Madeira demo's "Iniciar navegação pelo rio (Madeira)" button works the
+same way but simpler -- there's no forecast area/frame to activate first
+(Madeira has no bathymetry GeoTIFF), so ``startMadeiraFlythrough`` just
+closes the drawer and bumps a separate ``madeiraFlythroughRequestId``.
+Both requestId props share the *same* cancellation refs in ``MapboxMap``
+(``cancelFlythroughRef``/``removeDepthWireframeRef``), not one pair each --
+starting either demo cancels whichever one (if any) was already running,
+so only one flight/wireframe is ever active regardless of which button
+was clicked.
+
 The path
 ---------
 
-``riverFlythrough.ts``'s ``buildTapajosPath()`` filters the already-loaded
-``crossSectionFeatures`` (the same data driving the map's cross-section
-circles -- no separate fetch) down to Tapajós points by matching
-``sword_node_id`` against the ``622411``-``622415`` prefix range, the same
-convention used elsewhere (``scripts/load_bathymetry_parquet.py``, the
-cross-section merge). There's no dedicated "river" field on
+``riverFlythrough.ts``'s ``buildTapajosPath()``/``buildMadeiraPath()``
+filter the already-loaded ``crossSectionFeatures`` (the same data driving
+the map's cross-section circles -- no separate fetch) down to one river's
+points by matching ``sword_node_id`` against a prefix (``622411``-
+``622415`` for Tapajós, ``6226`` for Madeira), the same convention used
+elsewhere (``scripts/load_bathymetry_parquet.py``, the cross-section
+merge). There's no dedicated "river" field on
 ``CrossSectionFeatureProperties`` to filter on directly yet. Points are
 then sorted ascending by ``sword_dist_out`` (distance from the river
-outlet), so the path runs mouth → farthest upstream -- "first node to
+outlet), so each path runs mouth → farthest upstream -- "first node to
 last node," matching the request this implements.
 
 The camera
@@ -201,18 +223,107 @@ bathymetry raster underneath it without either clobbering the other,
 and correctly disappears once the camera has flown far enough away
 (expected, since it's one fixed chunk, not a camera-following one).
 
+Madeira flythrough: real PostGIS data, not a raster
+-------------------------------------------------------
+
+A second, separate demo/test, triggered by its own "Iniciar navegação
+pelo rio (Madeira)" button (amber-themed in the drawer, to visually
+distinguish it from the Tapajós one's cyan) -- same camera mechanism
+(``startRiverFlythrough``, just given ``buildMadeiraPath()``'s path
+instead), but the riverbed wireframe's data source is entirely
+different, and was requested specifically because Madeira already has
+real bathymetry data loaded in Postgres (:doc:`bathymetry_depth_lookup`),
+not just a rendered GeoTIFF.
+
+One indexed query instead of a raster crop + decode
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``GET /api/bathymetry/point-grid?bbox=&date=`` (``fetchDepthChunkFromPoints``
+in ``riverFlythroughTerrain.ts``) replaces the Tapajós path's TiTiler
+crop + ``geotiff`` decode with a single query against
+``bathymetry_points``:
+
+.. code-block:: text
+
+   SELECT cell_row, cell_col, depth_m,
+          ST_X(geom::geometry) AS lng, ST_Y(geom::geometry) AS lat
+   FROM bathymetry_points
+   WHERE reference_date = $1
+     AND geom && ST_MakeEnvelope($2, $3, $4, $5, 4326)::geography
+
+The ``&&`` bbox check uses the same ``bathymetry_points_geom_idx`` GiST
+index the depth-lookup endpoint's nearest-neighbor query relies on --
+confirmed via ``EXPLAIN ANALYZE`` to use a Bitmap Index Scan, a few
+milliseconds for a chunk-sized bbox even at 168k total rows. This is
+both cheaper (no network hop to TiTiler, no raster decode) and more
+accurate (the real measured value at each point, not one resampled
+through a reprojection) than the Tapajós path -- the data just has to
+actually be loaded in Postgres for a river for this to be an option at
+all, which is why this is Madeira-specific rather than replacing the
+Tapajós path.
+
+Why grid positions can't be interpolated from bounds here
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``buildWireframeGeometry`` (in ``riverFlythroughTerrain.ts``) originally
+computed each vertex's lng/lat by interpolating evenly across a chunk's
+``bounds`` -- correct for a TiTiler raster crop, which really is an
+evenly-spaced grid in lng/lat by construction (TiTiler reprojects and
+resamples to exactly the requested bbox). It is **not** correct for
+``bathymetry_points``: its ``cell_row``/``cell_col`` describe a grid
+that's regular in the *source UTM projection's* meters, not in lng/lat
+degrees, and a 700km-long, winding river accumulates real drift between
+those two (UTM grid north vs. true north -- the projection's convergence
+angle -- varies along the river's length). Reconstructing positions from
+``bounds`` alone would have quietly warped the mesh's shape, worse in
+some stretches than others, as a result.
+
+The fix: ``DepthChunk`` gained an optional ``lngLats`` field -- real,
+per-point coordinates, parallel to ``values`` -- which
+``fetchDepthChunkFromPoints`` always populates (straight from the SQL
+query's own ``ST_X``/``ST_Y``) and ``fetchDepthChunkFromRaster`` leaves
+unset (interpolating from ``bounds`` is still correct there).
+``buildWireframeGeometry`` prefers ``lngLats[i]`` when present, falling
+back to the bounds interpolation otherwise -- one function, correct for
+either data source, rather than two separate geometry builders.
+``cell_row``/``cell_col`` are still what decides which vertices are
+*adjacent* (i.e., which pairs get a wireframe line drawn between them) --
+that part of the original UTM grid's topology is still exactly right
+regardless of how it reprojects, only the vertex *positions* needed the
+fix.
+
+A real gap pattern, not a clipped rectangle
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Unlike a raster crop (always a filled rectangle), a bbox query against
+``bathymetry_points`` only returns points where the original hydraulic
+model actually had a river cell -- a bbox straddling the riverbank comes
+back with real, irregular gaps matching the channel's own shape. No
+special handling was needed for this: the existing nodata-as-``null``
+convention (a missing/``null`` depth skips the line segments touching
+that vertex, see ``buildWireframeGeometry``'s ``pushSegment``) already
+covers it, since a grid cell with no matching row in the query result
+is exactly as "missing" as a raster pixel with a ``0`` mask value.
+
+Verified visually via Playwright: the wireframe renders flat (not the
+Tapajós prototype's one-time rotation bug), amber-colored, following
+the Madeira channel's real, irregular shape (not a clean rectangle) near
+the flight's starting node, and the camera itself correctly flies along
+the real Rio Madeira (confirmed against on-map place labels passed
+during the flight) rather than Tapajós.
+
 Known limitations
 -------------------
 
 This is explicitly a demo/test of the concept, not a finished feature:
 
-- **Tapajós only, hardcoded.** The button, the path-building logic, and
-  the "PROFUNDIDADE" area gate are all specific to this one river. A
-  second river would need at minimum a way to pick which river's path to
-  fly (and ideally a real ``river`` field on cross-section features
-  instead of the node-id-prefix convention this and other code already
-  lean on).
-- **No visual progress indicator.** The flight can be started again
+- **Two rivers, both hardcoded, no river picker.** Tapajós and Madeira
+  are each a dedicated button/path/data-source wired by hand, not one
+  flexible "pick a river" feature. A third river would mean repeating
+  that wiring again (and ideally a real ``river`` field on cross-section
+  features instead of the node-id-prefix convention this and other code
+  already lean on).
+- **No visual progress indicator.** Either flight can be started again
   (restarting cleanly) but there's no on-screen "flying... 40%" state or
   a way to pause/stop it early beyond re-triggering or navigating away.
 - **No terrain/3D buildings.** The pitch tilt is real (confirmed by
@@ -220,12 +331,16 @@ This is explicitly a demo/test of the concept, not a finished feature:
   horizon once zoomed in or over open water, but the base map style has
   no elevation data, so the "flying over terrain" feel is mostly carried
   by the raster/water content in view, not true 3D relief.
-- **The riverbed wireframe is one static chunk, not a camera-following
-  one.** It's placed near the flight's starting node and stays there for
-  the whole flight -- proving the Three.js/Mapbox/TiTiler mechanics work
-  end to end, not yet the progressive, chunk-streaming version (fetch a
-  window of chunks ahead of the camera, dispose ones behind it) that a
-  real "3D riverbed the whole flight" feature would need.
-- **``slug``/``bounds`` are hardcoded to one known Tapajós bathymetry
-  frame and the flight's start node**, in ``MapboxMap.tsx``, not derived
-  from whatever frame ``ForecastDrawer`` actually has active.
+- **Both riverbed wireframes are one static chunk, not camera-following
+  ones.** Each is placed near its flight's starting node and stays there
+  for the whole flight -- proving the Three.js/Mapbox mechanics (and, for
+  Madeira, the PostGIS data path) work end to end, not yet the
+  progressive, chunk-streaming version (fetch a window of chunks ahead of
+  the camera, dispose ones behind it) that a real "3D riverbed the whole
+  flight" feature would need. Madeira's real, already-loaded point data
+  (see "Madeira flythrough" above) is the cheaper foundation to build
+  that streaming version on, if/when it happens.
+- **Tapajós's ``slug``/bounds, and Madeira's bounds, are hardcoded** to
+  one known bathymetry frame and each flight's start node, in
+  ``MapboxMap.tsx`` -- Tapajós's isn't derived from whatever frame
+  ``ForecastDrawer`` actually has active.

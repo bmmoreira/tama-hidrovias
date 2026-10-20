@@ -62,6 +62,11 @@ export interface ForecastDrawerProps {
    *  flythrough camera animation on the map (see riverFlythrough.ts). Only
    *  rendered when the "profundidade" (bathymetry) area has data. */
   onStartFlythrough?: () => void;
+  /** Separate "new, separated proof/demo" trigger for the Madeira
+   *  flythrough -- real PostGIS depth data (bathymetry_points), not a
+   *  bathymetry GeoTIFF, so this button isn't gated on any forecast-tiles
+   *  area having frames (Madeira has none) and is always shown. */
+  onStartMadeiraFlythrough?: () => void;
 }
 
 const fetcher = async (url: string) => {
@@ -200,6 +205,7 @@ export default function ForecastDrawer({
   onOpenChange,
   appSettings,
   onStartFlythrough,
+  onStartMadeiraFlythrough,
 }: ForecastDrawerProps) {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
@@ -451,6 +457,15 @@ export default function ForecastDrawer({
     onStartFlythrough?.();
   };
 
+  // Madeira has no bathymetry GeoTIFF to activate (its depth data lives in
+  // Postgres, not under assets/tiff/) -- so unlike startFlythrough above,
+  // there's no forecast area/frame to select first, just close the drawer
+  // and trigger the camera.
+  const startMadeiraFlythrough = () => {
+    setIsOpen(false);
+    onStartMadeiraFlythrough?.();
+  };
+
   return (
     <>
       {isOpen && (
@@ -626,6 +641,28 @@ export default function ForecastDrawer({
               </button>
             </section>
           )}
+
+          {/* Separate demo from the Tapajós one above -- real PostGIS depth
+              data (bathymetry_points), not a bathymetry GeoTIFF, so this
+              one isn't gated on any forecast-tiles area having frames. */}
+          <section className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-amber-700">
+              Navegação simulada (dados reais -- Madeira)
+            </p>
+            <p className="mt-1 text-xs text-amber-900/70">
+              Sobrevoa o rio Madeira com um recorte 3D da batimetria real
+              (PostGIS), não de uma imagem raster -- uma prova de conceito
+              separada da navegação do Tapajós acima.
+            </p>
+            <button
+              type="button"
+              onClick={startMadeiraFlythrough}
+              className="mt-3 inline-flex items-center gap-2 rounded-full bg-amber-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-amber-700"
+            >
+              <Ship className="h-4 w-4" />
+              <span>Iniciar navegação pelo rio (Madeira)</span>
+            </button>
+          </section>
 
           <section>
             <p className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">

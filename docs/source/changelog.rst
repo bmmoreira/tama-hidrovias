@@ -4,6 +4,30 @@ Changelog
 Upcoming
 --------
 
+Madeira river flythrough (separate demo, real PostGIS data)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Added a second, separate "Iniciar navegação pelo rio (Madeira)" demo
+  (amber-themed, next to the existing cyan Tapajós one) in the Camadas
+  de Previsão drawer -- same camera flight mechanism, but its riverbed
+  wireframe is built from real, already-loaded PostGIS depth data
+  (``bathymetry_points``) instead of a bathymetry GeoTIFF, since Madeira
+  has no such raster but does have real loaded point data.
+- New endpoint, ``GET /api/bathymetry/point-grid``, replaces the
+  Tapajós path's TiTiler-crop-and-``geotiff``-decode round trip with one
+  indexed Postgres query (``geom &&`` against the existing GiST index) --
+  cheaper, and returns real measured values instead of ones resampled
+  through a raster reprojection.
+- Fixed a real distortion risk this surfaced: the point source's grid is
+  regular in its *origin UTM projection's* meters, not in lng/lat
+  degrees, so interpolating vertex positions from a chunk's bounds (fine
+  for a TiTiler raster crop, which genuinely is lng/lat-regular) would
+  have quietly warped the mesh over a long, winding river. ``DepthChunk``
+  gained an optional ``lngLats`` field carrying real per-point
+  coordinates instead.
+- See ``architecture/river_flythrough.rst``'s "Madeira flythrough: real
+  PostGIS data, not a raster" section for the full mechanism.
+
 River navigation flythrough (Tapajós, test/demo)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

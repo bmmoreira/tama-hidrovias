@@ -20,6 +20,17 @@ export interface DepthChunk {
   bounds: [number, number, number, number];
   /** Row-major (row 0 = north edge, matching raster convention), null = nodata. */
   values: (number | null)[];
+  /**
+   * Real per-point [lng, lat], row-major, parallel to `values` -- optional
+   * because a TiTiler-resampled raster crop (`fetchDepthChunkFromRaster`)
+   * genuinely IS an evenly-spaced grid across `bounds` by construction, so
+   * vertex positions can be safely interpolated from `bounds` alone there.
+   * A point-source grid (`fetchDepthChunkFromPoints`) is regular in its
+   * *origin UTM projection's* meters, not in lng/lat degrees, and that
+   * drift compounds over a long, winding river -- so it carries real
+   * per-point coordinates instead of letting them be re-derived.
+   */
+  lngLats?: ([number, number] | null)[];
 }
 
 /**
@@ -27,9 +38,10 @@ export interface DepthChunk {
  * GeoTIFF via `/api/bathymetry/raster-grid` (which crops+decodes server-side
  * -- see that route) rather than fetching a whole raster or the rendered
  * PNG tiles the rest of the forecast system uses; a wireframe needs actual
- * numeric vertices, not pixel colors.
+ * numeric vertices, not pixel colors. Used for Tapajós, which only has a
+ * bathymetry GeoTIFF -- no point table loaded for it.
  */
-export async function fetchDepthChunk(
+export async function fetchDepthChunkFromRaster(
   slug: string,
   bounds: [number, number, number, number],
   size = 64,
@@ -44,6 +56,29 @@ export async function fetchDepthChunk(
     throw new Error(`Failed to fetch depth chunk: ${response.status}`);
   }
   const json = (await response.json()) as { data: DepthChunk };
+  return json.data;
+}
+
+/**
+ * Fetches a depth grid directly from `bathymetry_points` (real PostGIS data
+ * -- see /api/bathymetry/point-grid) for Madeira, which has a loaded point
+ * table instead of a bathymetry GeoTIFF. Cheaper than the raster path (one
+ * indexed Postgres query instead of a TiTiler crop + GeoTIFF decode) and
+ * uses real measured values rather than ones resampled through a raster
+ * reprojection -- see that route's own comment for the full reasoning.
+ */
+export async function fetchDepthChunkFromPoints(bounds: [number, number, number, number]): Promise<DepthChunk> {
+  const url = new URL('/api/bathymetry/point-grid', window.location.origin);
+  url.searchParams.set('bbox', bounds.join(','));
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch depth chunk: ${response.status}`);
+  }
+  const json = (await response.json()) as { data: DepthChunk | null };
+  if (!json.data) {
+    throw new Error('No bathymetry points found for this bounds.');
+  }
   return json.data;
 }
 
@@ -75,17 +110,23 @@ function buildWireframeGeometry(
   origin: [number, number],
   exaggeration: number,
 ): THREE.BufferGeometry {
-  const { width, height, bounds, values } = chunk;
+  const { width, height, bounds, values, lngLats } = chunk;
   const [minLng, minLat, maxLng, maxLat] = bounds;
 
   const positions: [number, number, number][] = new Array(width * height);
   for (let row = 0; row < height; row++) {
     for (let col = 0; col < width; col++) {
-      const lng = minLng + ((col + 0.5) / width) * (maxLng - minLng);
+      const index = row * width + col;
+      // Real per-point coordinates when the source provides them (a
+      // point-grid chunk), otherwise interpolated across bounds (a
+      // raster-crop chunk, genuinely regular in lng/lat by construction --
+      // see the DepthChunk.lngLats comment for why these aren't equivalent).
+      const realLngLat = lngLats?.[index];
+      const lng = realLngLat ? realLngLat[0] : minLng + ((col + 0.5) / width) * (maxLng - minLng);
       // Raster row 0 is the north edge.
-      const lat = maxLat - ((row + 0.5) / height) * (maxLat - minLat);
+      const lat = realLngLat ? realLngLat[1] : maxLat - ((row + 0.5) / height) * (maxLat - minLat);
       const [x, y] = metersFromOrigin(origin, [lng, lat]);
-      const depth = values[row * width + col];
+      const depth = values[index];
       // Below the water surface (negative Z), exaggerated for legibility --
       // real depths here (a few to ~20m) are imperceptible next to a
       // kilometers-wide chunk without this.
@@ -114,12 +155,11 @@ function buildWireframeGeometry(
 }
 
 export interface RiverDepthWireframeOptions {
-  /** Forecast-tiles slug for the bathymetry GeoTIFF, e.g.
-   *  "profundidade/TAPAJOS_BATHYMETRY_2023-12-05T00h00_wgs84". */
-  slug: string;
-  bounds: [number, number, number, number];
-  /** Grid resolution per side (clamped server-side to 128). */
-  size?: number;
+  /** Already-fetched grid -- from either `fetchDepthChunkFromRaster`
+   *  (Tapajós) or `fetchDepthChunkFromPoints` (Madeira). Fetching is the
+   *  caller's job, not this function's, specifically so the same rendering
+   *  code works for both data sources without caring which one it was. */
+  chunk: DepthChunk;
   /** Depth multiplier for visual legibility -- see buildWireframeGeometry. */
   exaggeration?: number;
   color?: string;
@@ -133,15 +173,15 @@ export interface RiverDepthWireframeOptions {
  * vertices into Mercator space, combined every frame with the matrix Mapbox
  * itself provides -- see the `render` callback below.
  */
-export async function addRiverDepthWireframe(
+export function addRiverDepthWireframe(
   map: mapboxgl.Map,
   layerId: string,
   options: RiverDepthWireframeOptions,
-): Promise<() => void> {
-  const { slug, bounds, size = 64, exaggeration = 12, color = '#22d3ee' } = options;
+): () => void {
+  const { chunk, exaggeration = 12, color = '#22d3ee' } = options;
+  const { bounds } = chunk;
 
   const origin: [number, number] = [(bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2];
-  const chunk = await fetchDepthChunk(slug, bounds, size);
   const geometry = buildWireframeGeometry(chunk, origin, exaggeration);
 
   const originMercator = mapboxgl.MercatorCoordinate.fromLngLat(origin, 0);

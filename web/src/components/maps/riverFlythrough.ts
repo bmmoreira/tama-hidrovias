@@ -75,6 +75,24 @@ export function buildTapajosPath(features: CrossSectionFeature[]): LngLat[] {
     .map((f) => f.geometry.coordinates as LngLat);
 }
 
+/** Same convention as `TAPAJOS_NODE_ID_PREFIXES` above, for Madeira -- every
+ *  Madeira node's `sword_node_id` starts with "6226". */
+const MADEIRA_NODE_ID_PREFIX = '6226';
+
+/**
+ * Builds an ordered Madeira path (river mouth → farthest upstream node),
+ * same reasoning as `buildTapajosPath` above. Madeira is the river
+ * `bathymetry_points` actually has real loaded depth data for (Tapajós only
+ * has the two bathymetry GeoTIFFs) -- see the Madeira flythrough demo in
+ * ForecastDrawer and `fetchDepthChunkFromPoints` in riverFlythroughTerrain.ts.
+ */
+export function buildMadeiraPath(features: CrossSectionFeature[]): LngLat[] {
+  return features
+    .filter((f) => String(f.properties.sword_node_id).startsWith(MADEIRA_NODE_ID_PREFIX))
+    .sort((a, b) => a.properties.sword_dist_out - b.properties.sword_dist_out)
+    .map((f) => f.geometry.coordinates as LngLat);
+}
+
 interface PathTable {
   points: LngLat[];
   /** Cumulative distance (m) from points[0] to points[i], same length as points. */
