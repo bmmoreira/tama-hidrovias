@@ -4,6 +4,27 @@ Changelog
 Upcoming
 --------
 
+Madeira flythrough: full independent tuning (camera + streaming)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Madeira's pitch and zoom ("height") are now independently tunable
+  (``NEXT_PUBLIC_MADEIRA_FLYTHROUGH_PITCH``/``_ZOOM``), separate from
+  Tapajós's, same reasoning as its already-separate duration.
+- The wireframe streamer's own parameters are now ``.env``-tunable too:
+  ``NEXT_PUBLIC_MADEIRA_WIREFRAME_EXAGGERATION``, ``_COLOR``,
+  ``_CHUNK_SPAN_DEG``, ``_STEP_DISTANCE_M``, and ``_MAX_CHUNKS`` --
+  previously hardcoded defaults inside ``createDepthWireframeStreamer``.
+- Documented how these interact: flight duration sets how much
+  wall-clock time each chunk's fetch has to land before the camera
+  reaches the point it was requested for, so a mesh that visibly lags
+  behind the camera is usually a duration problem, not a streaming-
+  parameter one -- raising ``NEXT_PUBLIC_MADEIRA_FLYTHROUGH_DURATION_MS``
+  loosens every chunk's deadline at once, rather than changing how much
+  geometry is requested or shown.
+- See ``architecture/river_flythrough.rst``'s "Configuration: Madeira
+  has its own full set of knobs" section for the full table and the
+  duration/streaming interaction.
+
 Madeira flythrough: progressive wireframe streaming + its own pacing
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

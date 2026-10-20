@@ -33,12 +33,19 @@ import {
   buildMadeiraPath,
   startRiverFlythrough,
   MADEIRA_FLYTHROUGH_DURATION_MS,
+  MADEIRA_FLYTHROUGH_PITCH,
+  MADEIRA_FLYTHROUGH_ZOOM,
 } from '@/components/maps/riverFlythrough';
 import {
   addRiverDepthWireframe,
   fetchDepthChunkFromRaster,
   fetchDepthChunkFromPoints,
   createDepthWireframeStreamer,
+  MADEIRA_WIREFRAME_EXAGGERATION,
+  MADEIRA_WIREFRAME_COLOR,
+  MADEIRA_WIREFRAME_CHUNK_SPAN_DEG,
+  MADEIRA_WIREFRAME_STEP_DISTANCE_M,
+  MADEIRA_WIREFRAME_MAX_CHUNKS,
 } from '@/components/maps/riverFlythroughTerrain';
 
 export interface ViewState {
@@ -481,11 +488,18 @@ export default function MapboxMap({
     const path = buildMadeiraPath(crossSectionFeatures);
     const streamer = createDepthWireframeStreamer(map, 'madeira-depth-wireframe', {
       fetchChunk: fetchDepthChunkFromPoints,
+      chunkHalfSpanDeg: MADEIRA_WIREFRAME_CHUNK_SPAN_DEG,
+      stepDistanceM: MADEIRA_WIREFRAME_STEP_DISTANCE_M,
+      maxChunks: MADEIRA_WIREFRAME_MAX_CHUNKS,
+      exaggeration: MADEIRA_WIREFRAME_EXAGGERATION,
+      color: MADEIRA_WIREFRAME_COLOR,
     });
     removeDepthWireframeRef.current = streamer.dispose;
 
     cancelFlythroughRef.current = startRiverFlythrough(map, path, {
       durationMs: MADEIRA_FLYTHROUGH_DURATION_MS,
+      pitch: MADEIRA_FLYTHROUGH_PITCH,
+      zoom: MADEIRA_FLYTHROUGH_ZOOM,
       onProgress: ({ position, distanceM }) => streamer.onProgress(position, distanceM),
       onComplete: () => {
         cancelFlythroughRef.current = null;

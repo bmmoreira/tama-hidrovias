@@ -106,12 +106,14 @@ Driven by ``startRiverFlythrough(map, path, options)``:
   Without this, a user scrolling/dragging mid-flight would fight the
   forced camera updates every frame.
 
-Configuration
---------------
+Configuration (Tapajós)
+--------------------------
 
 Three ``.env`` variables, read as module-level constants in
 ``riverFlythrough.ts`` (same pattern as every other tunable layer
-setting in this codebase, e.g. ``NEXT_PUBLIC_CROSS_SECTION_CIRCLE_RADIUS``):
+setting in this codebase, e.g. ``NEXT_PUBLIC_CROSS_SECTION_CIRCLE_RADIUS``).
+Madeira has its own, larger set, covering wireframe streaming too --
+see `Configuration: Madeira has its own full set of knobs`_ below.
 
 .. list-table::
    :header-rows: 1
@@ -355,21 +357,65 @@ does its own throttling:
   deliberately simple for a first version (see "Known limitations"
   below for what real prefetching would add).
 
-Pacing: Madeira needed its own duration, not Tapajós's
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Configuration: Madeira has its own full set of knobs
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Both flights originally shared ``FLYTHROUGH_DURATION_MS``. Madeira's
-path (~1014km) is about 3.5x longer than Tapajós's (~292km), so the same
-total duration meant Madeira's camera moved roughly 3.5x faster -- this
-is what "going a little too fast" actually was, confirmed by computing
-both paths' real cumulative distance. Fixed with a separate
-``MADEIRA_FLYTHROUGH_DURATION_MS`` /
-``NEXT_PUBLIC_MADEIRA_FLYTHROUGH_DURATION_MS`` (default 150 seconds,
-versus Tapajós's 45) -- a deliberately independent pacing knob rather
-than deriving one duration from the other's speed, since literally
-matching speeds would stretch Madeira's flight to several minutes,
-which may not suit every use of this demo either.
+Both flights originally shared ``FLYTHROUGH_PITCH``/``_ZOOM``/
+``_DURATION_MS``. Madeira's path (~1014km) is about 3.5x longer than
+Tapajós's (~292km), so the same total duration meant Madeira's camera
+moved roughly 3.5x faster -- this is what "going a little too fast"
+actually was, confirmed by computing both paths' real cumulative
+distance. Rather than deriving Madeira's pacing from Tapajós's (which
+would, among other things, stretch a literally speed-matched Madeira
+flight to several minutes), Madeira got its own complete, independent
+set of ``.env`` knobs -- camera *and* wireframe streaming together,
+since they interact directly (see below):
 
+.. list-table::
+   :header-rows: 1
+   :widths: 46 34 20
+
+   * - Variable
+     - Meaning
+     - Default
+   * - ``NEXT_PUBLIC_MADEIRA_FLYTHROUGH_PITCH``
+     - Camera tilt, degrees
+     - ``65``
+   * - ``NEXT_PUBLIC_MADEIRA_FLYTHROUGH_ZOOM``
+     - "Height" above the river
+     - ``13.5``
+   * - ``NEXT_PUBLIC_MADEIRA_FLYTHROUGH_DURATION_MS``
+     - Total time, ms, to fly the whole Madeira reach
+     - ``150000``
+   * - ``NEXT_PUBLIC_MADEIRA_WIREFRAME_EXAGGERATION``
+     - Depth multiplier for visual legibility
+     - ``12``
+   * - ``NEXT_PUBLIC_MADEIRA_WIREFRAME_COLOR``
+     - Wireframe line color
+     - ``#f59e0b``
+   * - ``NEXT_PUBLIC_MADEIRA_WIREFRAME_CHUNK_SPAN_DEG``
+     - Half-width (degrees) of each streamed chunk
+     - ``0.015``
+   * - ``NEXT_PUBLIC_MADEIRA_WIREFRAME_STEP_DISTANCE_M``
+     - Meters the camera travels before the next chunk fetches
+     - ``2000``
+   * - ``NEXT_PUBLIC_MADEIRA_WIREFRAME_MAX_CHUNKS``
+     - How many chunks stay loaded at once (sliding window)
+     - ``4``
+
+Duration and the four streaming variables are coupled, not independent
+dials: ``stepDistanceM`` divided by how fast the camera is actually
+moving (which is itself ``totalDistanceM / durationMs``) is how much
+wall-clock time each chunk's fetch has to land before the camera
+reaches the point it was fetched for. Shrinking ``durationMs`` (faster
+flight) or ``stepDistanceM`` (more frequent fetches) both reduce that
+slack; if the mesh starts visibly lagging behind the camera, raising
+``durationMs`` is usually the simplest fix, since it loosens every
+chunk's deadline at once rather than changing how much geometry is
+requested or shown. ``maxChunks`` is the separate memory/GPU-bound
+knob -- it doesn't affect timing, only how much of the already-streamed
+wireframe stays visible behind the camera before the oldest is disposed
+(see "Progressive chunk streaming" above for that disposal mechanism).
 Known limitations
 -------------------
 

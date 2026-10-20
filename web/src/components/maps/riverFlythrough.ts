@@ -11,12 +11,16 @@ import type { CrossSectionFeature } from './crossSectionClusterLayer';
  * for the full design writeup.
  */
 
-/** Camera tilt, in degrees (0 = straight down, close to 85 = near-horizon). */
+/** Camera tilt, in degrees (0 = straight down, close to 85 = near-horizon).
+ *  Tapajós's own knob -- see `MADEIRA_FLYTHROUGH_PITCH` below for Madeira's
+ *  separate one; the two flights are tuned independently, same reasoning
+ *  as their separate durations. */
 export const FLYTHROUGH_PITCH = Number(process.env.NEXT_PUBLIC_FLYTHROUGH_PITCH) || 65;
 
 /** "Height" above the river -- a Mapbox zoom level, not a real altitude
  *  (Mapbox has no true 3D camera height for a 2D vector/raster style);
- *  higher is lower/closer to the water. */
+ *  higher is lower/closer to the water. Tapajós's own knob, see
+ *  `MADEIRA_FLYTHROUGH_ZOOM` below. */
 export const FLYTHROUGH_ZOOM = Number(process.env.NEXT_PUBLIC_FLYTHROUGH_ZOOM) || 13.5;
 
 /** Total time, in ms, to fly the entire path from end to end -- NOT per
@@ -37,6 +41,15 @@ export const FLYTHROUGH_DURATION_MS = Number(process.env.NEXT_PUBLIC_FLYTHROUGH_
  *  either -- this is a independent pacing knob, not a physics simulation. */
 export const MADEIRA_FLYTHROUGH_DURATION_MS =
   Number(process.env.NEXT_PUBLIC_MADEIRA_FLYTHROUGH_DURATION_MS) || 150000;
+
+/** Madeira's own pitch/zoom, independent of Tapajós's -- same "each flight
+ *  is a separately tuned experience, not one feature with shared defaults"
+ *  reasoning as the duration split above. Defaults match Tapajós's for now
+ *  (nothing about Madeira's geometry demands a different starting point),
+ *  but are free to diverge via their own env vars without touching
+ *  Tapajós's. */
+export const MADEIRA_FLYTHROUGH_PITCH = Number(process.env.NEXT_PUBLIC_MADEIRA_FLYTHROUGH_PITCH) || 65;
+export const MADEIRA_FLYTHROUGH_ZOOM = Number(process.env.NEXT_PUBLIC_MADEIRA_FLYTHROUGH_ZOOM) || 13.5;
 
 type LngLat = [number, number];
 

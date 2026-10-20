@@ -13,6 +13,34 @@ import * as THREE from 'three';
  * once, at a fixed location, when the flight starts, and stays there.
  */
 
+/**
+ * Madeira wireframe/streaming tuning -- all independently adjustable via
+ * .env, same "separately tuned experience" reasoning as
+ * MADEIRA_FLYTHROUGH_DURATION_MS/_PITCH/_ZOOM in riverFlythrough.ts.
+ * Duration and these interact directly: a shorter flight duration means
+ * the camera crosses `stepDistanceM` faster in wall-clock time, leaving
+ * less time for each chunk's fetch to land before it's needed -- slowing
+ * the flight down (or increasing the step/chunk size so fewer fetches are
+ * needed) is how to trade "more detail" against "keeps up smoothly."
+ */
+export const MADEIRA_WIREFRAME_EXAGGERATION =
+  Number(process.env.NEXT_PUBLIC_MADEIRA_WIREFRAME_EXAGGERATION) || 12;
+export const MADEIRA_WIREFRAME_COLOR = process.env.NEXT_PUBLIC_MADEIRA_WIREFRAME_COLOR || '#f59e0b';
+/** Half-width, degrees, of each streamed chunk -- see
+ *  `DepthWireframeStreamerOptions.chunkHalfSpanDeg` below. */
+export const MADEIRA_WIREFRAME_CHUNK_SPAN_DEG =
+  Number(process.env.NEXT_PUBLIC_MADEIRA_WIREFRAME_CHUNK_SPAN_DEG) || 0.015;
+/** Meters the camera must travel before the next chunk fetches -- see
+ *  `DepthWireframeStreamerOptions.stepDistanceM` below. Smaller means more
+ *  frequent (smaller, cheaper-per-request) fetches; larger means fewer,
+ *  larger steps with more slack before the next one is needed. */
+export const MADEIRA_WIREFRAME_STEP_DISTANCE_M =
+  Number(process.env.NEXT_PUBLIC_MADEIRA_WIREFRAME_STEP_DISTANCE_M) || 2000;
+/** How many chunks stay loaded at once -- see
+ *  `DepthWireframeStreamerOptions.maxChunks` below. */
+export const MADEIRA_WIREFRAME_MAX_CHUNKS =
+  Number(process.env.NEXT_PUBLIC_MADEIRA_WIREFRAME_MAX_CHUNKS) || 4;
+
 export interface DepthChunk {
   width: number;
   height: number;
