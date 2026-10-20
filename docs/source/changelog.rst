@@ -4,6 +4,27 @@ Changelog
 Upcoming
 --------
 
+Bathymetry depth lookup (PostGIS)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Added PostGIS to the ``postgres`` service (swapped to
+  ``postgis/postgis:15-3.4-alpine``, safe on the existing data volume --
+  same Postgres 15 underneath) and a new ``bathymetry_points`` table,
+  loaded from a HEC-RAS-style depth-grid parquet export via a new script,
+  ``scripts/load_bathymetry_parquet.py`` (168,277 points for the one
+  Madeira snapshot loaded so far: 2022-10-01).
+- Added ``GET /api/bathymetry/depth?lng=&lat=``, a new Next.js route
+  querying Postgres directly (no Strapi content type) for the nearest
+  loaded point to a clicked coordinate, via a single indexed PostGIS
+  nearest-neighbor query. Returns ``{ data: null }`` for a coordinate
+  more than 150m from any loaded point, rather than an error.
+- The query's ``reference_date`` filter is **temporarily hardcoded** to
+  the one snapshot currently loaded, regardless of which forecast
+  GeoTIFF frame is selected in the Camadas de Previsão drawer -- there's
+  no frame→date matching wired up yet. See
+  ``architecture/bathymetry_depth_lookup.rst`` for the full load
+  pipeline, schema, and what real frame matching would need.
+
 Cross-section circle styling: size, color, and a metric selector
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

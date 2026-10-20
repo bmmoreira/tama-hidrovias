@@ -1,10 +1,18 @@
 services:
   postgres:
-    image: postgres:15-alpine
+    image: postgis/postgis:15-3.4-alpine
     environment:
       POSTGRES_DB: tama_hidrovias
       POSTGRES_USER: strapi
       POSTGRES_PASSWORD: strapi_password
+    # Dev-only: publishes Postgres on the host so one-off scripts run
+    # straight from the host (e.g. scripts/load_bathymetry_parquet.py via
+    # pipeline/venv) can reach it at localhost -- the `postgres` hostname
+    # DATABASE_HOST uses only resolves from inside the Docker network.
+    # Overridable the same way STRAPI_HOST_PORT/PGADMIN_HOST_PORT are, in
+    # case 5432 is already taken on the host.
+    ports:
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

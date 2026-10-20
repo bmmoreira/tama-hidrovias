@@ -1,6 +1,13 @@
 services:
   postgres:
-    image: postgres:15-alpine
+    # PostGIS-enabled image (same Postgres 15 underneath, just with the
+    # postgis extension's binaries available) -- needed for bathymetry_points
+    # (see scripts/load_bathymetry_parquet.py). Swapping this image is safe
+    # on an existing data volume: it doesn't touch stored table data, it only
+    # makes `CREATE EXTENSION postgis` possible, which the load script runs
+    # itself rather than relying on a docker-entrypoint-initdb.d script (those
+    # only run once, on a brand new empty volume).
+    image: postgis/postgis:15-3.4-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: tama_hidrovias

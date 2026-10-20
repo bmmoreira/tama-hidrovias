@@ -163,8 +163,31 @@ Updating this data means replacing the files under
 or migration involved. This flow is documented in more detail in
 ``architecture/cross_section_flow.rst``.
 
-Python package layout
----------------------
+Bathymetry Depth Lookup Endpoint
+----------------------------------
+
+Given a map coordinate, returns the real measured river depth nearest to
+it from a loaded hydraulic-model snapshot -- unlike every other endpoint
+on this page, this one talks to Postgres/PostGIS directly, with **no
+Strapi content type involved at all**.
+
+Runtime shape:
+
+- Next.js route: ``GET /api/bathymetry/depth?lng=<lng>&lat=<lat>``
+- Postgres table: ``bathymetry_points`` (PostGIS ``geography(Point,
+  4326)``, loaded by ``scripts/load_bathymetry_parquet.py``)
+
+The route (``web/src/app/api/bathymetry/depth/route.ts``) runs a single
+indexed nearest-neighbor query (PostGIS's ``<->`` KNN operator against a
+GiST index) and returns ``{ data: null }`` if the nearest point is more
+than 150m away -- meaning the clicked coordinate is outside the modeled
+river extent, not an error. The query is currently **hardcoded** to one
+fixed ``reference_date`` regardless of which forecast GeoTIFF frame is
+selected in the Camadas de Previsão drawer, since there's no mapping yet
+from "which frame is active" to "which bathymetry snapshot to query" --
+see the route's own top-of-file comment, and
+``architecture/bathymetry_depth_lookup.rst`` for the full load
+pipeline and schema.
 
 The Python service is organized under ``pipeline/tama_hidrovias``:
 
