@@ -126,3 +126,60 @@ Until that lands, every depth lookup answers "what did the river look
 like on 2022-10-01," not "what does the currently selected forecast
 frame say" -- acceptable for the current testing/prototyping stage, not
 for a release.
+
+Frontend: the click handler and popup
+----------------------------------------
+
+``MapboxMap.tsx`` registers a plain ``map.on('click', ...)`` handler
+(not scoped to a layer, unlike every other click handler in that file)
+that's active **only while a forecast GeoTIFF overlay is loaded**
+(``tileLayerUrl`` is set) -- a click with no raster active has nothing
+to probe, by design, matching the feature request this implements. The
+effect that registers it is keyed on ``[mapLoaded, tileLayerUrl]``, so
+toggling the Camadas de Previsão drawer off immediately stops
+intercepting clicks instead of silently staying active against a
+raster that's no longer shown; a second effect also force-closes an
+already-open popup the moment ``tileLayerUrl`` clears, so it can't be
+left pointing at stale data.
+
+Layer exclusion
+~~~~~~~~~~~~~~~~~
+
+Before querying the depth endpoint, the handler runs
+``map.queryRenderedFeatures(e.point, { layers: [...] })`` against every
+other interactive point/line/fill layer on the map (stations, SWOT
+gauges, cross-section clusters/points/labels, rivers, basins) and bails
+out if the click hit any of them -- otherwise a click on, say, a
+cross-section circle would both open that feature's own popup *and* a
+depth popup, which would be confusing and also just wrong (that circle
+already has a real, precise value of its own). The layer id list is
+filtered down to layers that actually exist on the map first
+(``map.getLayer(id)``), since a disabled layer (stations are off by
+default) doesn't exist to query and Mapbox throws if asked about one.
+
+The popup itself
+~~~~~~~~~~~~~~~~~~
+
+Unlike every other popup in ``MapboxMap.tsx`` (station, SWOT gauge,
+cross-section -- all rendered as a centered, full-screen-backdrop
+overlay card the user dismisses before doing anything else), the depth
+popup is a small card anchored directly at the clicked **screen pixel**
+(``e.point``, not a re-projected lng/lat) and has no backdrop at all.
+This was a deliberate departure from the existing pattern: probing
+several spots on the raster in quick succession is the whole point of
+this feature, and a full-screen takeover the user has to close between
+every single click would actively fight that workflow. The popup closes
+on the map's ``movestart`` event instead of tracking the view live --
+once the user pans or zooms, the screen point it was anchored to is
+stale, so it's simpler and just as correct to close it outright rather
+than re-project it on every ``move`` event.
+
+The card has four states (``DepthPopupState['status']``): ``loading``
+(spinner, while the fetch is in flight), ``found`` (the depth/water-
+surface-elevation values, plus a small amber note making the temporarily
+forced reference date visible rather than letting the user assume it
+matches whatever forecast frame they have selected), ``not-found`` (the
+click landed more than the endpoint's 150m threshold from any loaded
+point -- a plain, non-alarming message, not an error, since clicking
+outside the modeled river extent is an expected, common outcome while
+exploring), and ``error`` (the fetch itself failed).

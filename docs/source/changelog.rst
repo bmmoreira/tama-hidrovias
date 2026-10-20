@@ -21,9 +21,20 @@ Bathymetry depth lookup (PostGIS)
 - The query's ``reference_date`` filter is **temporarily hardcoded** to
   the one snapshot currently loaded, regardless of which forecast
   GeoTIFF frame is selected in the Camadas de Previsão drawer -- there's
-  no frame→date matching wired up yet. See
-  ``architecture/bathymetry_depth_lookup.rst`` for the full load
-  pipeline, schema, and what real frame matching would need.
+  no frame→date matching wired up yet.
+- Clicking the map while a forecast overlay is loaded now shows a small
+  popup, anchored at the clicked pixel, with the depth/water-surface
+  value (or a quiet "no data here" message for a click outside the
+  modeled extent). Unlike this app's other map popups (station/SWOT/
+  cross-section, all centered full-screen cards), this one has no
+  backdrop and closes on the next map pan/zoom instead of requiring an
+  explicit dismiss -- probing several spots in a row is the point of
+  the feature, and a takeover-style popup would fight that. A click
+  that hits another interactive layer (a station, SWOT gauge,
+  cross-section point, river, or basin) opens that feature's own popup
+  instead, not this one.
+- See ``architecture/bathymetry_depth_lookup.rst`` for the full load
+  pipeline, schema, endpoint, and click-handler mechanism.
 
 Cross-section circle styling: size, color, and a metric selector
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -13,14 +13,18 @@ import {
   attachStationLayerInteractions,
   updateStationLayerData,
   STATION_CLUSTERS_LAYER_ID,
+  STATION_UNCLUSTERED_LAYER_ID,
 } from '@/components/maps/stationClusterLayer';
-import { SwotGaugeClusterLayer } from '@/components/maps/swotGaugeClusterLayer';
+import { SwotGaugeClusterLayer, SWOT_GAUGES_LAYER_ID } from '@/components/maps/swotGaugeClusterLayer';
 import type { SwotMetric } from '@/components/maps/SwotFilterDrawer';
 import {
   addCrossSectionLayers,
   attachCrossSectionLayerInteractions,
   updateCrossSectionLayerData,
   CROSS_SECTION_DEFAULT_METRIC,
+  CROSS_SECTION_CLUSTERS_LAYER_ID,
+  CROSS_SECTION_UNCLUSTERED_LAYER_ID,
+  CROSS_SECTION_VALUE_LAYER_ID,
 } from '@/components/maps/crossSectionClusterLayer';
 import type { CrossSectionFeature, CrossSectionMetric } from '@/components/maps/crossSectionClusterLayer';
 import CrossSectionModal from '@/components/maps/CrossSectionModal';
@@ -91,6 +95,22 @@ interface CrossSectionPopupState {
   feature: CrossSectionFeature;
 }
 
+interface DepthLookupResult {
+  depthM: number;
+  wseM: number;
+  distanceM: number;
+  referenceDate: string;
+}
+
+/** `point` is screen pixels at click time (not lng/lat) -- the popup is
+ *  positioned directly from it and closed on the next map move rather than
+ *  re-projected live, see the click handler effect below for why. */
+interface DepthPopupState {
+  point: [number, number];
+  status: 'loading' | 'found' | 'not-found' | 'error';
+  result?: DepthLookupResult;
+}
+
 export default function MapboxMap({
   initialViewState = { longitude: -52, latitude: -15, zoom: 4 },
   mapStyle = 'outdoors',
@@ -121,6 +141,7 @@ export default function MapboxMap({
   const [gaugeModal, setGaugeModal] = useState<StationPopupData | null>(null);
   const [crossSectionPopup, setCrossSectionPopup] = useState<CrossSectionPopupState | null>(null);
   const [crossSectionModalFeature, setCrossSectionModalFeature] = useState<CrossSectionFeature | null>(null);
+  const [depthPopup, setDepthPopup] = useState<DepthPopupState | null>(null);
   // Tracks the map's 'load' event as React state (rather than only checking
   // map.isStyleLoaded() imperatively) so effects that push river/basin data
   // into their sources re-run once the style finishes loading, even if the
@@ -360,6 +381,76 @@ export default function MapboxMap({
 
     updateCrossSectionLayerData(map, crossSectionFeatures, crossSectionMetric);
   }, [crossSectionFeatures, crossSectionMetric, mapLoaded]);
+
+  // Bathymetry depth-on-click, only while a forecast GeoTIFF overlay
+  // (Camadas de Previsão) is active -- a click anywhere else on the map
+  // has no raster loaded to probe, so there's nothing to ask the depth
+  // endpoint about. Registered/torn down whenever tileLayerUrl itself
+  // changes (not just once on map load) specifically so toggling the
+  // forecast drawer off immediately stops intercepting clicks, rather
+  // than silently staying active with a stale raster.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded || !tileLayerUrl) return;
+
+    // Layers with their own click handler elsewhere in this file/the
+    // cluster layer modules -- a click that lands on one of these should
+    // open THEIR popup/modal, not a depth lookup. Filtered to layers that
+    // actually exist on the map right now, since querying a layer id that
+    // was never registered (e.g. stations, off by default) throws.
+    const interactiveLayerIds = [
+      STATION_CLUSTERS_LAYER_ID,
+      STATION_UNCLUSTERED_LAYER_ID,
+      SWOT_GAUGES_LAYER_ID,
+      CROSS_SECTION_CLUSTERS_LAYER_ID,
+      CROSS_SECTION_UNCLUSTERED_LAYER_ID,
+      CROSS_SECTION_VALUE_LAYER_ID,
+      RIVERS_LAYER_ID,
+      BASINS_FILL_LAYER_ID,
+    ];
+
+    const handleClick = (e: mapboxgl.MapMouseEvent) => {
+      const presentLayerIds = interactiveLayerIds.filter((id) => map.getLayer(id));
+      if (presentLayerIds.length > 0) {
+        const hits = map.queryRenderedFeatures(e.point, { layers: presentLayerIds });
+        if (hits.length > 0) return;
+      }
+
+      const point: [number, number] = [e.point.x, e.point.y];
+      setDepthPopup({ point, status: 'loading' });
+
+      fetch(`/api/bathymetry/depth?lng=${e.lngLat.lng}&lat=${e.lngLat.lat}`)
+        .then((response) => response.json())
+        .then((json: { data: DepthLookupResult | null }) => {
+          setDepthPopup({ point, status: json.data ? 'found' : 'not-found', result: json.data ?? undefined });
+        })
+        .catch(() => {
+          setDepthPopup({ point, status: 'error' });
+        });
+    };
+
+    // Closing on movestart (not re-projecting the popup live on every
+    // 'move') keeps this simple: the popup answers "what's the depth at
+    // the spot I just clicked," not "track this spot as I pan/zoom" --
+    // once the view moves, the screen point it was anchored to is stale.
+    const closePopup = () => setDepthPopup(null);
+
+    map.on('click', handleClick);
+    map.on('movestart', closePopup);
+
+    return () => {
+      map.off('click', handleClick);
+      map.off('movestart', closePopup);
+    };
+  }, [mapLoaded, tileLayerUrl]);
+
+  // Also close the depth popup outright if the forecast overlay itself
+  // goes away (drawer closed, frame cleared) -- the effect above already
+  // stops it from reopening on new clicks, but an already-open popup
+  // would otherwise linger pointing at a raster that's no longer loaded.
+  useEffect(() => {
+    if (!tileLayerUrl) setDepthPopup(null);
+  }, [tileLayerUrl]);
 
   // Update rivers GeoJSON when the layers drawer selection changes.
   useEffect(() => {
@@ -668,6 +759,72 @@ export default function MapboxMap({
           </div>
         );
       })()}
+
+      {/* Bathymetry depth popup -- a small card anchored at the clicked
+          screen point (not a centered takeover like the popups above),
+          since probing several spots on the raster in quick succession is
+          the whole point of this one: a full-screen overlay the user has
+          to dismiss between every click would fight that workflow. */}
+      {depthPopup !== null && (
+        <div
+          className="pointer-events-none absolute z-50 w-60 -translate-x-1/2 -translate-y-[calc(100%+14px)]"
+          style={{ left: depthPopup.point[0], top: depthPopup.point[1] }}
+        >
+          <div className="pointer-events-auto overflow-hidden rounded-2xl border border-white/20 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-md dark:border-slate-700/60 dark:bg-slate-900/95">
+            <div className="relative bg-gradient-to-br from-blue-600 to-cyan-700 px-4 pb-3 pt-3">
+              <button
+                onClick={() => setDepthPopup(null)}
+                className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-white/80 transition hover:bg-white/35 hover:text-white"
+                aria-label="Fechar"
+              >
+                <svg viewBox="0 0 10 10" className="h-2.5 w-2.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                  <path d="M2 2l6 6M8 2l-6 6" />
+                </svg>
+              </button>
+              <p className="pr-6 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/70">
+                Profundidade do rio
+              </p>
+            </div>
+
+            <div className="px-4 py-3">
+              {depthPopup.status === 'loading' && (
+                <div className="flex items-center gap-2 py-1 text-xs text-slate-500 dark:text-slate-400">
+                  <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600 dark:border-slate-700" />
+                  Consultando...
+                </div>
+              )}
+
+              {depthPopup.status === 'found' && depthPopup.result && (
+                <>
+                  <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                    {depthPopup.result.depthM.toFixed(1)} m
+                  </p>
+                  <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                    Cota da água: {depthPopup.result.wseM.toFixed(1)} m
+                  </p>
+                  <p className="mt-2 text-[10px] leading-snug text-amber-600 dark:text-amber-400">
+                    Referência fixa de{' '}
+                    {new Date(depthPopup.result.referenceDate).toLocaleDateString('pt-BR')} -- ainda
+                    não associada à imagem de previsão selecionada.
+                  </p>
+                </>
+              )}
+
+              {depthPopup.status === 'not-found' && (
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Sem dado de profundidade medido neste ponto. Tente clicar mais próximo do leito do rio.
+                </p>
+              )}
+
+              {depthPopup.status === 'error' && (
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Não foi possível consultar a profundidade agora.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <StationDetailsModal
         open={gaugeModal !== null}
