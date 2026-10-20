@@ -319,11 +319,16 @@ Known Issues Fixed
 River Cross-Section Points
 ----------------------------
 
-A third clustered point layer, added for the Madeira basin's river
-cross-section (transversal section) data: 377 SWORD-derived points, each
-with an associated bathymetric depth profile. See
-:doc:`architecture/cross_section_flow` for the full diagrams; this
-section covers just what differs from the station/SWOT layers above.
+A third clustered point layer, for river cross-section (transversal
+section) data: 476 SWORD-derived points across two rivers (377 Madeira,
+99 Tapajós), each with an associated bathymetric depth profile, all in
+one ``FeatureCollection`` -- the layer has no notion of "which river," it
+just clusters whatever points are in the file (see
+:doc:`architecture/cross_section_flow`'s "Adding Another River" section
+for what a new river's source export needs normalized before it can be
+merged in the same way). See :doc:`architecture/cross_section_flow` for
+the full diagrams; this section covers just what differs from the
+station/SWOT layers above.
 
 Unlike stations and SWOT gauges, this layer's source data is **not**
 fetched from Strapi -- it's static reference data checked into the repo

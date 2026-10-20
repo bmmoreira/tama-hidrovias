@@ -2,9 +2,9 @@ River Cross-Section Flow
 ==========================
 
 The following diagrams illustrate how ``crossSectionClusterLayer.ts``
-clusters the Madeira river transversal-section points on the public map,
-and how clicking one leads to a bathymetric profile chart in
-``CrossSectionModal``.
+clusters river transversal-section points (Madeira and Tapajós, as of
+this writing) on the public map, and how clicking one leads to a
+bathymetric profile chart in ``CrossSectionModal``.
 
 Data
 -----
@@ -14,20 +14,58 @@ is static reference data checked into the repo and served as plain files
 under ``web/public/geojson/``, the same convention already used for
 ``rivers.geojson``/``subbacias.geojson``:
 
-- ``output_points_water_level.geojson`` -- 377 SWORD-derived point
-  features along the Madeira basin. Each feature's properties carry
-  ``sword_node_id``, ``sword_reach_id``, ``sword_width``,
-  ``sword_dist_out``, a ``file`` name, and ``water_level`` -- the
-  station's measured water-surface elevation, in meters.
-- ``secoes_transversais/<file>`` -- one profile per point: two
-  tab-separated columns, no header (distance along the section in
-  meters, then the elevation in meters at that point). ``nan`` marks a
-  NoData pixel and becomes a gap in the chart rather than a false zero.
+- ``output_points_water_level.geojson`` -- 476 SWORD-derived point
+  features: 377 along the Madeira basin, 99 along the Tapajós. **One
+  file for every river**, not one per river -- see `Adding Another
+  River`_ below. Each feature's properties carry ``sword_node_id``,
+  ``sword_reach_id``, ``sword_width``, ``sword_dist_out``, a ``file``
+  name, and ``water_level`` -- the station's measured water-surface
+  elevation, in meters.
+- ``secoes_transversais/<file>`` -- one profile per point, from either
+  river, in the same flat directory: two tab-separated columns, no
+  header (distance along the section in meters, then the elevation in
+  meters at that point). ``nan`` marks a NoData pixel and becomes a gap
+  in the chart rather than a false zero.
 
 Source data lives in ``assets/output_points_water_level.geojson`` and
 ``assets/secoes_transversais/`` (see ``LEIA_ME.txt`` there for the exact
 raster/processing provenance); the ``web/public/geojson/`` copies are
 what the browser actually fetches.
+
+Adding Another River
+~~~~~~~~~~~~~~~~~~~~~~
+
+``crossSectionClusterLayer.ts`` and ``CrossSectionModal`` have no notion
+of "which river" a point belongs to -- they just cluster and plot
+whatever ``CrossSectionFeatureProperties`` they're given (see `Endpoints
+and Backend`_). That's why Tapajós was added by **merging** its 99
+points into the existing ``output_points_water_level.geojson`` rather
+than shipping a second geojson file and teaching the app to fetch both:
+one source, one fetch, zero app code changes. A per-river source export
+will rarely already match that shape exactly, though -- when adding
+another river, check for the same two gotchas the Tapajós merge hit:
+
+- **Property schema.** A fresh SWORD export tends to carry the *entire*
+  raw join (``sword_x``, ``sword_wse``, ``sword_facc``, ``fid``, and
+  two to three dozen more) rather than the clean 6-property shape
+  ``CrossSectionFeatureProperties`` expects. Normalize down to exactly
+  ``sword_node_id``, ``sword_reach_id``, ``sword_width``,
+  ``sword_dist_out``, ``file``, ``water_level`` before merging --
+  Tapajós's raw export didn't even have a ``file`` field, which was
+  derived as ``f"{int(sword_node_id)}_{int(sword_dist_out)}.txt"``
+  (confirmed against the actual ``.txt`` filenames already present, not
+  assumed from the naming description alone).
+- **Coordinate reference system.** GeoJSON's own spec assumes WGS84
+  lon/lat, and Mapbox GL renders it that way unconditionally -- but a
+  raw raster-processing export is frequently still in whatever
+  projected CRS the raster itself used (Tapajós shipped in UTM 21S /
+  EPSG:32721; Madeira's existing file was already WGS84). A top-level
+  ``"crs"`` member naming something other than ``CRS84``/``EPSG:4326``,
+  or coordinate values in the hundreds of thousands/millions instead of
+  small lon/lat degrees, is the tell. Reproject with ``pyproj`` (already
+  a ``pipeline/venv`` dependency) before merging -- getting this wrong
+  doesn't error, it just silently plots every point for that river in
+  the wrong place (or off the visible map entirely).
 
 Endpoints and Backend
 -----------------------

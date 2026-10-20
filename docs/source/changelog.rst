@@ -4,6 +4,25 @@ Changelog
 Upcoming
 --------
 
+Tapajós river cross-section points
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Added 99 Tapajós river cross-section points, merged into the existing
+  ``output_points_water_level.geojson`` (now 476 points total) rather
+  than shipped as a second file -- the clustering layer and modal have
+  no notion of "which river," so one merged source means zero app code
+  changes.
+- The raw Tapajós export needed two fixes before merging: its ~30-field
+  raw SWORD join was normalized down to the existing 6-property schema
+  (and was missing a ``file`` field entirely, derived from
+  ``sword_node_id``/``sword_dist_out``), and its coordinates were
+  reprojected from UTM 21S (EPSG:32721) to WGS84 -- the source export
+  was in a different CRS than Madeira's existing file, which would have
+  silently plotted every new point in the wrong place (large UTM
+  easting/northing values interpreted as lon/lat) if merged as-is.
+- See ``architecture/cross_section_flow.rst``'s "Adding Another River"
+  section for the full checklist this follows for the next river.
+
 River cross-section (transversal section) points
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
