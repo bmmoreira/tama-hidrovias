@@ -416,6 +416,56 @@ requested or shown. ``maxChunks`` is the separate memory/GPU-bound
 knob -- it doesn't affect timing, only how much of the already-streamed
 wireframe stays visible behind the camera before the oldest is disposed
 (see "Progressive chunk streaming" above for that disposal mechanism).
+
+Playback controls
+--------------------
+
+A small frosted-glass pill, bottom-center of the map, appears whenever
+either flight is active (``isFlightActive`` in ``MapboxMap.tsx``) and
+disappears when it ends or is stopped: rewind, play/pause, fast-forward,
+and an explicit stop (``X``) button. Shared between both rivers -- only
+one flight can be active at a time (both effects share
+``flythroughControllerRef``), so one panel implementation covers both.
+
+Why ``startRiverFlythrough`` needed a real refactor, not just new buttons
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The original implementation tracked progress as
+``performance.now() - startTime`` -- fine for a fire-and-forget
+animation, but that can't represent "paused": real-world time elapsed
+while paused would otherwise still count against the flight's progress,
+so the camera would jump forward the instant it resumed. Progress is now
+tracked as an accumulated ``elapsedMs``, advanced by each frame's own
+delta time and simply **not** accumulated on a paused frame -- pausing
+doesn't need to do anything to the camera at all, it just stops time
+from advancing.
+
+``startRiverFlythrough`` now returns a ``FlythroughController`` (``pause``,
+``resume``, ``seekBy``, ``stop``, ``isPaused``, ``getProgress``) instead of
+a bare cancel function. ``seekBy(fractionDelta)`` jumps ``elapsedMs`` by
+a fraction of the total duration (clamped to the route's start/end) and
+immediately re-renders the camera at the new position -- deliberately
+not gated on "not paused," since a seek button should feel responsive
+whether or not the flight happens to be playing at that moment. Seeking
+to the very end triggers ``onComplete`` the same as reaching it by
+playing, since from the camera's (and the wireframe streamer's)
+perspective they're the same state.
+
+Interaction with wireframe streaming
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Both ``pause`` and ``seekBy`` still fire ``onProgress``, so Madeira's
+``DepthWireframeStreamer`` (see "Progressive chunk streaming" above)
+reacts to a fast-forward/rewind exactly like normal playback -- a chunk
+fetches as soon as the jumped-to position is far enough from the last
+fetch's center, confirmed visually (a new chunk appeared at the new
+location immediately after fast-forwarding, even while paused). Rewinding
+past chunks that have already been disposed (behind the streamer's
+sliding window) doesn't restore them -- the streamer has no "already
+visited, still relevant" memory, only a forward-looking one, so rewinding
+far enough shows the gap between the camera's new position and whatever
+chunks are still loaded until forward progress streams new ones back in.
+
 Known limitations
 -------------------
 
@@ -427,9 +477,11 @@ This is explicitly a demo/test of the concept, not a finished feature:
   that wiring again (and ideally a real ``river`` field on cross-section
   features instead of the node-id-prefix convention this and other code
   already lean on).
-- **No visual progress indicator.** Either flight can be started again
-  (restarting cleanly) but there's no on-screen "flying... 40%" state or
-  a way to pause/stop it early beyond re-triggering or navigating away.
+- **No scrubbable progress bar.** The playback panel has pause/resume
+  and discrete ±5% seek jumps (rewind/fast-forward), but no visible
+  "flying... 40%" readout and no click-or-drag-to-any-point scrubber --
+  ``getProgress()`` already exists on the controller for exactly this,
+  just not wired to anything visual yet.
 - **No terrain/3D buildings.** The pitch tilt is real (confirmed by
   reading back ``map.getPitch()`` during the flight) and visible as a
   horizon once zoomed in or over open water, but the base map style has

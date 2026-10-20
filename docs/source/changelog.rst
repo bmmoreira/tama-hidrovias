@@ -4,6 +4,33 @@ Changelog
 Upcoming
 --------
 
+Flythrough playback controls (pause/resume/rewind/fast-forward)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Added a small frosted-glass control panel, bottom-center of the map,
+  shown whenever a Tapajós or Madeira flythrough is active: rewind
+  (-5%), play/pause, fast-forward (+5%), and a stop button. Shared by
+  both flights -- only one can run at a time.
+- Required refactoring ``startRiverFlythrough``'s progress tracking from
+  ``performance.now() - startTime`` (which can't represent "paused" --
+  real-world time elapsed while paused would otherwise still count
+  against progress) to an accumulated ``elapsedMs`` that simply isn't
+  advanced on a paused frame. It now returns a ``FlythroughController``
+  (``pause``/``resume``/``seekBy``/``stop``/``isPaused``/``getProgress``)
+  instead of a bare cancel function.
+- Seeking (rewind/fast-forward) works even while paused -- it re-renders
+  the camera immediately rather than waiting for the next playing frame
+  -- and still fires ``onProgress``, so Madeira's wireframe streamer
+  reacts to a fast-forward/rewind the same as normal playback (a new
+  chunk streams in at the jumped-to position). Verified via Playwright:
+  pause produces pixel-identical screenshots 2 seconds apart, seeking
+  jumps the camera and streams a new chunk immediately, stop removes
+  both the panel and every loaded wireframe chunk, and map interactions
+  (scroll-zoom, drag) are confirmed working again immediately after stop.
+- See ``architecture/river_flythrough.rst``'s "Playback controls"
+  section for the full mechanism, including why rewinding past a
+  disposed chunk doesn't restore it.
+
 Madeira flythrough: full independent tuning (camera + streaming)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

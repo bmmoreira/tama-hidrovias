@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useCallback, useMemo, useState, type ReactNode } from 'react';
+import { Play, Pause, SkipBack, SkipForward, X } from 'lucide-react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import type { MapStylePreference, Station, SwotGaugeFeature } from '@/lib/strapi';
@@ -36,6 +37,7 @@ import {
   MADEIRA_FLYTHROUGH_PITCH,
   MADEIRA_FLYTHROUGH_ZOOM,
 } from '@/components/maps/riverFlythrough';
+import type { FlythroughController } from '@/components/maps/riverFlythrough';
 import {
   addRiverDepthWireframe,
   fetchDepthChunkFromRaster,
@@ -162,8 +164,15 @@ export default function MapboxMap({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const popupRef = useRef<mapboxgl.Popup | null>(null);
-  const cancelFlythroughRef = useRef<(() => void) | null>(null);
+  const flythroughControllerRef = useRef<FlythroughController | null>(null);
   const removeDepthWireframeRef = useRef<(() => void) | null>(null);
+  // Drives the bottom-center playback panel -- null/false while no flight
+  // is active, so the panel itself is simply not rendered then. Separate
+  // from flythroughControllerRef (an imperative handle, not reactive state)
+  // since the panel's play/pause icon and visibility need to trigger
+  // re-renders; the controller ref itself intentionally doesn't.
+  const [isFlightActive, setIsFlightActive] = useState(false);
+  const [isFlightPaused, setIsFlightPaused] = useState(false);
   const swotLayerRef = useRef<SwotGaugeClusterLayer | null>(null);
   const onDoubleClickRef = useRef(onStationDoubleClick);
   // Read from the double-click handler registered once on map load, so it
@@ -425,14 +434,18 @@ export default function MapboxMap({
     const map = mapRef.current;
     if (!map || !mapLoaded || flythroughRequestId == null) return;
 
-    cancelFlythroughRef.current?.();
+    flythroughControllerRef.current?.stop();
+    setIsFlightPaused(false);
 
     const path = buildTapajosPath(crossSectionFeatures);
-    cancelFlythroughRef.current = startRiverFlythrough(map, path, {
+    flythroughControllerRef.current = startRiverFlythrough(map, path, {
       onComplete: () => {
-        cancelFlythroughRef.current = null;
+        flythroughControllerRef.current = null;
+        setIsFlightActive(false);
       },
+      onPauseChange: setIsFlightPaused,
     });
+    setIsFlightActive(true);
 
     // Step-one 3D riverbed wireframe prototype (see
     // architecture/river_flythrough.rst) -- a single static chunk of real,
@@ -470,7 +483,7 @@ export default function MapboxMap({
   // real loaded PostGIS depth data (bathymetry_points) instead of a
   // bathymetry GeoTIFF -- see fetchDepthChunkFromPoints's own comment for
   // why that's actually the cheaper, more accurate data source where it's
-  // available. Shares cancelFlythroughRef/removeDepthWireframeRef with the
+  // available. Shares flythroughControllerRef/removeDepthWireframeRef with the
   // Tapajós effect above (not separate refs) so starting either one
   // cancels the other -- only one flight/wireframe should ever run at once,
   // regardless of which button triggered it. Unlike Tapajós's one static
@@ -482,8 +495,9 @@ export default function MapboxMap({
     const map = mapRef.current;
     if (!map || !mapLoaded || madeiraFlythroughRequestId == null) return;
 
-    cancelFlythroughRef.current?.();
+    flythroughControllerRef.current?.stop();
     removeDepthWireframeRef.current?.();
+    setIsFlightPaused(false);
 
     const path = buildMadeiraPath(crossSectionFeatures);
     const streamer = createDepthWireframeStreamer(map, 'madeira-depth-wireframe', {
@@ -496,15 +510,18 @@ export default function MapboxMap({
     });
     removeDepthWireframeRef.current = streamer.dispose;
 
-    cancelFlythroughRef.current = startRiverFlythrough(map, path, {
+    flythroughControllerRef.current = startRiverFlythrough(map, path, {
       durationMs: MADEIRA_FLYTHROUGH_DURATION_MS,
       pitch: MADEIRA_FLYTHROUGH_PITCH,
       zoom: MADEIRA_FLYTHROUGH_ZOOM,
       onProgress: ({ position, distanceM }) => streamer.onProgress(position, distanceM),
       onComplete: () => {
-        cancelFlythroughRef.current = null;
+        flythroughControllerRef.current = null;
+        setIsFlightActive(false);
       },
+      onPauseChange: setIsFlightPaused,
     });
+    setIsFlightActive(true);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps -- crossSectionFeatures
     // intentionally not a dependency, same reasoning as the Tapajós effect.
@@ -515,10 +532,23 @@ export default function MapboxMap({
   // this file.
   useEffect(() => {
     return () => {
-      cancelFlythroughRef.current?.();
+      flythroughControllerRef.current?.stop();
       removeDepthWireframeRef.current?.();
     };
   }, []);
+
+  // Explicit "end the flight now" for the playback panel's stop button --
+  // same cleanup the onComplete callbacks above do when a flight finishes
+  // on its own, just triggered by the user instead of reaching the end of
+  // the route.
+  const stopFlight = () => {
+    flythroughControllerRef.current?.stop();
+    flythroughControllerRef.current = null;
+    removeDepthWireframeRef.current?.();
+    removeDepthWireframeRef.current = null;
+    setIsFlightActive(false);
+    setIsFlightPaused(false);
+  };
 
   // Bathymetry depth-on-click, only while a forecast GeoTIFF overlay
   // (Camadas de Previsão) is active -- a click anywhere else on the map
@@ -960,6 +990,59 @@ export default function MapboxMap({
                 </p>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Flythrough playback panel -- bottom-center, only while a Tapajós or
+          Madeira flight is actually running (isFlightActive), shared by
+          both since only one can ever be active at once (see
+          flythroughControllerRef). Seek buttons jump by a fixed 5% of the
+          whole route, same "discrete seek" semantics as a video player's
+          +/-10s buttons, not a continuous scrub. */}
+      {isFlightActive && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-6 z-40 flex justify-center">
+          <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-white/20 bg-slate-900/45 px-3 py-2 shadow-2xl backdrop-blur-xl">
+            <button
+              type="button"
+              onClick={() => flythroughControllerRef.current?.seekBy(-0.05)}
+              className="flex h-9 w-9 items-center justify-center rounded-full text-white/90 transition hover:bg-white/15 hover:text-white"
+              aria-label="Retroceder"
+            >
+              <SkipBack className="h-4 w-4" fill="currentColor" />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (isFlightPaused) flythroughControllerRef.current?.resume();
+                else flythroughControllerRef.current?.pause();
+              }}
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-slate-900 shadow-md transition hover:bg-white/90"
+              aria-label={isFlightPaused ? 'Retomar navegação' : 'Pausar navegação'}
+            >
+              {isFlightPaused ? (
+                <Play className="h-5 w-5 translate-x-0.5" fill="currentColor" />
+              ) : (
+                <Pause className="h-5 w-5" fill="currentColor" />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => flythroughControllerRef.current?.seekBy(0.05)}
+              className="flex h-9 w-9 items-center justify-center rounded-full text-white/90 transition hover:bg-white/15 hover:text-white"
+              aria-label="Avançar"
+            >
+              <SkipForward className="h-4 w-4" fill="currentColor" />
+            </button>
+            <div className="mx-1 h-6 w-px bg-white/20" />
+            <button
+              type="button"
+              onClick={stopFlight}
+              className="flex h-9 w-9 items-center justify-center rounded-full text-white/70 transition hover:bg-white/15 hover:text-white"
+              aria-label="Encerrar navegação"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
         </div>
       )}

@@ -193,27 +193,75 @@ export interface FlythroughOptions {
    *  not throttled here -- a caller that only wants to act every N meters
    *  should do that throttling itself (see `createDepthWireframeStreamer`
    *  in riverFlythroughTerrain.ts), since different consumers may want
-   *  different thresholds. */
+   *  different thresholds. Fires on seeks too (including while paused),
+   *  not just during normal forward playback. */
   onProgress?: (progress: FlythroughProgress) => void;
+  /** Called whenever `pause()`/`resume()` change the paused state -- lets a
+   *  UI control panel keep its play/pause icon in sync without polling. */
+  onPauseChange?: (paused: boolean) => void;
+}
+
+export interface FlythroughController {
+  /** Freezes the flight in place -- the camera stops advancing, but stays
+   *  exactly where it was (not reset to anywhere). A no-op if already
+   *  paused or the flight has already ended. */
+  pause: () => void;
+  /** Continues from wherever the flight was paused. A no-op if not
+   *  currently paused. */
+  resume: () => void;
+  /** Jumps the flight's position by `fractionDelta` of the *total* route
+   *  (e.g. -0.05 rewinds 5% of the whole trip, +0.05 fast-forwards 5%),
+   *  clamped to the route's start/end -- not a playback-speed change, a
+   *  one-off seek. Updates the camera and fires `onProgress` immediately,
+   *  even while paused, so a control panel's seek buttons feel responsive
+   *  without needing to resume first. Seeking to the very end triggers
+   *  `onComplete` the same as reaching it by playing, since from the
+   *  camera's perspective they're the same state. */
+  seekBy: (fractionDelta: number) => void;
+  /** Cancels the flight outright and restores the map's normal interaction
+   *  handlers (drag/scroll/etc.) to whatever they were before the flight
+   *  started. Also called internally when the flight completes normally. */
+  stop: () => void;
+  isPaused: () => boolean;
+  /** Current progress, 0 to 1, of the eased position along the route --
+   *  NOT the same as elapsed-time fraction (easing means they diverge near
+   *  the start/end of the flight). For a UI progress bar. */
+  getProgress: () => number;
 }
 
 /**
- * Starts flying the camera along `path` and returns a function that cancels
- * it early (also called internally when the flight finishes normally).
- * Drives the camera with `map.jumpTo` inside a `requestAnimationFrame` loop
- * -- not `flyTo`/`easeTo`, which each own their own internal animation and
- * would fight a per-frame external driver -- and temporarily disables the
- * map's normal interaction handlers (drag/scroll/etc.) so the user's input
- * can't fight the forced camera moves mid-flight; they're restored when the
- * flight ends or is cancelled.
+ * Starts flying the camera along `path` and returns a {@link
+ * FlythroughController} for pausing/resuming/seeking/stopping it (see
+ * MapboxMap.tsx's bottom-center playback panel). Drives the camera with
+ * `map.jumpTo` inside a `requestAnimationFrame` loop -- not `flyTo`/
+ * `easeTo`, which each own their own internal animation and would fight a
+ * per-frame external driver -- and temporarily disables the map's normal
+ * interaction handlers (drag/scroll/etc.) so the user's input can't fight
+ * the forced camera moves mid-flight; they're restored when the flight
+ * ends or is cancelled.
+ *
+ * Progress is tracked as accumulated `elapsedMs` (advanced by each frame's
+ * own delta time), not as `performance.now() - startTime` -- the latter is
+ * simple for a fire-and-forget animation, but can't represent "paused":
+ * time elapsed *in the real world* while paused would otherwise still
+ * count against the flight's progress. Accumulating per-frame deltas, and
+ * simply not accumulating them while paused, sidesteps that entirely.
  */
 export function startRiverFlythrough(
   map: mapboxgl.Map,
   path: LngLat[],
   options: FlythroughOptions = {},
-): () => void {
+): FlythroughController {
+  const noop: FlythroughController = {
+    pause: () => {},
+    resume: () => {},
+    seekBy: () => {},
+    stop: () => {},
+    isPaused: () => false,
+    getProgress: () => 0,
+  };
   if (path.length < 2) {
-    return () => {};
+    return noop;
   }
 
   const pitch = options.pitch ?? FLYTHROUGH_PITCH;
@@ -236,7 +284,10 @@ export function startRiverFlythrough(
 
   let rafId: number | null = null;
   let cancelled = false;
-  const startTime = performance.now();
+  let paused = false;
+  let elapsedMs = 0;
+  let lastFrameTime: number | null = null;
+  let lastRawT = 0;
 
   const restoreInteractions = () => {
     interactionHandlers.forEach((h, i) => {
@@ -251,27 +302,43 @@ export function startRiverFlythrough(
     restoreInteractions();
   };
 
-  const tick = (now: number) => {
-    if (cancelled) return;
-
-    // Clamped on both ends: a requestAnimationFrame callback's own `now`
-    // timestamp can occasionally predate the `performance.now()` read when
-    // the animation was scheduled (same tick, different clock read), which
-    // would otherwise make the very first frame or two compute a tiny
-    // negative elapsed/rawT.
-    const elapsed = now - startTime;
-    const rawT = Math.min(Math.max(elapsed / durationMs, 0), 1);
+  // Applies the camera for the current elapsedMs and fires onProgress --
+  // shared by the normal per-frame tick and by seekBy's immediate update,
+  // so a seek while paused doesn't need to wait for a tick that (being
+  // paused) will never come.
+  const render = () => {
+    const rawT = Math.min(Math.max(elapsedMs / durationMs, 0), 1);
+    lastRawT = rawT;
     const t = easeInOutCosine(rawT);
 
     const distanceM = t * table.totalDistanceM;
     const { position, bearing } = pointAlongPath(table, distanceM);
     map.jumpTo({ center: position, zoom, pitch, bearing });
     options.onProgress?.({ position, distanceM, totalDistanceM: table.totalDistanceM });
+    return rawT;
+  };
 
-    if (rawT >= 1) {
-      stop();
-      options.onComplete?.();
-      return;
+  const tick = (now: number) => {
+    if (cancelled) return;
+
+    if (!paused) {
+      // lastFrameTime is null on the very first tick (nothing to diff
+      // against yet) and is deliberately reset to null on every paused
+      // tick too, so the frame immediately after a resume() doesn't count
+      // the entire paused duration as elapsed time.
+      if (lastFrameTime !== null) {
+        elapsedMs += now - lastFrameTime;
+      }
+      lastFrameTime = now;
+
+      const rawT = render();
+      if (rawT >= 1) {
+        stop();
+        options.onComplete?.();
+        return;
+      }
+    } else {
+      lastFrameTime = null;
     }
 
     rafId = requestAnimationFrame(tick);
@@ -279,5 +346,28 @@ export function startRiverFlythrough(
 
   rafId = requestAnimationFrame(tick);
 
-  return stop;
+  return {
+    pause: () => {
+      if (cancelled || paused) return;
+      paused = true;
+      options.onPauseChange?.(true);
+    },
+    resume: () => {
+      if (cancelled || !paused) return;
+      paused = false;
+      options.onPauseChange?.(false);
+    },
+    seekBy: (fractionDelta: number) => {
+      if (cancelled) return;
+      elapsedMs = Math.min(Math.max(elapsedMs + fractionDelta * durationMs, 0), durationMs);
+      const rawT = render();
+      if (rawT >= 1) {
+        stop();
+        options.onComplete?.();
+      }
+    },
+    stop,
+    isPaused: () => paused,
+    getProgress: () => lastRawT,
+  };
 }
